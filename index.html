@@ -874,11 +874,81 @@ table.patient-table td {
 
 @media (max-width: 700px) {
   #header { flex-wrap: wrap; height: auto; padding: 10px; gap: 8px; }
-  .floor-tabs { order: 3; }
+  .floor-tabs { order: 3; width: 100%; justify-content: center; }
+  .header-actions { 
+    width: 100%; 
+    justify-content: space-between;
+    order: 4;
+    margin-top: 8px;
+  }
+  .search-box { min-width: auto; flex: 1; }
+  .btn span { display: none; }
+  .btn svg { width: 16px; height: 16px; }
   #entry-panel { width: 100%; right: -100%; }
   #entry-panel.open { right: 0; }
+  #patient-days-panel { width: 100%; right: -100%; }
+  #patient-days-panel.open { right: 0; }
   .config-form { grid-template-columns: 1fr; }
   .config-form input.full { grid-column: 1; }
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table.patient-table { font-size: 11px; }
+  table.patient-table thead th { font-size: 8px; padding: 5px 6px; }
+  table.patient-table td { padding: 5px 6px; }
+  .cell-room { font-size: 11px; }
+  .cell-patient-name { font-size: 11px; }
+  .cell-diag { font-size: 9px; padding: 1px 4px; }
+  .day-cell-btn { min-height: 36px; padding: 4px; }
+  .badge { font-size: 8px; padding: 1px 3px; }
+  #csv-modal, #add-patient-modal { width: 95vw; max-width: 95vw; }
+  .modal-header { padding: 14px 15px; }
+  .modal-body { padding: 15px; }
+  .modal-footer { padding: 10px 15px; }
+  .panel-header { padding: 12px 15px; }
+  .panel-patient-name { font-size: 13px; }
+  .panel-body { padding: 12px 15px; }
+  .panel-footer { padding: 12px 15px; }
+  .day-selector { padding: 8px 15px; }
+  .day-btn { font-size: 9px; padding: 5px; }
+  .cat-header { padding: 6px 10px; }
+  .cat-label { font-size: 11px; }
+  .tag-chip { font-size: 10px; padding: 2px 6px; }
+  .cat-textarea { font-size: 11px; padding: 6px 8px; }
+  .days-row-card { min-height: 70px; padding: 8px; }
+  .days-row-day { font-size: 9px; }
+  .days-row-summary { font-size: 10px; }
+  .week-nav { padding: 2px 6px; }
+  #week-label { min-width: 60px; font-size: 10px; }
+  .logo { font-size: 11px; }
+}
+
+@media (max-width: 480px) {
+  #header { padding: 8px; }
+  .logo { font-size: 10px; }
+  .week-nav button { width: 18px; height: 18px; font-size: 12px; }
+  .floor-tab { padding: 3px 8px; font-size: 10px; }
+  .section-title { font-size: 9px; }
+  .patient-count { font-size: 9px; }
+  table.patient-table thead th { font-size: 7px; padding: 4px; }
+  table.patient-table td { padding: 4px; }
+  .cell-room { font-size: 10px; }
+  .cell-patient-name { font-size: 10px; }
+  .cell-sub { font-size: 9px; }
+  .cell-diag { font-size: 8px; padding: 1px 3px; }
+  .day-badges { gap: 1px; }
+  .badge { font-size: 7px; padding: 1px 2px; }
+  #config-banner { padding: 12px; }
+  .config-banner-icon { font-size: 24px; }
+  .config-banner-text h3 { font-size: 13px; }
+  .config-banner-text p { font-size: 11px; }
+  .config-form input { font-size: 11px; padding: 6px 8px; }
+  .drop-zone { padding: 20px 10px; }
+  .drop-zone svg { width: 24px; height: 24px; }
+  .drop-zone p { font-size: 11px; }
+  .preview-info { font-size: 10px; padding: 8px 10px; }
+  .preview-row { font-size: 9px; padding: 5px 8px; gap: 8px; }
+  .day-list-item { padding: 10px 15px; }
+  .day-list-day { font-size: 11px; min-width: 55px; }
+  .day-list-summary { font-size: 10px; }
 }
 </style>
 </head>
