@@ -954,7 +954,6 @@ table.patient-table td {
             <th style="min-width:200px">Paciente</th>
             <th style="min-width:140px">Médico / Cobertura</th>
             <th style="min-width:90px">Diagnóstico</th>
-            <th style="min-width:120px">Acciones</th>
           </tr>
         </thead>
         <tbody id="patient-tbody"></tbody>
@@ -1306,8 +1305,8 @@ function renderTable(filter='') {
   tbody.innerHTML = patients.map(p => {
     const hc = String(p.hc);
     return `
-      <tr class="patient-row" data-hc="${hc}">
-        <td><div class="cell-room" style="cursor:pointer" onclick="openMovePatient('${hc}')" title="Mover de cama">${p.cama}</div></td>
+      <tr class="patient-row" data-hc="${hc}" style="cursor:pointer" onclick="toggleDaysRow('${hc}')">
+        <td><div class="cell-room" style="cursor:pointer" onclick="event.stopPropagation(); openMovePatient('${hc}')" title="Mover de cama">${p.cama}</div></td>
         <td>
           <div class="cell-patient-name">${p.paciente}</div>
           <div class="cell-sub">HC ${p.hc}${p.ingreso ? ' · Ing. '+p.ingreso : ''}</div>
@@ -1317,15 +1316,9 @@ function renderTable(filter='') {
           <div class="cell-sub">${(p.cobertura||'').split(' - ')[0]}</div>
         </td>
         <td><span class="cell-diag">${p.diagnostico||'—'}</span></td>
-        <td style="padding:6px">
-          <button class="btn" onclick="toggleDaysRow('${hc}')" style="width:100%">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M9 18l6-6-6-6"/></svg>
-            Ver días
-          </button>
-        </td>
       </tr>
       <tr class="days-row" id="days-row-${hc}" style="display:none;">
-        <td colspan="5" style="padding:0;background:var(--surface2);">
+        <td colspan="4" style="padding:0;background:var(--surface2);">
           <div class="days-row-content" id="days-content-${hc}"></div>
         </td>
       </tr>`;
