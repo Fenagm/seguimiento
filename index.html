@@ -1,108 +1,1460 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Seguimiento</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        margin: 2rem;
-        color: #1f2937;
-      }
-      .grid {
-        display: grid;
-        gap: 1.5rem;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      }
-      .card {
-        border: 1px solid #d1d5db;
-        border-radius: 8px;
-        padding: 1rem;
-      }
-      ul {
-        padding-left: 1.25rem;
-      }
-      li {
-        margin-bottom: 0.5rem;
-      }
-      label,
-      input,
-      textarea,
-      button {
-        display: block;
-        width: 100%;
-      }
-      input,
-      textarea,
-      button {
-        margin-top: 0.35rem;
-        margin-bottom: 0.75rem;
-        padding: 0.5rem;
-      }
-      #salidaUsuario {
-        background: #f3f4f6;
-        border-radius: 6px;
-        padding: 0.75rem;
-        white-space: pre-wrap;
-      }
-    </style>
-  </head>
-  <body>
-    <h1>Panel de seguimiento</h1>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Seguimiento Clínico Semanal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 
-    <div class="grid">
-      <section class="card">
-        <h2>Días (uno debajo de otro)</h2>
-        <ul>
-          <li>Lunes</li>
-          <li>Martes</li>
-          <li>Miércoles</li>
-          <li>Jueves</li>
-          <li>Viernes</li>
-          <li>Sábado</li>
-          <li>Domingo</li>
-        </ul>
-      </section>
+<style>
+:root {
+  --bg: #0e1621;
+  --surface: #161f2e;
+  --surface2: #1e2c40;
+  --surface3: #243347;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --text: #e8edf4;
+  --text2: #8fa3bc;
+  --text3: #5a7290;
+  --accent: #3d7ef5;
+  --accent-dim: rgba(61,126,245,0.15);
 
-      <section class="card">
-        <h2>Información cargada por el usuario (visible)</h2>
-        <form id="formUsuario">
-          <label for="nombre">Nombre</label>
-          <input id="nombre" name="nombre" type="text" placeholder="Ingresar nombre" required />
+  --cat-nut: #2da44e;    --cat-nut-bg: rgba(45,164,78,0.12);
+  --cat-sed: #c87af0;    --cat-sed-bg: rgba(200,122,240,0.12);
+  --cat-atb: #f5a623;    --cat-atb-bg: rgba(245,166,35,0.12);
+  --cat-qmt: #ef5e5e;    --cat-qmt-bg: rgba(239,94,94,0.12);
+  --cat-oth: #4ab3c7;    --cat-oth-bg: rgba(74,179,199,0.12);
 
-          <label for="detalle">Detalle</label>
-          <textarea id="detalle" name="detalle" rows="4" placeholder="Ingresar información"></textarea>
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'IBM Plex Sans', sans-serif;
+}
 
-          <button type="submit">Guardar y mostrar</button>
-        </form>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-        <h3>Última carga</h3>
-        <div id="salidaUsuario">Aún no hay datos cargados.</div>
-      </section>
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
 
-      <section class="card">
-        <h2>Sectores habilitados</h2>
-        <ul>
-          <li>TAMO</li>
-          <li>U.T.I — Piso 4</li>
-          <li>U.T.I.Q — Piso 2</li>
-        </ul>
-        <p><strong>Nota:</strong> Se ignoran Piso 1 y Piso 2, excepto U.T.I.Q (Piso 2) solicitado.</p>
-      </section>
+/* ─── HEADER ─── */
+#header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 20px;
+  height: 52px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.logo {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent);
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  margin-right: 8px;
+}
+
+.week-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+.week-nav button {
+  background: none;
+  border: none;
+  color: var(--text2);
+  cursor: pointer;
+  font-size: 14px;
+  width: 20px;
+  height: 20px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 3px;
+  transition: all .15s;
+}
+.week-nav button:hover { background: var(--surface3); color: var(--text); }
+#week-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text2);
+  min-width: 80px;
+  text-align: center;
+}
+
+.floor-tabs {
+  display: flex;
+  gap: 2px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px;
+}
+.floor-tab {
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  background: none;
+  border: none;
+  color: var(--text2);
+  transition: all .15s;
+}
+.floor-tab.active {
+  background: var(--accent);
+  color: white;
+}
+.floor-tab:hover:not(.active) { background: var(--surface3); color: var(--text); }
+
+.header-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  color: var(--text2);
+  transition: all .15s;
+  white-space: nowrap;
+}
+.btn:hover { background: var(--surface3); color: var(--text); border-color: var(--border2); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: white; }
+.btn.primary:hover { background: #5591f7; }
+.btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+.search-box {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  min-width: 200px;
+}
+.search-box svg { width: 13px; height: 13px; color: var(--text3); flex-shrink: 0; }
+.search-box input {
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-size: 12px;
+  width: 100%;
+  font-family: var(--sans);
+}
+.search-box input::placeholder { color: var(--text3); }
+
+/* ─── VIEWS ─── */
+#view-main { display: block; }
+#view-history { display: none; }
+
+/* ─── PATIENT TABLE ─── */
+#main-area {
+  padding: 16px 20px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.section-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text3);
+}
+.patient-count {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text3);
+}
+
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+table.patient-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 900px;
+}
+
+table.patient-table thead th {
+  background: var(--surface2);
+  padding: 8px 12px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text3);
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+table.patient-table thead th.day-col {
+  text-align: center;
+  min-width: 90px;
+}
+
+table.patient-table tbody tr {
+  border-bottom: 1px solid var(--border);
+  transition: background .1s;
+}
+table.patient-table tbody tr:last-child { border-bottom: none; }
+table.patient-table tbody tr:hover { background: var(--surface2); }
+
+table.patient-table td {
+  padding: 8px 12px;
+  vertical-align: middle;
+}
+
+.cell-room {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent);
+  white-space: nowrap;
+}
+.cell-patient-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+}
+.cell-sub {
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 2px;
+}
+.cell-diag {
+  font-size: 11px;
+  font-family: var(--mono);
+  background: var(--surface2);
+  padding: 2px 6px;
+  border-radius: 3px;
+  color: var(--text2);
+  white-space: nowrap;
+  display: inline-block;
+}
+
+.day-cell-btn {
+  width: 100%;
+  min-height: 44px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  transition: all .15s;
+  position: relative;
+}
+.day-cell-btn:hover {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+.day-cell-btn.has-data {
+  border-color: var(--border2);
+}
+
+.day-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+.badge {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 3px;
+  letter-spacing: 0.04em;
+}
+.badge.nut { background: var(--cat-nut-bg); color: var(--cat-nut); }
+.badge.sed { background: var(--cat-sed-bg); color: var(--cat-sed); }
+.badge.atb { background: var(--cat-atb-bg); color: var(--cat-atb); }
+.badge.qmt { background: var(--cat-qmt-bg); color: var(--cat-qmt); }
+.badge.oth { background: var(--cat-oth-bg); color: var(--cat-oth); }
+
+.cell-empty { color: var(--text3); font-size: 11px; text-align: center; padding: 4px; }
+
+/* ─── ENTRY PANEL ─── */
+#entry-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 200;
+  backdrop-filter: blur(2px);
+}
+#entry-overlay.open { display: block; }
+
+#entry-panel {
+  position: fixed;
+  top: 0;
+  right: -520px;
+  width: 520px;
+  height: 100vh;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  z-index: 201;
+  display: flex;
+  flex-direction: column;
+  transition: right .25s cubic-bezier(0.4,0,0.2,1);
+  overflow: hidden;
+}
+#entry-panel.open { right: 0; }
+
+.panel-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.panel-title {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.panel-patient-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+.panel-meta {
+  font-size: 11px;
+  color: var(--text3);
+  font-family: var(--mono);
+}
+.panel-close {
+  background: none;
+  border: none;
+  color: var(--text2);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  font-size: 18px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.panel-close:hover { background: var(--surface3); color: var(--text); }
+
+.day-selector {
+  display: flex;
+  gap: 4px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  background: var(--surface2);
+}
+.day-btn {
+  flex: 1;
+  padding: 6px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--text2);
+  transition: all .15s;
+  text-align: center;
+}
+.day-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+.day-btn:hover:not(.active) { background: var(--surface3); color: var(--text); }
+
+.panel-body {
+  overflow-y: auto;
+  flex: 1;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cat-section {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.cat-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  user-select: none;
+  transition: background .1s;
+}
+.cat-header:hover { background: var(--surface3); }
+
+.cat-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.cat-label {
+  font-size: 12px;
+  font-weight: 600;
+  flex: 1;
+  letter-spacing: 0.03em;
+}
+.cat-toggle { font-size: 11px; color: var(--text3); }
+.cat-summary {
+  font-size: 10px;
+  color: var(--text3);
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cat-body {
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--surface2);
+}
+
+.tags-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.tag-chip {
+  font-size: 11px;
+  padding: 3px 9px;
+  border-radius: 20px;
+  cursor: pointer;
+  border: 1px solid;
+  transition: all .12s;
+  background: none;
+  font-family: var(--sans);
+}
+.tag-chip:hover { opacity: 0.8; }
+.tag-chip.active { }
+.tag-chip.nut { color: var(--cat-nut); border-color: var(--cat-nut); }
+.tag-chip.nut.active { background: var(--cat-nut); color: #fff; }
+.tag-chip.sed { color: var(--cat-sed); border-color: var(--cat-sed); }
+.tag-chip.sed.active { background: var(--cat-sed); color: #fff; }
+.tag-chip.atb { color: var(--cat-atb); border-color: var(--cat-atb); }
+.tag-chip.atb.active { background: var(--cat-atb); color: #1a0f00; }
+.tag-chip.qmt { color: var(--cat-qmt); border-color: var(--cat-qmt); }
+.tag-chip.qmt.active { background: var(--cat-qmt); color: #fff; }
+.tag-chip.oth { color: var(--cat-oth); border-color: var(--cat-oth); }
+.tag-chip.oth.active { background: var(--cat-oth); color: #fff; }
+
+.cat-textarea {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text);
+  font-size: 12px;
+  font-family: var(--sans);
+  padding: 8px 10px;
+  resize: vertical;
+  min-height: 60px;
+  outline: none;
+  transition: border-color .15s;
+  line-height: 1.5;
+}
+.cat-textarea:focus { border-color: var(--accent); }
+.cat-textarea::placeholder { color: var(--text3); }
+
+.panel-footer {
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  flex-shrink: 0;
+  background: var(--surface2);
+}
+
+/* ─── CSV UPLOAD MODAL ─── */
+#csv-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 300;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+#csv-overlay.open { display: flex; }
+
+#csv-modal {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  width: 480px;
+  max-width: 95vw;
+}
+.modal-header {
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.modal-title { font-size: 15px; font-weight: 600; }
+.modal-body { padding: 20px; }
+.modal-footer {
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.drop-zone {
+  border: 2px dashed var(--border2);
+  border-radius: 8px;
+  padding: 36px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .2s;
+}
+.drop-zone:hover, .drop-zone.drag-over {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+.drop-zone svg { width: 32px; height: 32px; color: var(--text3); margin: 0 auto 10px; display: block; }
+.drop-zone p { font-size: 13px; color: var(--text2); }
+.drop-zone small { font-size: 11px; color: var(--text3); }
+#file-input { display: none; }
+
+#csv-preview {
+  margin-top: 16px;
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+}
+.preview-info {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  background: var(--surface2);
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+.preview-info svg { width: 14px; height: 14px; color: var(--cat-nut); flex-shrink: 0; }
+.preview-list {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.preview-row {
+  display: flex;
+  gap: 12px;
+  padding: 7px 12px;
+  font-size: 11px;
+  border-bottom: 1px solid var(--border);
+  align-items: center;
+}
+.preview-row:last-child { border-bottom: none; }
+.preview-row:hover { background: var(--surface2); }
+.pr-room { font-family: var(--mono); color: var(--accent); min-width: 35px; font-size: 12px; }
+.pr-name { flex: 1; color: var(--text); }
+.pr-doc { color: var(--text3); font-size: 10px; }
+
+/* ─── HISTORY VIEW ─── */
+.history-filters {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.filter-input {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 12px;
+  font-family: var(--sans);
+  padding: 7px 12px;
+  outline: none;
+  transition: border-color .15s;
+}
+.filter-input:focus { border-color: var(--accent); }
+.filter-input::placeholder { color: var(--text3); }
+
+#history-results {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.hist-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.hist-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--surface2);
+  cursor: pointer;
+}
+.hist-card-body {
+  padding: 12px 14px;
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+}
+.hist-card-body.open { display: flex; }
+.hist-day-entry {
+  font-size: 12px;
+  color: var(--text2);
+  line-height: 1.5;
+}
+.hist-day-label {
+  font-weight: 600;
+  color: var(--text);
+  margin-right: 6px;
+}
+
+/* ─── TOAST ─── */
+#toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(60px);
+  background: var(--surface3);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  padding: 10px 18px;
+  border-radius: 6px;
+  font-size: 13px;
+  z-index: 999;
+  transition: transform .3s, opacity .3s;
+  opacity: 0;
+  pointer-events: none;
+  white-space: nowrap;
+}
+#toast.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+/* ─── FIREBASE CONFIG BANNER ─── */
+#config-banner {
+  background: linear-gradient(135deg, #1a1035, #0d1b3e);
+  border-bottom: 2px solid var(--accent);
+  padding: 20px 24px;
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+#config-banner.hidden { display: none; }
+.config-banner-icon { font-size: 22px; flex-shrink: 0; margin-top: 2px; }
+.config-banner-text { flex: 1; }
+.config-banner-text h3 { font-size: 14px; font-weight: 600; margin-bottom: 6px; color: var(--text); }
+.config-banner-text p { font-size: 12px; color: var(--text2); line-height: 1.6; }
+.config-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+.config-form input {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 5px;
+  color: var(--text);
+  font-size: 11px;
+  font-family: var(--mono);
+  padding: 6px 10px;
+  outline: none;
+}
+.config-form input:focus { border-color: var(--accent); }
+.config-form input::placeholder { color: var(--text3); }
+.config-form input.full { grid-column: 1/-1; }
+
+/* ─── LOADING ─── */
+.spinner {
+  width: 16px; height: 16px;
+  border: 2px solid var(--border2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  display: inline-block;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── SCROLLBAR ─── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 3px; }
+
+/* ─── NO DATA ─── */
+.no-data {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text3);
+  font-size: 14px;
+}
+.no-data svg { width: 40px; height: 40px; margin: 0 auto 12px; display: block; opacity: .3; }
+
+@media (max-width: 700px) {
+  #header { flex-wrap: wrap; height: auto; padding: 10px; gap: 8px; }
+  .floor-tabs { order: 3; }
+  #entry-panel { width: 100%; right: -100%; }
+  #entry-panel.open { right: 0; }
+  .config-form { grid-template-columns: 1fr; }
+  .config-form input.full { grid-column: 1; }
+}
+</style>
+</head>
+<body>
+
+<!-- FIREBASE CONFIG BANNER -->
+<div id="config-banner">
+  <div class="config-banner-icon">🔥</div>
+  <div class="config-banner-text">
+    <h3>Configuración de Firebase</h3>
+    <p>Ingresá las credenciales de tu proyecto Firebase para activar el almacenamiento en Firestore. Creá un proyecto en <strong>console.firebase.google.com</strong> y habilitá Firestore Database.</p>
+    <div class="config-form">
+      <input id="cfg-apiKey" placeholder="apiKey" class="full">
+      <input id="cfg-authDomain" placeholder="authDomain (proyecto.firebaseapp.com)">
+      <input id="cfg-projectId" placeholder="projectId">
+      <input id="cfg-appId" placeholder="appId" class="full">
     </div>
+    <div style="margin-top:10px; display:flex; gap:8px;">
+      <button class="btn primary" onclick="saveConfig()">Guardar y conectar</button>
+      <button class="btn" onclick="useLocalMode()">Usar modo local (sin Firebase)</button>
+    </div>
+  </div>
+</div>
 
-    <script>
-      const form = document.getElementById('formUsuario');
-      const salida = document.getElementById('salidaUsuario');
+<!-- HEADER -->
+<div id="header">
+  <div class="logo">Seg. Clínico</div>
 
-      form.addEventListener('submit', function (event) {
-        event.preventDefault();
-        const nombre = document.getElementById('nombre').value.trim();
-        const detalle = document.getElementById('detalle').value.trim();
+  <div class="week-nav">
+    <button onclick="changeWeek(-1)" title="Semana anterior">‹</button>
+    <span id="week-label">—</span>
+    <button onclick="changeWeek(1)" title="Semana siguiente">›</button>
+  </div>
 
-        salida.textContent = `Nombre: ${nombre || '-'}\nDetalle: ${detalle || '-'}`;
-      });
-    </script>
-  </body>
+  <div class="floor-tabs" id="floor-tabs"></div>
+
+  <div class="header-actions">
+    <div class="search-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input id="search-input" placeholder="Buscar paciente..." oninput="filterPatients(this.value)">
+    </div>
+    <button class="btn" onclick="openCSV()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Cargar CSV
+    </button>
+    <button class="btn" onclick="toggleView('history')" id="btn-history">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Historial
+    </button>
+    <button class="btn" onclick="saveWeek()" id="btn-save">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      Guardar semana
+    </button>
+  </div>
+</div>
+
+<!-- MAIN VIEW -->
+<div id="view-main">
+  <div id="main-area">
+    <div class="section-header">
+      <span class="section-title" id="floor-title">Piso —</span>
+      <span class="patient-count" id="patient-count"></span>
+    </div>
+    <div class="table-wrap">
+      <table class="patient-table">
+        <thead>
+          <tr>
+            <th style="width:50px">Cama</th>
+            <th style="min-width:200px">Paciente</th>
+            <th style="min-width:140px">Médico / Cobertura</th>
+            <th style="min-width:90px">Diagnóstico</th>
+            <th class="day-col">Lunes</th>
+            <th class="day-col">Martes</th>
+            <th class="day-col">Miércoles</th>
+            <th class="day-col">Jueves</th>
+            <th class="day-col">Viernes</th>
+          </tr>
+        </thead>
+        <tbody id="patient-tbody"></tbody>
+      </table>
+    </div>
+    <div id="no-patients" class="no-data" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <p>Sin pacientes en este piso.<br><small>Cargá el CSV para importar la lista.</small></p>
+    </div>
+  </div>
+</div>
+
+<!-- HISTORY VIEW -->
+<div id="view-history" style="display:none; padding:16px 20px;">
+  <div class="section-header">
+    <span class="section-title">Historial de Seguimientos</span>
+    <button class="btn" onclick="toggleView('main')">← Volver</button>
+  </div>
+  <div class="history-filters">
+    <input class="filter-input" id="hist-search-patient" placeholder="Buscar por paciente..." oninput="searchHistory()">
+    <input class="filter-input" id="hist-search-drug" placeholder="Buscar por droga/tag..." oninput="searchHistory()">
+    <input class="filter-input" id="hist-search-week" type="week" oninput="searchHistory()">
+  </div>
+  <div id="history-results"></div>
+</div>
+
+<!-- ENTRY PANEL OVERLAY -->
+<div id="entry-overlay" onclick="closePanelOnOverlay(event)"></div>
+
+<!-- ENTRY PANEL -->
+<div id="entry-panel">
+  <div class="panel-header">
+    <div class="panel-title">
+      <div class="panel-patient-name" id="panel-patient-name">—</div>
+      <div class="panel-meta" id="panel-meta">—</div>
+    </div>
+    <button class="panel-close" onclick="closePanel()">✕</button>
+  </div>
+  <div class="day-selector" id="day-selector"></div>
+  <div class="panel-body" id="panel-body"></div>
+  <div class="panel-footer">
+    <button class="btn" onclick="closePanel()">Cancelar</button>
+    <button class="btn primary" onclick="saveEntry()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+      Guardar
+    </button>
+  </div>
+</div>
+
+<!-- CSV UPLOAD MODAL -->
+<div id="csv-overlay" onclick="closeCsvOnOverlay(event)">
+  <div id="csv-modal">
+    <div class="modal-header">
+      <span class="modal-title">Importar Listado de Internaciones</span>
+      <button class="panel-close" onclick="closeCSV()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()"
+           ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        <p>Arrastrá el CSV o hacé click para seleccionar</p>
+        <small>Formato: Listado de Internaciones (sal_internaciones.csv)</small>
+      </div>
+      <input type="file" id="file-input" accept=".csv" onchange="handleFileInput(this)">
+      <div id="csv-preview"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeCSV()">Cancelar</button>
+      <button class="btn primary" id="btn-import" onclick="importPatients()" disabled>
+        Importar pacientes
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, doc, setDoc, getDoc, collection, getDocs, query, where, orderBy } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+// ─── CATEGORIES & TAGS ───────────────────────────────────────────────────────
+const CATS = [
+  { id: 'nutricion', label: 'Nutrición',    cls: 'nut', dot: '#2da44e' },
+  { id: 'sedacion',  label: 'Sedación',     cls: 'sed', dot: '#c87af0' },
+  { id: 'antibioticos', label: 'Antibióticos', cls: 'atb', dot: '#f5a623' },
+  { id: 'qmt',       label: 'QMT',          cls: 'qmt', dot: '#ef5e5e' },
+  { id: 'otros',     label: 'Otros',        cls: 'oth', dot: '#4ab3c7' },
+];
+
+const TAGS = {
+  nutricion: ['NPT Magistral 63 ml/h', 'Fresubin Original 63 ml/h', 'Fresubin Energy 42 ml/h', 'Protison 42 ml/h', 'NE por SNG', 'Ayuno', 'Dieta blanda'],
+  sedacion:  ['Midazolam', 'Metadona 5mg c/8h', 'Morfina', 'Oxicodona', 'Fentanilo', 'Propofol', 'Dexmedetomidina', 'Ketamina'],
+  antibioticos: ['Vancomicina', 'Meropenem', 'Pip/Tazo 4,5g c/6h', 'Aciclovir 400mg c/12h', 'Caspofungina', 'Daptomicina', 'Ampicilina-Sulbactam', 'Colistin'],
+  qmt: ['Rituximab + EPOCH', 'Ciclo 2', 'Carbo/Etopósido + Atezolizumab', 'FOLFIRI', 'FOLFOX', 'Cisplatino', 'Ciclofosfamida', 'Paclitaxel'],
+  otros: ['Filgrastim', 'Bactrim forte', 'Isavuconazol', 'Ceftolozano + Tazobactam', 'Heparina', 'HBPM', 'Omeprazol', 'Dexametasona'],
+};
+
+const DAYS = ['lunes','martes','miercoles','jueves','viernes'];
+const DAY_LABELS = { lunes:'Lun', martes:'Mar', miercoles:'Mié', jueves:'Jue', viernes:'Vie' };
+const FLOORS = ['1','2','3','4','5'];
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let db = null;
+let localMode = false;
+let currentWeek = getWeekId(new Date());
+let currentFloor = '3';
+let allPatients = JSON.parse(localStorage.getItem('sc_patients') || '{}');
+let weekData = JSON.parse(localStorage.getItem(`sc_week_${currentWeek}`) || '{}');
+let pendingCSV = [];
+let panelState = { hc: null, day: 'lunes', data: {} };
+
+// ─── FIREBASE ─────────────────────────────────────────────────────────────────
+function getWeekId(date) {
+  const d = new Date(date);
+  d.setHours(0,0,0,0);
+  d.setDate(d.getDate() + 3 - (d.getDay()+6)%7);
+  const week1 = new Date(d.getFullYear(),0,4);
+  const wn = 1 + Math.round(((d-week1)/86400000 - 3 + (week1.getDay()+6)%7)/7);
+  return `${d.getFullYear()}-W${String(wn).padStart(2,'0')}`;
+}
+
+function getWeekDates(weekId) {
+  const [year, wn] = weekId.replace('W','').split('-').map(Number);
+  const jan4 = new Date(year, 0, 4);
+  const startOfWeek = new Date(jan4);
+  startOfWeek.setDate(jan4.getDate() - (jan4.getDay()+6)%7 + (wn-1)*7);
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 4);
+  const fmt = d => d.toLocaleDateString('es-AR', {day:'2-digit',month:'2-digit'});
+  return `${fmt(startOfWeek)} – ${fmt(endOfWeek)}`;
+}
+
+window.saveConfig = async function() {
+  const cfg = {
+    apiKey: document.getElementById('cfg-apiKey').value.trim(),
+    authDomain: document.getElementById('cfg-authDomain').value.trim(),
+    projectId: document.getElementById('cfg-projectId').value.trim(),
+    appId: document.getElementById('cfg-appId').value.trim(),
+  };
+  if (!cfg.apiKey || !cfg.projectId) { showToast('Completá al menos apiKey y projectId'); return; }
+  localStorage.setItem('sc_fb_config', JSON.stringify(cfg));
+  await initFirebase(cfg);
+};
+
+window.useLocalMode = function() {
+  localMode = true;
+  document.getElementById('config-banner').classList.add('hidden');
+  showToast('Modo local activo — datos guardados en el navegador');
+  renderAll();
+};
+
+async function initFirebase(cfg) {
+  try {
+    const app = initializeApp(cfg);
+    db = getFirestore(app);
+    document.getElementById('config-banner').classList.add('hidden');
+    showToast('Firebase conectado ✓');
+    await loadWeekFromFirestore();
+    renderAll();
+  } catch(e) {
+    showToast('Error conectando Firebase: ' + e.message);
+  }
+}
+
+async function loadWeekFromFirestore() {
+  if (!db) return;
+  try {
+    const snap = await getDoc(doc(db, 'weeks', currentWeek));
+    if (snap.exists()) weekData = snap.data();
+    // Load patients
+    const pSnap = await getDocs(collection(db, 'patients'));
+    pSnap.forEach(d => { allPatients[d.id] = d.data(); });
+  } catch(e) { console.warn('Firestore load:', e); }
+}
+
+async function saveToFirestore() {
+  if (!db) return;
+  try {
+    await setDoc(doc(db, 'weeks', currentWeek), weekData);
+    // Save patients
+    for (const [hc, p] of Object.entries(allPatients)) {
+      await setDoc(doc(db, 'patients', hc), p);
+    }
+  } catch(e) { showToast('Error guardando en Firestore: ' + e.message); throw e; }
+}
+
+// ─── WEEK NAV ─────────────────────────────────────────────────────────────────
+window.changeWeek = async function(dir) {
+  const [y, wn] = currentWeek.replace('W','').split('-').map(Number);
+  const jan4 = new Date(y, 0, 4);
+  const startOfWeek = new Date(jan4);
+  startOfWeek.setDate(jan4.getDate() - (jan4.getDay()+6)%7 + (wn-1)*7 + dir*7);
+  currentWeek = getWeekId(startOfWeek);
+  weekData = JSON.parse(localStorage.getItem(`sc_week_${currentWeek}`) || '{}');
+  await loadWeekFromFirestore();
+  renderAll();
+};
+
+function updateWeekLabel() {
+  document.getElementById('week-label').textContent =
+    currentWeek.replace('-', ' ') + ' · ' + getWeekDates(currentWeek);
+}
+
+// ─── FLOOR TABS ───────────────────────────────────────────────────────────────
+function renderFloorTabs() {
+  const el = document.getElementById('floor-tabs');
+  el.innerHTML = FLOORS.map(f =>
+    `<button class="floor-tab ${f===currentFloor?'active':''}" onclick="selectFloor('${f}')">Piso ${f}</button>`
+  ).join('');
+}
+window.selectFloor = function(f) { currentFloor = f; renderTable(); renderFloorTabs(); };
+
+// ─── PATIENTS TABLE ───────────────────────────────────────────────────────────
+function getFloorPatients() {
+  const prefix = currentFloor;
+  return Object.values(allPatients)
+    .filter(p => String(p.cama).startsWith(prefix) && String(p.cama).length === 3)
+    .sort((a,b) => Number(a.cama) - Number(b.cama));
+}
+
+function renderTable(filter='') {
+  const patients = getFloorPatients().filter(p =>
+    !filter || p.paciente.toLowerCase().includes(filter.toLowerCase())
+  );
+  const tbody = document.getElementById('patient-tbody');
+  document.getElementById('floor-title').textContent = `Piso ${currentFloor}`;
+  document.getElementById('patient-count').textContent = `${patients.length} paciente${patients.length!==1?'s':''}`;
+
+  if (!patients.length) {
+    tbody.innerHTML = '';
+    document.getElementById('no-patients').style.display = 'block';
+    return;
+  }
+  document.getElementById('no-patients').style.display = 'none';
+
+  tbody.innerHTML = patients.map(p => {
+    const hc = String(p.hc);
+    return `
+      <tr>
+        <td><div class="cell-room">${p.cama}</div></td>
+        <td>
+          <div class="cell-patient-name">${p.paciente}</div>
+          <div class="cell-sub">HC ${p.hc}${p.ingreso ? ' · Ing. '+p.ingreso : ''}</div>
+        </td>
+        <td>
+          <div style="font-size:12px;color:var(--text2)">${p.medico||'—'}</div>
+          <div class="cell-sub">${(p.cobertura||'').split(' - ')[0]}</div>
+        </td>
+        <td><span class="cell-diag">${p.diagnostico||'—'}</span></td>
+        ${DAYS.map(day => `
+          <td style="padding:6px">
+            <button class="day-cell-btn ${hasData(hc,day)?'has-data':''}"
+                    onclick="openPanel('${hc}','${day}')">
+              ${renderDayBadges(hc,day)}
+            </button>
+          </td>
+        `).join('')}
+      </tr>`;
+  }).join('');
+}
+
+function hasData(hc, day) {
+  const entry = weekData[`${hc}_${day}`];
+  if (!entry) return false;
+  return CATS.some(c => entry[c.id] && (entry[c.id].text || entry[c.id].tags?.length));
+}
+
+function renderDayBadges(hc, day) {
+  const entry = weekData[`${hc}_${day}`];
+  if (!entry) return `<div class="cell-empty">+</div>`;
+  const badges = CATS.filter(c => {
+    const d = entry[c.id];
+    return d && (d.text || d.tags?.length);
+  }).map(c => `<span class="badge ${c.cls}">${c.label.substring(0,3).toUpperCase()}</span>`).join('');
+  return badges || `<div class="cell-empty">+</div>`;
+}
+
+// ─── ENTRY PANEL ──────────────────────────────────────────────────────────────
+window.openPanel = function(hc, day) {
+  const p = allPatients[hc];
+  if (!p) return;
+  panelState.hc = hc;
+  panelState.day = day;
+  panelState.data = JSON.parse(JSON.stringify(weekData[`${hc}_${day}`] || {}));
+
+  document.getElementById('panel-patient-name').textContent = p.paciente;
+  document.getElementById('panel-meta').textContent =
+    `Cama ${p.cama} · HC ${p.hc} · ${p.medico||''}`;
+
+  renderDaySelector();
+  renderPanelBody();
+
+  document.getElementById('entry-overlay').classList.add('open');
+  document.getElementById('entry-panel').classList.add('open');
+};
+
+function renderDaySelector() {
+  const el = document.getElementById('day-selector');
+  el.innerHTML = DAYS.map(d =>
+    `<button class="day-btn ${d===panelState.day?'active':''}"
+             onclick="switchPanelDay('${d}')">${DAY_LABELS[d]}</button>`
+  ).join('');
+}
+
+window.switchPanelDay = function(day) {
+  // Save current before switching
+  collectPanelData();
+  panelState.day = day;
+  panelState.data = JSON.parse(JSON.stringify(
+    weekData[`${panelState.hc}_${day}`] || {}
+  ));
+  renderDaySelector();
+  renderPanelBody();
+};
+
+function renderPanelBody() {
+  const el = document.getElementById('panel-body');
+  el.innerHTML = CATS.map(cat => {
+    const entry = panelState.data[cat.id] || {};
+    const activeTags = entry.tags || [];
+    const text = entry.text || '';
+    const tags = TAGS[cat.id] || [];
+    const summary = activeTags.length ? activeTags.join(', ') : (text ? text.substring(0,40) : '');
+
+    return `
+      <div class="cat-section" id="cat-sec-${cat.id}">
+        <div class="cat-header" onclick="toggleCat('${cat.id}')">
+          <div class="cat-dot" style="background:${cat.dot}"></div>
+          <span class="cat-label" style="color:${cat.dot}">${cat.label}</span>
+          <span class="cat-summary" id="cat-sum-${cat.id}">${summary}</span>
+          <span class="cat-toggle">▾</span>
+        </div>
+        <div class="cat-body" id="cat-body-${cat.id}" style="${activeTags.length||text?'':'display:none'}">
+          <div class="tags-row">
+            ${tags.map(t => `
+              <button class="tag-chip ${cat.cls} ${activeTags.includes(t)?'active':''}"
+                      onclick="toggleTag('${cat.id}','${t.replace(/'/g,"\\'")}',this)">
+                ${t}
+              </button>`).join('')}
+          </div>
+          <textarea class="cat-textarea" id="ta-${cat.id}"
+                    placeholder="Notas adicionales de ${cat.label.toLowerCase()}..."
+                    oninput="updateCatSummary('${cat.id}')">${text}</textarea>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+window.toggleCat = function(catId) {
+  const body = document.getElementById(`cat-body-${catId}`);
+  body.style.display = body.style.display === 'none' ? '' : 'none';
+};
+
+window.toggleTag = function(catId, tag, btn) {
+  if (!panelState.data[catId]) panelState.data[catId] = { tags: [], text: '' };
+  const tags = panelState.data[catId].tags || [];
+  const idx = tags.indexOf(tag);
+  if (idx >= 0) { tags.splice(idx,1); btn.classList.remove('active'); }
+  else { tags.push(tag); btn.classList.add('active'); }
+  panelState.data[catId].tags = tags;
+  updateCatSummary(catId);
+  // Auto-open category body
+  const body = document.getElementById(`cat-body-${catId}`);
+  if (body.style.display === 'none') body.style.display = '';
+};
+
+window.updateCatSummary = function(catId) {
+  const entry = panelState.data[catId] || {};
+  const tags = entry.tags || [];
+  const ta = document.getElementById(`ta-${catId}`);
+  const text = ta ? ta.value : '';
+  const sum = document.getElementById(`cat-sum-${catId}`);
+  if (sum) sum.textContent = tags.length ? tags.join(', ') : text.substring(0,40);
+};
+
+function collectPanelData() {
+  CATS.forEach(cat => {
+    const ta = document.getElementById(`ta-${cat.id}`);
+    if (!ta) return;
+    if (!panelState.data[cat.id]) panelState.data[cat.id] = { tags: [], text: '' };
+    panelState.data[cat.id].text = ta.value;
+  });
+}
+
+window.saveEntry = function() {
+  collectPanelData();
+  const key = `${panelState.hc}_${panelState.day}`;
+  weekData[key] = panelState.data;
+  // Persist locally always
+  localStorage.setItem(`sc_week_${currentWeek}`, JSON.stringify(weekData));
+  renderTable(document.getElementById('search-input').value);
+  closePanel();
+  showToast('Entrada guardada');
+};
+
+window.saveWeek = async function() {
+  localStorage.setItem(`sc_week_${currentWeek}`, JSON.stringify(weekData));
+  if (db) {
+    const btn = document.getElementById('btn-save');
+    btn.innerHTML = '<span class="spinner"></span> Guardando...';
+    try {
+      await saveToFirestore();
+      showToast('Semana guardada en Firestore ✓');
+    } catch(e) {}
+    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Guardar semana`;
+  } else {
+    showToast('Semana guardada localmente ✓');
+  }
+};
+
+window.closePanel = function() {
+  document.getElementById('entry-overlay').classList.remove('open');
+  document.getElementById('entry-panel').classList.remove('open');
+};
+window.closePanelOnOverlay = function(e) {
+  if (e.target === document.getElementById('entry-overlay')) closePanel();
+};
+
+// ─── CSV IMPORT ───────────────────────────────────────────────────────────────
+window.openCSV = () => document.getElementById('csv-overlay').classList.add('open');
+window.closeCSV = () => { document.getElementById('csv-overlay').classList.remove('open'); pendingCSV=[]; document.getElementById('csv-preview').style.display='none'; document.getElementById('btn-import').disabled=true; };
+window.closeCsvOnOverlay = (e) => { if(e.target===document.getElementById('csv-overlay')) closeCSV(); };
+
+window.handleDragOver = function(e) { e.preventDefault(); document.getElementById('drop-zone').classList.add('drag-over'); };
+window.handleDragLeave = function() { document.getElementById('drop-zone').classList.remove('drag-over'); };
+window.handleDrop = function(e) { e.preventDefault(); document.getElementById('drop-zone').classList.remove('drag-over'); readCSVFile(e.dataTransfer.files[0]); };
+window.handleFileInput = function(input) { if(input.files[0]) readCSVFile(input.files[0]); };
+
+function readCSVFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const text = e.target.result;
+    pendingCSV = parseCSV(text);
+    showCSVPreview(pendingCSV);
+  };
+  reader.readAsText(file, 'latin1');
+}
+
+function parseCSV(text) {
+  const patients = [];
+  const re = /["']?(\d{3})["']?\s*,\s*["']?([\w,\s\.ÑÁÉÍÓÚÜ\/\-]+?)["']?\s*,\s*["']?(\d+\.?\d*)["']?\s*,\s*["']?([\w\s\'`ÁÉÍÓÚÜ]+?)["']?\s*,\s*["']?(\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2})["']?\s*,\s*["']?(\d+)["']?\s*,\s*["']?(.*?)["']?\s*,\s*["']?(INTERNACION|CUIDADOS PALEATIVOS)["']?\s*,\s*["']?(.*?)["']?(?:,|$)/gi;
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    const cama = m[1];
+    // Determine floor from room number
+    const floor = cama.charAt(0);
+    patients.push({
+      cama, hc: m[3].replace('.0',''),
+      paciente: m[2].trim(),
+      medico: m[4].trim(),
+      ingreso: m[5],
+      dias: m[6],
+      cobertura: m[7].trim(),
+      servicio: m[8],
+      diagnostico: m[9].trim() || 'SIN DIAGNÓSTICO',
+      floor,
+    });
+  }
+  return patients;
+}
+
+function showCSVPreview(patients) {
+  const el = document.getElementById('csv-preview');
+  if (!patients.length) { el.style.display='none'; showToast('No se encontraron pacientes'); return; }
+  el.style.display = 'flex';
+  el.innerHTML = `
+    <div class="preview-info">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      <span>${patients.length} pacientes encontrados en ${new Set(patients.map(p=>p.floor)).size} pisos</span>
+    </div>
+    <div class="preview-list">
+      ${patients.map(p=>`
+        <div class="preview-row">
+          <span class="pr-room">${p.cama}</span>
+          <span class="pr-name">${p.paciente}</span>
+          <span class="pr-doc">${p.medico}</span>
+        </div>`).join('')}
+    </div>`;
+  document.getElementById('btn-import').disabled = false;
+}
+
+window.importPatients = async function() {
+  if (!pendingCSV.length) return;
+  for (const p of pendingCSV) {
+    allPatients[p.hc] = p;
+  }
+  localStorage.setItem('sc_patients', JSON.stringify(allPatients));
+  if (db) { for (const [hc,p] of Object.entries(allPatients)) { try { await setDoc(doc(db,'patients',hc),p); } catch(e){} } }
+  closeCSV();
+  renderTable();
+  showToast(`${pendingCSV.length} pacientes importados ✓`);
+  pendingCSV = [];
+};
+
+// ─── HISTORY VIEW ─────────────────────────────────────────────────────────────
+window.toggleView = function(view) {
+  document.getElementById('view-main').style.display = view==='main' ? 'block' : 'none';
+  document.getElementById('view-history').style.display = view==='history' ? 'block' : 'none';
+  if (view==='history') searchHistory();
+};
+
+window.searchHistory = function() {
+  const patQ = document.getElementById('hist-search-patient').value.toLowerCase();
+  const drugQ = document.getElementById('hist-search-drug').value.toLowerCase();
+  const weekQ = document.getElementById('hist-search-week').value; // YYYY-Www
+
+  // Gather all local weeks
+  const weeks = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (!key.startsWith('sc_week_')) continue;
+    const wid = key.replace('sc_week_','');
+    if (weekQ && wid !== weekQ.replace('-W','-W').replace('-W0','-W').replace('-W','-W')) {
+      // rough match
+      if (!wid.includes(weekQ.replace('W',''))) continue;
+    }
+    try { weeks[wid] = JSON.parse(localStorage.getItem(key)); } catch(e){}
+  }
+
+  const results = [];
+  for (const [wid, data] of Object.entries(weeks)) {
+    for (const [key, dayData] of Object.entries(data)) {
+      const [hc, day] = key.split('_');
+      const patient = allPatients[hc];
+      if (!patient) continue;
+      if (patQ && !patient.paciente.toLowerCase().includes(patQ)) continue;
+
+      // Check drug match
+      let drugMatch = !drugQ;
+      if (drugQ) {
+        for (const cat of CATS) {
+          const cd = dayData[cat.id];
+          if (!cd) continue;
+          if ((cd.text||'').toLowerCase().includes(drugQ)) { drugMatch=true; break; }
+          if ((cd.tags||[]).some(t=>t.toLowerCase().includes(drugQ))) { drugMatch=true; break; }
+        }
+      }
+      if (!drugMatch) continue;
+      results.push({ wid, day, patient, hc, dayData });
+    }
+  }
+
+  renderHistoryResults(results);
+};
+
+function renderHistoryResults(results) {
+  const el = document.getElementById('history-results');
+  if (!results.length) {
+    el.innerHTML = '<div class="no-data"><p>Sin resultados para los filtros aplicados.</p></div>';
+    return;
+  }
+
+  // Group by week + patient
+  const grouped = {};
+  for (const r of results) {
+    const gkey = `${r.wid}_${r.hc}`;
+    if (!grouped[gkey]) grouped[gkey] = { wid: r.wid, patient: r.patient, hc: r.hc, days: {} };
+    grouped[gkey].days[r.day] = r.dayData;
+  }
+
+  el.innerHTML = Object.values(grouped).map(g => `
+    <div class="hist-card">
+      <div class="hist-card-header" onclick="this.nextElementSibling.classList.toggle('open')">
+        <span class="cell-room" style="font-size:12px;min-width:35px">${g.patient.cama}</span>
+        <strong style="flex:1;font-size:13px">${g.patient.paciente}</strong>
+        <span style="font-family:var(--mono);font-size:11px;color:var(--text3)">${g.wid} · ${getWeekDates(g.wid)}</span>
+        <span style="margin-left:8px;color:var(--text3)">▾</span>
+      </div>
+      <div class="hist-card-body">
+        ${DAYS.filter(d=>g.days[d]).map(d => `
+          <div>
+            <span class="hist-day-label">${DAY_LABELS[d]}:</span>
+            ${CATS.filter(c=>{const e=g.days[d][c.id];return e&&(e.tags?.length||e.text);}).map(c=>{
+              const e = g.days[d][c.id];
+              const parts = [];
+              if (e.tags?.length) parts.push(e.tags.map(t=>`<span class="badge ${c.cls}">${t}</span>`).join(' '));
+              if (e.text) parts.push(`<span style="color:var(--text2);font-size:11px">${e.text}</span>`);
+              return `<span style="margin-right:10px"><span style="color:${c.dot};font-size:11px;font-weight:600">${c.label}:</span> ${parts.join(' ')}</span>`;
+            }).join('')}
+          </div>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
+// ─── SEARCH ───────────────────────────────────────────────────────────────────
+window.filterPatients = function(q) { renderTable(q); };
+
+// ─── TOAST ────────────────────────────────────────────────────────────────────
+window.showToast = function(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._tid);
+  t._tid = setTimeout(() => t.classList.remove('show'), 2800);
+};
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+function renderAll() {
+  updateWeekLabel();
+  renderFloorTabs();
+  renderTable();
+}
+
+async function init() {
+  updateWeekLabel();
+  renderFloorTabs();
+
+  // Try to restore Firebase config
+  const saved = localStorage.getItem('sc_fb_config');
+  if (saved) {
+    try {
+      const cfg = JSON.parse(saved);
+      await initFirebase(cfg);
+    } catch(e) { renderAll(); }
+  } else {
+    renderAll();
+  }
+
+  // If patients already loaded, render immediately
+  if (Object.keys(allPatients).length > 0) {
+    document.getElementById('config-banner').classList.add('hidden');
+    renderAll();
+    useLocalMode(); // don't require firebase if we have data
+  }
+}
+
+init();
+</script>
+</body>
 </html>
