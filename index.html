@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Seguimiento semanal</title>
+    <style>
+      :root {
+        --bg: #f8fafc;
+        --card: #ffffff;
+        --text: #0f172a;
+        --muted: #475569;
+        --line: #cbd5e1;
+        --accent: #0284c7;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: Inter, Arial, sans-serif;
+      }
+
+      .container {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 1.25rem;
+      }
+
+      h1 {
+        margin: 0 0 1rem;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: 320px 1fr;
+        gap: 1rem;
+      }
+
+      .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 1rem;
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      .days {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+
+      .days li {
+        padding: 0.6rem 0.7rem;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        margin-bottom: 0.45rem;
+      }
+
+      .sectors {
+        margin: 0;
+        padding-left: 1.1rem;
+      }
+
+      label {
+        display: block;
+        margin-top: 0.75rem;
+        font-weight: 600;
+      }
+
+      input,
+      select,
+      textarea,
+      button {
+        width: 100%;
+        margin-top: 0.35rem;
+        padding: 0.6rem;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        font-size: 0.95rem;
+      }
+
+      textarea {
+        resize: vertical;
+        min-height: 90px;
+      }
+
+      button {
+        margin-top: 1rem;
+        border-color: var(--accent);
+        background: var(--accent);
+        color: #fff;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        padding: 0.6rem 0.35rem;
+        vertical-align: top;
+      }
+
+      .empty {
+        padding: 1rem;
+        border: 1px dashed var(--line);
+        border-radius: 8px;
+      }
+
+      @media (max-width: 900px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <h1>Seguimiento semanal</h1>
+
+      <section class="layout">
+        <aside class="card">
+          <h2>Días (uno debajo de otro)</h2>
+          <ul id="listaDias" class="days"></ul>
+
+          <h3>Sectores disponibles</h3>
+          <ul class="sectors" id="listaSectores"></ul>
+          <p class="muted">
+            Se ignoran Piso 1 y Piso 2 en general. Excepción solicitada: <strong>U.T.I.Q Piso 2</strong>.
+          </p>
+        </aside>
+
+        <section class="card">
+          <h2>Cargar información del usuario</h2>
+          <form id="formRegistro">
+            <label for="nombre">Nombre</label>
+            <input id="nombre" name="nombre" type="text" required placeholder="Ej: Ana Pérez" />
+
+            <label for="dia">Día</label>
+            <select id="dia" name="dia" required></select>
+
+            <label for="sector">Sector</label>
+            <select id="sector" name="sector" required></select>
+
+            <label for="detalle">Información</label>
+            <textarea id="detalle" name="detalle" required placeholder="Detalle de la carga..."></textarea>
+
+            <button type="submit">Agregar registro</button>
+          </form>
+
+          <h3>Información cargada por el usuario (visible)</h3>
+          <div id="contenedorRegistros" class="empty">Aún no hay registros cargados.</div>
+        </section>
+      </section>
+    </main>
+
+    <script>
+      const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+      const SECTORES = [
+        { nombre: 'TAMO' },
+        { nombre: 'U.T.I', piso: 4 },
+        { nombre: 'U.T.I.Q', piso: 2 }
+      ];
+
+      const listaDias = document.getElementById('listaDias');
+      const listaSectores = document.getElementById('listaSectores');
+      const selectDia = document.getElementById('dia');
+      const selectSector = document.getElementById('sector');
+      const form = document.getElementById('formRegistro');
+      const contenedorRegistros = document.getElementById('contenedorRegistros');
+
+      const registros = [];
+
+      function textoSector(item) {
+        return item.piso ? `${item.nombre} — Piso ${item.piso}` : item.nombre;
+      }
+
+      function renderFiltros() {
+        DIAS.forEach((dia) => {
+          const li = document.createElement('li');
+          li.textContent = dia;
+          listaDias.appendChild(li);
+
+          const optDia = document.createElement('option');
+          optDia.value = dia;
+          optDia.textContent = dia;
+          selectDia.appendChild(optDia);
+        });
+
+        SECTORES.forEach((s) => {
+          const li = document.createElement('li');
+          li.textContent = textoSector(s);
+          listaSectores.appendChild(li);
+
+          const optSector = document.createElement('option');
+          optSector.value = textoSector(s);
+          optSector.textContent = textoSector(s);
+          selectSector.appendChild(optSector);
+        });
+      }
+
+      function renderRegistros() {
+        if (registros.length === 0) {
+          contenedorRegistros.className = 'empty';
+          contenedorRegistros.innerHTML = 'Aún no hay registros cargados.';
+          return;
+        }
+
+        contenedorRegistros.className = '';
+        const rows = registros
+          .map(
+            (r) => `
+              <tr>
+                <td>${r.nombre}</td>
+                <td>${r.dia}</td>
+                <td>${r.sector}</td>
+                <td>${r.detalle}</td>
+              </tr>
+            `
+          )
+          .join('');
+
+        contenedorRegistros.innerHTML = `
+          <table>
+            <thead>
+              <tr>
+                <th>Usuario</th>
+                <th>Día</th>
+                <th>Sector</th>
+                <th>Información visible</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        `;
+      }
+
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();
+
+        registros.unshift({
+          nombre: document.getElementById('nombre').value.trim(),
+          dia: selectDia.value,
+          sector: selectSector.value,
+          detalle: document.getElementById('detalle').value.trim()
+        });
+
+        form.reset();
+        renderRegistros();
+      });
+
+      renderFiltros();
+      renderRegistros();
+    </script>
+  </body>
+</html>
