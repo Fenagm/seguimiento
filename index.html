@@ -1012,6 +1012,32 @@ table.patient-table td {
   </div>
 </div>
 
+<!-- MOVE PATIENT MODAL -->
+<div id="move-patient-overlay" onclick="closeMovePatientOnOverlay(event)">
+  <div id="move-patient-modal">
+    <div class="modal-header">
+      <span class="modal-title">Mover de Cama</span>
+      <button class="panel-close" onclick="closeMovePatientModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12px; color:var(--text2); margin-bottom:16px;">
+        Paciente: <strong id="move-patient-name" style="color:var(--text)"></strong><br>
+        Cama actual: <strong id="move-current-room" style="color:var(--accent)"></strong>
+      </p>
+      <label style="font-size:11px; color:var(--text3); display:block; margin-bottom:8px;">Nueva Cama / Habitación</label>
+      <input type="text" id="new-move-room" placeholder="Ej: 305" style="width:100%; background:var(--surface2); border:1px solid var(--border2); border-radius:5px; color:var(--text); font-size:13px; padding:10px 12px;">
+      <p id="move-room-warning" style="font-size:11px; color:var(--cat-qmt); margin-top:8px; display:none;"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeMovePatientModal()">Cancelar</button>
+      <button class="btn primary" onclick="confirmMovePatient()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        Mover Paciente
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- PATIENT DAYS VIEW OVERLAY -->
 <div id="patient-days-overlay" onclick="closePatientDaysOnOverlay(event)">
   <div id="patient-days-panel">
@@ -1229,8 +1255,8 @@ function renderTable(filter='') {
   tbody.innerHTML = patients.map(p => {
     const hc = String(p.hc);
     return `
-      <tr>
-        <td><div class="cell-room">${p.cama}</div></td>
+      <tr class="patient-row" data-hc="${hc}">
+        <td><div class="cell-room" style="cursor:pointer" onclick="openMovePatient('${hc}')" title="Mover de cama">${p.cama}</div></td>
         <td>
           <div class="cell-patient-name">${p.paciente}</div>
           <div class="cell-sub">HC ${p.hc}${p.ingreso ? ' · Ing. '+p.ingreso : ''}</div>
@@ -1241,10 +1267,15 @@ function renderTable(filter='') {
         </td>
         <td><span class="cell-diag">${p.diagnostico||'—'}</span></td>
         <td style="padding:6px">
-          <button class="btn" onclick="openPatientDays('${hc}')" style="width:100%">
+          <button class="btn" onclick="toggleDaysRow('${hc}')" style="width:100%">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M9 18l6-6-6-6"/></svg>
             Ver días
           </button>
+        </td>
+      </tr>
+      <tr class="days-row" id="days-row-${hc}" style="display:none;">
+        <td colspan="5" style="padding:0;background:var(--surface2);">
+          <div class="days-row-content" id="days-content-${hc}"></div>
         </td>
       </tr>`;
   }).join('');
@@ -1604,6 +1635,13 @@ window.saveNewPatient = function() {
     return;
   }
 
+  // Verificar si la cama ya está ocupada
+  const camaOcupada = Object.values(allPatients).find(p => p.cama === cama);
+  if (camaOcupada) {
+    showToast(`La cama ${cama} ya está ocupada por ${camaOcupada.paciente}`);
+    return;
+  }
+
   const floor = cama.charAt(0);
   const newPatient = {
     cama,
@@ -1706,6 +1744,66 @@ window.addDayEntry = function() {
   if (currentDaysHc) {
     openPanel(currentDaysHc, 'lunes');
   }
+};
+
+// ─── MOVE PATIENT ─────────────────────────────────────────────────────────────
+let movePatientHc = null;
+
+window.openMovePatient = function(hc) {
+  const p = allPatients[hc];
+  if (!p) return;
+  
+  movePatientHc = hc;
+  document.getElementById('move-patient-name').textContent = p.paciente;
+  document.getElementById('move-current-room').textContent = p.cama;
+  document.getElementById('new-move-room').value = '';
+  document.getElementById('move-room-warning').style.display = 'none';
+  
+  document.getElementById('move-patient-overlay').classList.add('open');
+};
+
+window.closeMovePatientModal = function() {
+  document.getElementById('move-patient-overlay').classList.remove('open');
+  movePatientHc = null;
+};
+
+window.closeMovePatientOnOverlay = function(e) {
+  if (e.target === document.getElementById('move-patient-overlay')) closeMovePatientModal();
+};
+
+window.confirmMovePatient = function() {
+  if (!movePatientHc) return;
+  
+  const newRoom = document.getElementById('new-move-room').value.trim();
+  if (!newRoom) {
+    showToast('Ingrese una nueva cama');
+    return;
+  }
+  
+  const p = allPatients[movePatientHc];
+  if (!p) return;
+  
+  // Verificar si la nueva cama ya está ocupada por otro paciente
+  const existingPatient = Object.values(allPatients).find(pat => pat.cama === newRoom && pat.hc !== movePatientHc);
+  if (existingPatient) {
+    document.getElementById('move-room-warning').textContent = `La cama ${newRoom} ya está ocupada por ${existingPatient.paciente}`;
+    document.getElementById('move-room-warning').style.display = 'block';
+    return;
+  }
+  
+  // Actualizar la cama del paciente
+  p.cama = newRoom;
+  p.floor = newRoom.charAt(0);
+  
+  localStorage.setItem('sc_patients', JSON.stringify(allPatients));
+  
+  if (db) {
+    setDoc(doc(db, 'patients', movePatientHc), p).catch(() => {});
+  }
+  
+  closeMovePatientModal();
+  renderTable();
+  showToast(`Paciente movido a cama ${newRoom} ✓`);
 };
 
 // ─── SEARCH ───────────────────────────────────────────────────────────────────
