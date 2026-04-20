@@ -1145,7 +1145,7 @@ table.patient-table td {
 <!-- Firebase SDK -->
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getFirestore, doc, setDoc, getDoc, collection, getDocs, query, where, orderBy } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getFirestore, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, where, orderBy } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 // ─── CATEGORIES & TAGS ───────────────────────────────────────────────────────
 const CATS = [
@@ -1834,6 +1834,51 @@ window.addDayEntry = function() {
   if (currentDaysHc) {
     openPanel(currentDaysHc, 'lunes');
   }
+};
+
+window.dischargePatient = async function(hc) {
+  const p = allPatients[hc];
+  if (!p) return;
+  const ok = confirm(`¿Dar de alta a ${p.paciente} y liberar la cama ${p.cama}?`);
+  if (!ok) return;
+
+  const currentWeekEntries = {};
+  for (const day of DAYS) {
+    const key = `${hc}_${day}`;
+    if (weekData[key]) currentWeekEntries[key] = weekData[key];
+  }
+
+  const dischargeRecord = {
+    ...p,
+    hc: String(hc),
+    dischargeAt: new Date().toISOString(),
+    dischargeWeek: currentWeek,
+    weekEntries: currentWeekEntries,
+  };
+
+  const discharges = JSON.parse(localStorage.getItem('sc_discharges') || '[]');
+  discharges.unshift(dischargeRecord);
+  localStorage.setItem('sc_discharges', JSON.stringify(discharges));
+
+  delete allPatients[hc];
+  localStorage.setItem('sc_patients', JSON.stringify(allPatients));
+
+  for (const day of DAYS) {
+    delete weekData[`${hc}_${day}`];
+  }
+  localStorage.setItem(`sc_week_${currentWeek}`, JSON.stringify(weekData));
+
+  if (db) {
+    try {
+      await setDoc(doc(db, 'discharges', `${hc}_${Date.now()}`), dischargeRecord);
+      await deleteDoc(doc(db, 'patients', String(hc)));
+    } catch (e) {
+      showToast('Alta guardada localmente, pero falló sync en Firestore');
+    }
+  }
+
+  renderTable(document.getElementById('search-input').value);
+  showToast(`Paciente ${p.paciente} dado de alta ✓`);
 };
 
 // ─── MOVE PATIENT ─────────────────────────────────────────────────────────────
