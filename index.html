@@ -935,7 +935,7 @@ table.patient-table td {
   .cell-patient-name { font-size: 10px; }
   .cell-sub { font-size: 9px; }
   .cell-diag { font-size: 8px; padding: 1px 3px; }
-  .btn-action-td { display: table-cell; }
+  .btn-action-td { display: none; }
   .day-badges { gap: 1px; }
   .badge { font-size: 7px; padding: 1px 2px; }
   #config-banner { padding: 12px; }
@@ -1390,9 +1390,13 @@ function renderTable(filter='') {
         </td>
         <td><span class="cell-diag">${p.diagnostico||'—'}</span></td>
         <td style="text-align:right;padding-right:16px;" class="btn-action-td">
-          <button class="btn primary" onclick="event.stopPropagation(); openMovePatient('${hc}')" title="Mover de cama" style="padding:4px 10px;font-size:11px;">
+          <button class="btn primary" onclick="event.stopPropagation(); openMovePatient('${hc}')" title="Mover de cama" style="padding:4px 10px;font-size:11px;margin-right:6px;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 9l7-7 7 7M5 15l7 7 7-7"/></svg>
             Mover
+          </button>
+          <button class="btn" onclick="event.stopPropagation(); dischargePatient('${hc}')" title="Dar de alta" style="padding:4px 10px;font-size:11px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Alta
           </button>
         </td>
       </tr>
@@ -1451,7 +1455,7 @@ function renderDaysRowContent(hc) {
         if (d.tags?.length) parts.push(`${c.label}:\n${d.tags.join(', ')}`);
         else if (d.text) parts.push(`${c.label}:\n${d.text}`);
       });
-      summary = parts.join('\n\n');
+      summary = parts.join('\n');
       if (summary.length > 200) summary = summary.substring(0, 200) + '…';
     }
 
@@ -1549,6 +1553,16 @@ window.toggleTag = function(catId, tag, btn) {
   if (idx >= 0) { tags.splice(idx,1); btn.classList.remove('active'); }
   else { tags.push(tag); btn.classList.add('active'); }
   panelState.data[catId].tags = tags;
+  
+  // Copy tag to textarea for editing
+  const ta = document.getElementById(`ta-${catId}`);
+  if (ta) {
+    const currentText = ta.value.trim();
+    if (!currentText.includes(tag)) {
+      ta.value = currentText ? currentText + '\n' + tag : tag;
+    }
+  }
+  
   updateCatSummary(catId);
   // Auto-open category body
   const body = document.getElementById(`cat-body-${catId}`);
