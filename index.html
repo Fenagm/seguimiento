@@ -202,7 +202,7 @@ body {
 table.patient-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 760px;
+  min-width: 850px;
 }
 
 table.patient-table thead th {
@@ -346,7 +346,8 @@ table.patient-table td {
 .days-row-summary {
   font-size: 11px;
   color: var(--text3);
-  line-height: 1.3;
+  line-height: 1.5;
+  white-space: pre-line;
 }
 
 @media (max-width: 1100px) {
@@ -934,6 +935,7 @@ table.patient-table td {
   .cell-patient-name { font-size: 10px; }
   .cell-sub { font-size: 9px; }
   .cell-diag { font-size: 8px; padding: 1px 3px; }
+  .btn-action-td { display: table-cell; }
   .day-badges { gap: 1px; }
   .badge { font-size: 7px; padding: 1px 2px; }
   #config-banner { padding: 12px; }
@@ -1024,6 +1026,7 @@ table.patient-table td {
             <th style="min-width:200px">Paciente</th>
             <th style="min-width:140px">Médico / Cobertura</th>
             <th style="min-width:90px">Diagnóstico</th>
+            <th style="width:80px;text-align:right">Acciones</th>
           </tr>
         </thead>
         <tbody id="patient-tbody"></tbody>
@@ -1376,7 +1379,7 @@ function renderTable(filter='') {
     const hc = String(p.hc);
     return `
       <tr class="patient-row" data-hc="${hc}" style="cursor:pointer" onclick="toggleDaysRow('${hc}')">
-        <td><div class="cell-room" style="cursor:pointer" onclick="event.stopPropagation(); openMovePatient('${hc}')" title="Mover de cama">${p.cama}</div></td>
+        <td><div class="cell-room">${p.cama}</div></td>
         <td>
           <div class="cell-patient-name">${p.paciente}</div>
           <div class="cell-sub">HC ${p.hc}${p.ingreso ? ' · Ing. '+p.ingreso : ''}</div>
@@ -1386,9 +1389,15 @@ function renderTable(filter='') {
           <div class="cell-sub">${(p.cobertura||'').split(' - ')[0]}</div>
         </td>
         <td><span class="cell-diag">${p.diagnostico||'—'}</span></td>
+        <td style="text-align:right;padding-right:16px;" class="btn-action-td">
+          <button class="btn primary" onclick="event.stopPropagation(); openMovePatient('${hc}')" title="Mover de cama" style="padding:4px 10px;font-size:11px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 9l7-7 7 7M5 15l7 7 7-7"/></svg>
+            Mover
+          </button>
+        </td>
       </tr>
       <tr class="days-row" id="days-row-${hc}" style="display:none;">
-        <td colspan="4" style="padding:0;background:var(--surface2);">
+        <td colspan="5" style="padding:0;background:var(--surface2);">
           <div class="days-row-content" id="days-content-${hc}"></div>
         </td>
       </tr>`;
@@ -1439,11 +1448,11 @@ function renderDaysRowContent(hc) {
       CATS.forEach(c => {
         const d = entry[c.id];
         if (!d) return;
-        if (d.tags?.length) parts.push(`${c.label}: ${d.tags.join(', ')}`);
-        else if (d.text) parts.push(`${c.label}: ${d.text}`);
+        if (d.tags?.length) parts.push(`${c.label}:\n${d.tags.join(', ')}`);
+        else if (d.text) parts.push(`${c.label}:\n${d.text}`);
       });
-      summary = parts.join(' · ');
-      if (summary.length > 95) summary = summary.substring(0, 95) + '…';
+      summary = parts.join('\n\n');
+      if (summary.length > 200) summary = summary.substring(0, 200) + '…';
     }
 
     return `
