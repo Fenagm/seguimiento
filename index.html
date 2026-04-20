@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Seguimiento</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 2rem;
+        color: #1f2937;
+      }
+      .grid {
+        display: grid;
+        gap: 1.5rem;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      }
+      .card {
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        padding: 1rem;
+      }
+      ul {
+        padding-left: 1.25rem;
+      }
+      li {
+        margin-bottom: 0.5rem;
+      }
+      label,
+      input,
+      textarea,
+      button {
+        display: block;
+        width: 100%;
+      }
+      input,
+      textarea,
+      button {
+        margin-top: 0.35rem;
+        margin-bottom: 0.75rem;
+        padding: 0.5rem;
+      }
+      #salidaUsuario {
+        background: #f3f4f6;
+        border-radius: 6px;
+        padding: 0.75rem;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Panel de seguimiento</h1>
+
+    <div class="grid">
+      <section class="card">
+        <h2>Días (uno debajo de otro)</h2>
+        <ul>
+          <li>Lunes</li>
+          <li>Martes</li>
+          <li>Miércoles</li>
+          <li>Jueves</li>
+          <li>Viernes</li>
+          <li>Sábado</li>
+          <li>Domingo</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h2>Información cargada por el usuario (visible)</h2>
+        <form id="formUsuario">
+          <label for="nombre">Nombre</label>
+          <input id="nombre" name="nombre" type="text" placeholder="Ingresar nombre" required />
+
+          <label for="detalle">Detalle</label>
+          <textarea id="detalle" name="detalle" rows="4" placeholder="Ingresar información"></textarea>
+
+          <button type="submit">Guardar y mostrar</button>
+        </form>
+
+        <h3>Última carga</h3>
+        <div id="salidaUsuario">Aún no hay datos cargados.</div>
+      </section>
+
+      <section class="card">
+        <h2>Sectores habilitados</h2>
+        <ul>
+          <li>TAMO</li>
+          <li>U.T.I — Piso 4</li>
+          <li>U.T.I.Q — Piso 2</li>
+        </ul>
+        <p><strong>Nota:</strong> Se ignoran Piso 1 y Piso 2, excepto U.T.I.Q (Piso 2) solicitado.</p>
+      </section>
+    </div>
+
+    <script>
+      const form = document.getElementById('formUsuario');
+      const salida = document.getElementById('salidaUsuario');
+
+      form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        const nombre = document.getElementById('nombre').value.trim();
+        const detalle = document.getElementById('detalle').value.trim();
+
+        salida.textContent = `Nombre: ${nombre || '-'}\nDetalle: ${detalle || '-'}`;
+      });
+    </script>
+  </body>
+</html>
