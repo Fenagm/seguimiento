@@ -527,6 +527,90 @@ table.patient-table td {
   width: 480px;
   max-width: 95vw;
 }
+
+/* ─── ADD PATIENT MODAL ─── */
+#add-patient-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 300;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+#add-patient-overlay.open { display: flex; }
+
+#add-patient-modal {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  width: 480px;
+  max-width: 95vw;
+}
+
+/* ─── PATIENT DAYS PANEL ─── */
+#patient-days-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 200;
+  backdrop-filter: blur(2px);
+}
+#patient-days-overlay.open { display: block; }
+
+#patient-days-panel {
+  position: fixed;
+  top: 0;
+  right: -520px;
+  width: 520px;
+  height: 100vh;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  z-index: 201;
+  display: flex;
+  flex-direction: column;
+  transition: right .25s cubic-bezier(0.4,0,0.2,1);
+  overflow: hidden;
+}
+#patient-days-panel.open { right: 0; }
+
+.day-list-item {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background .15s;
+}
+.day-list-item:hover { background: var(--surface2); }
+.day-list-item:last-child { border-bottom: none; }
+.day-list-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.day-list-day {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  min-width: 70px;
+}
+.day-list-badges {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.day-list-summary {
+  font-size: 11px;
+  color: var(--text2);
+  line-height: 1.4;
+}
+.day-list-empty {
+  font-size: 11px;
+  color: var(--text3);
+  font-style: italic;
+}
 .modal-header {
   padding: 18px 20px 14px;
   border-bottom: 1px solid var(--border);
@@ -806,6 +890,10 @@ table.patient-table td {
     <div class="section-header">
       <span class="section-title" id="floor-title">Piso —</span>
       <span class="patient-count" id="patient-count"></span>
+      <button class="btn primary" onclick="openAddPatientModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        Nuevo Paciente
+      </button>
     </div>
     <div class="table-wrap">
       <table class="patient-table">
@@ -815,11 +903,7 @@ table.patient-table td {
             <th style="min-width:200px">Paciente</th>
             <th style="min-width:140px">Médico / Cobertura</th>
             <th style="min-width:90px">Diagnóstico</th>
-            <th class="day-col">Lunes</th>
-            <th class="day-col">Martes</th>
-            <th class="day-col">Miércoles</th>
-            <th class="day-col">Jueves</th>
-            <th class="day-col">Viernes</th>
+            <th style="min-width:120px">Acciones</th>
           </tr>
         </thead>
         <tbody id="patient-tbody"></tbody>
@@ -869,7 +953,87 @@ table.patient-table td {
   </div>
 </div>
 
-<!-- CSV UPLOAD MODAL -->
+<!-- ADD PATIENT MODAL -->
+<div id="add-patient-overlay" onclick="closeAddPatientOnOverlay(event)">
+  <div id="add-patient-modal">
+    <div class="modal-header">
+      <span class="modal-title">Nuevo Paciente</span>
+      <button class="panel-close" onclick="closeAddPatientModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="add-patient-form" onsubmit="event.preventDefault(); saveNewPatient();">
+        <div style="display:grid; gap:12px;">
+          <div>
+            <label style="font-size:11px; color:var(--text3); display:block; margin-bottom:4px;">Cama / Habitación *</label>
+            <input type="text" id="new-cama" required placeholder="Ej: 401" style="width:100%; background:var(--surface2); border:1px solid var(--border2); border-radius:5px; color:var(--text); font-size:12px; padding:8px 10px;">
+          </div>
+          <div>
+            <label style="font-size:11px; color:var(--text3); display:block; margin-bottom:4px;">Nombre del Paciente *</label>
+            <input type="text" id="new-paciente" required placeholder="Apellido, Nombre" style="width:100%; background:var(--surface2); border:1px solid var(--border2); border-radius:5px; color:var(--text); font-size:12px; padding:8px 10px;">
+          </div>
+          <div>
+            <label style="font-size:11px; color:var(--text3); display:block; margin-bottom:4px;">Historia Clínica *</label>
+            <input type="text" id="new-hc" required placeholder="Número HC" style="width:100%; background:var(--surface2); border:1px solid var(--border2); border-radius:5px; color:var(--text); font-size:12px; padding:8px 10px;">
+          </div>
+          <div>
+            <label style="font-size:11px; color:var(--text3); display:block; margin-bottom:4px;">Médico</label>
+            <input type="text" id="new-medico" placeholder="Nombre del médico" style="width:100%; background:var(--surface2); border:1px solid var(--border2); border-radius:5px; color:var(--text); font-size:12px; padding:8px 10px;">
+          </div>
+          <div>
+            <label style="font-size:11px; color:var(--text3); display:block; margin-bottom:4px;">Cobertura Social</label>
+            <input type="text" id="new-cobertura" placeholder="Ej: OSDE, PAMI" style="width:100%; background:var(--surface2); border:1px solid var(--border2); border-radius:5px; color:var(--text); font-size:12px; padding:8px 10px;">
+          </div>
+          <div>
+            <label style="font-size:11px; color:var(--text3); display:block; margin-bottom:4px;">Fecha de Ingreso</label>
+            <input type="date" id="new-ingreso" style="width:100%; background:var(--surface2); border:1px solid var(--border2); border-radius:5px; color:var(--text); font-size:12px; padding:8px 10px;">
+          </div>
+          <div>
+            <label style="font-size:11px; color:var(--text3); display:block; margin-bottom:4px;">Días de Internación</label>
+            <input type="number" id="new-dias" placeholder="Ej: 3" style="width:100%; background:var(--surface2); border:1px solid var(--border2); border-radius:5px; color:var(--text); font-size:12px; padding:8px 10px;">
+          </div>
+          <div>
+            <label style="font-size:11px; color:var(--text3); display:block; margin-bottom:4px;">Servicio</label>
+            <input type="text" id="new-servicio" placeholder="Ej: CLINICA MEDICA" style="width:100%; background:var(--surface2); border:1px solid var(--border2); border-radius:5px; color:var(--text); font-size:12px; padding:8px 10px;">
+          </div>
+          <div>
+            <label style="font-size:11px; color:var(--text3); display:block; margin-bottom:4px;">Diagnóstico</label>
+            <textarea id="new-diagnostico" rows="2" placeholder="Diagnóstico principal" style="width:100%; background:var(--surface2); border:1px solid var(--border2); border-radius:5px; color:var(--text); font-size:12px; padding:8px 10px; resize:vertical; font-family:var(--sans);"></textarea>
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeAddPatientModal()">Cancelar</button>
+      <button class="btn primary" onclick="saveNewPatient()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        Agregar Paciente
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- PATIENT DAYS VIEW OVERLAY -->
+<div id="patient-days-overlay" onclick="closePatientDaysOnOverlay(event)">
+  <div id="patient-days-panel">
+    <div class="panel-header">
+      <div class="panel-title">
+        <div class="panel-patient-name" id="days-patient-name">—</div>
+        <div class="panel-meta" id="days-patient-meta">—</div>
+      </div>
+      <button class="panel-close" onclick="closePatientDays()">✕</button>
+    </div>
+    <div class="panel-body" id="patient-days-body" style="padding:0;">
+      <div id="patient-days-list"></div>
+    </div>
+    <div class="panel-footer">
+      <button class="btn" onclick="closePatientDays()">Cerrar</button>
+      <button class="btn primary" id="btn-add-day-entry" onclick="addDayEntry()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        Cargar Día
+      </button>
+    </div>
+  </div>
+</div>
 <div id="csv-overlay" onclick="closeCsvOnOverlay(event)">
   <div id="csv-modal">
     <div class="modal-header">
@@ -1076,14 +1240,12 @@ function renderTable(filter='') {
           <div class="cell-sub">${(p.cobertura||'').split(' - ')[0]}</div>
         </td>
         <td><span class="cell-diag">${p.diagnostico||'—'}</span></td>
-        ${DAYS.map(day => `
-          <td style="padding:6px">
-            <button class="day-cell-btn ${hasData(hc,day)?'has-data':''}"
-                    onclick="openPanel('${hc}','${day}')">
-              ${renderDayBadges(hc,day)}
-            </button>
-          </td>
-        `).join('')}
+        <td style="padding:6px">
+          <button class="btn" onclick="openPatientDays('${hc}')" style="width:100%">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M9 18l6-6-6-6"/></svg>
+            Ver días
+          </button>
+        </td>
       </tr>`;
   }).join('');
 }
@@ -1411,6 +1573,140 @@ function renderHistoryResults(results) {
       </div>
     </div>`).join('');
 }
+
+// ─── ADD PATIENT MODAL ────────────────────────────────────────────────────────
+window.openAddPatientModal = function() {
+  document.getElementById('add-patient-overlay').classList.add('open');
+};
+
+window.closeAddPatientModal = function() {
+  document.getElementById('add-patient-overlay').classList.remove('open');
+  document.getElementById('add-patient-form').reset();
+};
+
+window.closeAddPatientOnOverlay = function(e) {
+  if (e.target === document.getElementById('add-patient-overlay')) closeAddPatientModal();
+};
+
+window.saveNewPatient = function() {
+  const cama = document.getElementById('new-cama').value.trim();
+  const paciente = document.getElementById('new-paciente').value.trim();
+  const hc = document.getElementById('new-hc').value.trim();
+  const medico = document.getElementById('new-medico').value.trim();
+  const cobertura = document.getElementById('new-cobertura').value.trim();
+  const ingreso = document.getElementById('new-ingreso').value;
+  const dias = document.getElementById('new-dias').value;
+  const servicio = document.getElementById('new-servicio').value.trim();
+  const diagnostico = document.getElementById('new-diagnostico').value.trim();
+
+  if (!cama || !paciente || !hc) {
+    showToast('Complete los campos obligatorios');
+    return;
+  }
+
+  const floor = cama.charAt(0);
+  const newPatient = {
+    cama,
+    hc,
+    paciente,
+    medico: medico || '—',
+    cobertura: cobertura || '—',
+    ingreso: ingreso || '—',
+    dias: dias || '0',
+    servicio: servicio || '—',
+    diagnostico: diagnostico || 'SIN DIAGNÓSTICO',
+    floor,
+  };
+
+  allPatients[hc] = newPatient;
+  localStorage.setItem('sc_patients', JSON.stringify(allPatients));
+  
+  if (db) {
+    setDoc(doc(db, 'patients', hc), newPatient).catch(() => {});
+  }
+
+  closeAddPatientModal();
+  renderTable();
+  showToast('Paciente agregado ✓');
+};
+
+// ─── PATIENT DAYS VIEW ────────────────────────────────────────────────────────
+let currentDaysHc = null;
+
+window.openPatientDays = function(hc) {
+  const p = allPatients[hc];
+  if (!p) return;
+  
+  currentDaysHc = hc;
+  document.getElementById('days-patient-name').textContent = p.paciente;
+  document.getElementById('days-patient-meta').textContent = 
+    `Cama ${p.cama} · HC ${p.hc} · ${p.medico||''}`;
+  
+  renderPatientDaysList();
+  
+  document.getElementById('patient-days-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('patient-days-panel').classList.add('open'), 10);
+};
+
+window.closePatientDays = function() {
+  document.getElementById('patient-days-panel').classList.remove('open');
+  setTimeout(() => {
+    document.getElementById('patient-days-overlay').classList.remove('open');
+  }, 250);
+};
+
+window.closePatientDaysOnOverlay = function(e) {
+  if (e.target === document.getElementById('patient-days-overlay')) closePatientDays();
+};
+
+function renderPatientDaysList() {
+  const el = document.getElementById('patient-days-list');
+  const daysHtml = DAYS.map(day => {
+    const entry = weekData[`${currentDaysHc}_${day}`];
+    const hasEntry = entry && CATS.some(c => entry[c.id] && (entry[c.id].text || entry[c.id].tags?.length));
+    
+    if (!hasEntry) {
+      return `
+        <div class="day-list-item" onclick="openPanel('${currentDaysHc}','${day}')">
+          <div class="day-list-header">
+            <span class="day-list-day">${DAY_LABELS[day]}</span>
+            <span class="day-list-empty">Sin datos cargados</span>
+          </div>
+        </div>`;
+    }
+    
+    const badges = CATS.filter(c => {
+      const d = entry[c.id];
+      return d && (d.text || d.tags?.length);
+    }).map(c => `<span class="badge ${c.cls}">${c.label.substring(0,3).toUpperCase()}</span>`).join('');
+    
+    const summaries = [];
+    CATS.forEach(c => {
+      const d = entry[c.id];
+      if (d) {
+        if (d.tags?.length) summaries.push(`${c.label}: ${d.tags.join(', ')}`);
+        else if (d.text) summaries.push(`${c.label}: ${d.text.substring(0, 30)}...`);
+      }
+    });
+    
+    return `
+      <div class="day-list-item" onclick="openPanel('${currentDaysHc}','${day}')">
+        <div class="day-list-header">
+          <span class="day-list-day">${DAY_LABELS[day]}</span>
+          <div class="day-list-badges">${badges}</div>
+        </div>
+        <div class="day-list-summary">${summaries.join(' · ')}</div>
+      </div>`;
+  }).join('');
+  
+  el.innerHTML = daysHtml;
+}
+
+window.addDayEntry = function() {
+  if (currentDaysHc) {
+    openPanel(currentDaysHc, 'lunes');
+  }
+};
 
 // ─── SEARCH ───────────────────────────────────────────────────────────────────
 window.filterPatients = function(q) { renderTable(q); };
