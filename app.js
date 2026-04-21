@@ -763,22 +763,33 @@ function parseCSV(text) {
   for (const line of lines) {
     if (!line.trim()) continue;
     
-    // Parsear la línea respetando comillas escapadas ("")
+    // El formato del CSV es especial: toda la línea está entre comillas dobles externas
+    // y las comillas internas están escapadas como ""
+    // Primero quitamos las comillas externas si existen
+    let cleanLine = line.trim();
+    if (cleanLine.startsWith('"') && cleanLine.endsWith('"')) {
+      cleanLine = cleanLine.substring(1, cleanLine.length - 1);
+    }
+    
+    // Ahora parseamos los campos internos, reemplazando "" por un marcador temporal
+    // para evitar confundirlos con comillas de cierre
     const fields = [];
     let current = '';
     let i = 0;
     let inQuotes = false;
     
-    while (i < line.length) {
-      const char = line[i];
-      const nextChar = line[i + 1];
+    while (i < cleanLine.length) {
+      const char = cleanLine[i];
+      const nextChar = cleanLine[i + 1];
       
       if (char === '"') {
         if (nextChar === '"') {
+          // Comillas escapadas "" se convierten en una comilla simple
           current += '"';
           i += 2;
           continue;
         } else {
+          // Inicio o fin de campo entre comillas
           inQuotes = !inQuotes;
           i++;
           continue;
@@ -797,11 +808,13 @@ function parseCSV(text) {
     }
     fields.push(current);
     
-    // Limpiar campos
+    // Limpiar campos: quitar comillas dobles externas si existen
     const cleanFields = fields.map(f => {
-      let cleaned = f;
-      if (cleaned.startsWith('"')) cleaned = cleaned.substring(1);
-      if (cleaned.endsWith('"')) cleaned = cleaned.substring(0, cleaned.length - 1);
+      let cleaned = f.trim();
+      // Quitar comillas dobles al inicio y fin del campo
+      if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
+        cleaned = cleaned.substring(1, cleaned.length - 1);
+      }
       return cleaned.trim();
     });
     
@@ -812,11 +825,10 @@ function parseCSV(text) {
     
     for (let idx = 0; idx < cleanFields.length; idx++) {
       const field = cleanFields[idx];
-      // Detectar el encabezado del piso
+      // Detectar el encabezado del piso (debe coincidir exactamente)
       if (field === 'PISO 3' || field === 'PISO 4' || field === 'PISO 5' || 
           field === 'TAMO' || field === 'U.T.I    PISO 4' || field === 'U.T.I.Q  PISO2') {
         pisoValue = field;
-        continue;
       }
       // Detectar el inicio de los datos (después de "Diagnóstico")
       if (field === 'Diagnóstico') {
