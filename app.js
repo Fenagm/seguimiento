@@ -761,7 +761,7 @@ function parseCSV(text) {
   const lines = text.split(/\r?\n/);
   
   for (const line of lines) {
-    if (!line.trim() || !line.includes('"Cama"')) continue;
+    if (!line.trim()) continue;
     
     // Parsear la línea respetando comillas escapadas ("")
     const fields = [];
@@ -775,12 +775,10 @@ function parseCSV(text) {
       
       if (char === '"') {
         if (nextChar === '"') {
-          // Comilla doble escapada -> agregar una comilla literal
           current += '"';
           i += 2;
           continue;
         } else {
-          // Alternar estado de comillas
           inQuotes = !inQuotes;
           i++;
           continue;
@@ -797,9 +795,9 @@ function parseCSV(text) {
       current += char;
       i++;
     }
-    fields.push(current); // último campo
+    fields.push(current);
     
-    // Limpiar comillas exteriores de cada campo
+    // Limpiar campos
     const cleanFields = fields.map(f => {
       let cleaned = f;
       if (cleaned.startsWith('"')) cleaned = cleaned.substring(1);
@@ -807,62 +805,51 @@ function parseCSV(text) {
       return cleaned.trim();
     });
     
-    // Buscar índices de las columnas que nos interesan
-    // El formato tiene: ... "PISO 3","Cama","Paciente","HC","Medico","Ingreso","Dias","Cobertura / Plan","Servicio","Diagnóstico","301",...
-    let pisoIndex = -1;
-    let camaIndex = -1;
-    let pacienteIndex = -1;
-    let hcIndex = -1;
-    let medicoIndex = -1;
-    let ingresoIndex = -1;
-    let diasIndex = -1;
-    let coberturaIndex = -1;
-    let servicioIndex = -1;
-    let diagnosticoIndex = -1;
+    // Buscar el índice donde comienzan los datos reales
+    // Los datos están después de campos como "PISO 3", "Cama", "Paciente", etc.
+    let dataStartIndex = -1;
+    let pisoValue = '';
     
     for (let idx = 0; idx < cleanFields.length; idx++) {
       const field = cleanFields[idx];
+      // Detectar el encabezado del piso
       if (field === 'PISO 3' || field === 'PISO 4' || field === 'PISO 5' || 
           field === 'TAMO' || field === 'U.T.I    PISO 4' || field === 'U.T.I.Q  PISO2') {
-        pisoIndex = idx;
-      } else if (field === 'Cama') camaIndex = idx;
-      else if (field === 'Paciente') pacienteIndex = idx;
-      else if (field === 'HC') hcIndex = idx;
-      else if (field === 'Medico') medicoIndex = idx;
-      else if (field === 'Ingreso') ingresoIndex = idx;
-      else if (field === 'Dias') diasIndex = idx;
-      else if (field === 'Cobertura / Plan') coberturaIndex = idx;
-      else if (field === 'Servicio') servicioIndex = idx;
-      else if (field === 'Diagnóstico') diagnosticoIndex = idx;
+        pisoValue = field;
+        continue;
+      }
+      // Detectar el inicio de los datos (después de "Diagnóstico")
+      if (field === 'Diagnóstico') {
+        dataStartIndex = idx + 1;
+        break;
+      }
     }
     
-    // Si encontramos los índices y tenemos datos después de los encabezados
-    if (camaIndex !== -1 && pacienteIndex !== -1 && hcIndex !== -1 && 
-        cleanFields.length > Math.max(camaIndex, pacienteIndex, hcIndex, medicoIndex, ingresoIndex, diasIndex, coberturaIndex, servicioIndex, diagnosticoIndex)) {
+    // Si encontramos dónde empiezan los datos y hay suficientes campos
+    if (dataStartIndex !== -1 && cleanFields.length > dataStartIndex + 5) {
+      // Extraer los datos según las posiciones conocidas
+      // Orden: Cama, Paciente, HC, Medico, Ingreso, Dias, Cobertura, Servicio, Diagnóstico, Credencial
+      const cama = cleanFields[dataStartIndex] || '';
+      const paciente = cleanFields[dataStartIndex + 1] || '';
+      const hcRaw = cleanFields[dataStartIndex + 2] || '';
+      const hc = hcRaw.replace('.0', '').trim();
+      const medico = cleanFields[dataStartIndex + 3] || '—';
+      const ingreso = cleanFields[dataStartIndex + 4] || '';
+      const dias = cleanFields[dataStartIndex + 5] || '0';
+      const cobertura = cleanFields[dataStartIndex + 6] || '—';
+      const servicio = cleanFields[dataStartIndex + 7] || '—';
+      const diagnostico = cleanFields[dataStartIndex + 8] || 'SIN DIAGNÓSTICO';
       
-      const cama = cleanFields[camaIndex];
-      const paciente = cleanFields[pacienteIndex];
-      const hc = cleanFields[hcIndex].replace('.0', '');
-      const medico = cleanFields[medicoIndex] || '—';
-      const ingreso = cleanFields[ingresoIndex] || '';
-      const dias = cleanFields[diasIndex] || '0';
-      const cobertura = cleanFields[coberturaIndex] || '—';
-      const servicio = cleanFields[servicioIndex] || '—';
-      const diagnostico = cleanFields[diagnosticoIndex] || 'SIN DIAGNÓSTICO';
-      
-      // Determinar el piso según el encabezado PISO X o TAMO/UTI
+      // Determinar el piso
       let floor = '';
-      if (pisoIndex !== -1) {
-        const pisoValue = cleanFields[pisoIndex];
-        if (pisoValue === 'PISO 3') floor = '3';
-        else if (pisoValue === 'PISO 4') floor = '4';
-        else if (pisoValue === 'PISO 5') floor = '5';
-        else if (pisoValue === 'TAMO') floor = 'tamo';
-        else if (pisoValue === 'U.T.I    PISO 4') floor = 'uti';
-        else if (pisoValue === 'U.T.I.Q  PISO2') floor = 'utiq';
-      }
+      if (pisoValue === 'PISO 3') floor = '3';
+      else if (pisoValue === 'PISO 4') floor = '4';
+      else if (pisoValue === 'PISO 5') floor = '5';
+      else if (pisoValue === 'TAMO') floor = 'tamo';
+      else if (pisoValue === 'U.T.I    PISO 4') floor = 'uti';
+      else if (pisoValue === 'U.T.I.Q  PISO2') floor = 'utiq';
       
-      // Si no se detectó por el encabezado, usar el servicio o la cama
+      // Si no se detectó por el encabezado, usar la cama o servicio
       if (!floor) {
         if (servicio.includes('TAMO')) floor = 'tamo';
         else if (servicio.includes('U.T.I.Q')) floor = 'utiq';
@@ -874,23 +861,27 @@ function parseCSV(text) {
       }
       
       // Validar que tengamos datos mínimos
-      if (cama && paciente && hc && !isNaN(parseInt(hc))) {
-        patients.push({
-          cama: cama,
-          hc: hc,
-          paciente: paciente,
-          medico: medico,
-          ingreso: ingreso,
-          dias: dias,
-          cobertura: cobertura,
-          servicio: servicio,
-          diagnostico: diagnostico,
-          floor: floor,
-        });
+      if (cama && paciente && hc && !isNaN(parseInt(hc)) && parseInt(hc) > 0) {
+        // Evitar duplicados por HC
+        if (!patients.find(p => p.hc === hc)) {
+          patients.push({
+            cama: cama,
+            hc: hc,
+            paciente: paciente,
+            medico: medico,
+            ingreso: ingreso,
+            dias: dias,
+            cobertura: cobertura,
+            servicio: servicio,
+            diagnostico: diagnostico,
+            floor: floor,
+          });
+        }
       }
     }
   }
   
+  console.log('Pacientes encontrados:', patients.length);
   return patients;
 }
 
