@@ -94,6 +94,7 @@ body {
   min-width: 80px;
   text-align: center;
 }
+.week-dates { color: var(--text3); }
 
 .floor-tabs {
   display: flex;
@@ -102,7 +103,11 @@ body {
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 3px;
+  overflow-x: auto;
+  flex-shrink: 0;
+  scrollbar-width: none;
 }
+.floor-tabs::-webkit-scrollbar { display: none; }
 .floor-tab {
   padding: 4px 12px;
   border-radius: 4px;
@@ -178,6 +183,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-bottom: 12px;
 }
 .section-title {
@@ -304,8 +311,8 @@ table.patient-table td {
 
 .cell-empty { color: var(--text3); font-size: 11px; text-align: center; padding: 4px; }
 
-.days-row-content {
-  padding: 12px;
+.days-row-cards-grid {
+  padding: 10px 12px;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 8px;
@@ -322,6 +329,11 @@ table.patient-table td {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  text-align: left;
+}
+.days-row-card.has-data {
+  border-color: var(--border2);
+  background: var(--surface);
 }
 .days-row-card:hover {
   border-color: var(--accent);
@@ -351,7 +363,7 @@ table.patient-table td {
 }
 
 @media (max-width: 1100px) {
-  .days-row-content {
+  .days-row-cards-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -555,6 +567,7 @@ table.patient-table td {
   display: flex;
   gap: 8px;
   justify-content: flex-end;
+  flex-wrap: wrap;
   flex-shrink: 0;
   background: var(--surface2);
 }
@@ -579,6 +592,98 @@ table.patient-table td {
   width: 480px;
   max-width: 95vw;
 }
+
+/* ─── MOBILE CARD TABLE ─── */
+@media (max-width: 640px) {
+  .table-wrap { border: none; border-radius: 0; }
+  table.patient-table { min-width: unset; width: 100%; }
+  table.patient-table thead { display: none; }
+  table.patient-table tr.patient-row {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    padding: 10px 12px;
+    background: var(--surface);
+    position: relative;
+  }
+  table.patient-table tr.patient-row td {
+    display: block;
+    border: none;
+    padding: 2px 0;
+  }
+  /* Hide médico and diagnóstico cells — visible in expanded row */
+  table.patient-table td:nth-child(3),
+  table.patient-table td:nth-child(4) { display: none; }
+  /* Alta button: top right corner */
+  .btn-action-td {
+    position: absolute !important;
+    top: 10px; right: 10px;
+    padding: 0 !important;
+  }
+  /* Days expanded row full width */
+  table.patient-table tr.days-row td { display: block; }
+  .days-row-cards-grid { grid-template-columns: 1fr 1fr; gap: 6px; padding: 8px; }
+}
+#move-patient-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 300;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+#move-patient-overlay.open { display: flex; }
+
+#move-patient-modal {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  width: 520px;
+  max-width: 95vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.bed-card {
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: all .15s;
+  background: var(--surface2);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.bed-card:hover { border-color: var(--accent); background: var(--accent-dim); }
+.bed-card.selected { border-color: var(--accent); background: var(--accent-dim); box-shadow: 0 0 0 2px var(--accent); }
+.bed-card.occupied { opacity: 0.5; }
+.bed-card.occupied:hover { border-color: var(--cat-qmt); background: var(--cat-qmt-bg); }
+.bed-card-room { font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--accent); }
+.bed-card.occupied .bed-card-room { color: var(--text2); }
+.bed-card-name { font-size: 10px; color: var(--text3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bed-card-status { font-size: 9px; font-weight: 600; letter-spacing: .04em; }
+.bed-card-status.free { color: var(--cat-nut); }
+.bed-card-status.busy { color: var(--cat-qmt); }
+
+.move-floor-btn {
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--border2);
+  background: none;
+  color: var(--text2);
+  transition: all .15s;
+}
+.move-floor-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+.move-floor-btn:hover:not(.active) { background: var(--surface3); }
 
 /* ─── ADD PATIENT MODAL ─── */
 #add-patient-overlay {
@@ -858,6 +963,24 @@ table.patient-table td {
   display: inline-block;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+@keyframes slideUp { from { transform:translateX(-50%) translateY(20px); opacity:0; } to { transform:translateX(-50%) translateY(0); opacity:1; } }
+
+/* ─── TOUCH TARGETS ─── */
+.btn, .floor-tab, .day-btn, .tag-chip, .panel-close,
+.week-nav button, .cat-header, .days-row-card, .bed-card {
+  touch-action: manipulation; /* eliminates 300ms tap delay */
+}
+@media (hover: none) and (pointer: coarse) {
+  /* Dedos grandes necesitan áreas más grandes */
+  .day-btn { min-height: 38px; }
+  .floor-tab { min-height: 36px; }
+  .tag-chip { min-height: 34px; padding: 6px 12px; }
+  .week-nav button { width: 36px; height: 36px; }
+  .panel-close { width: 36px; height: 36px; font-size: 16px; }
+  .cat-header { min-height: 44px; }
+  /* Evitar zoom al hacer foco en inputs */
+  input, textarea, select { font-size: 16px !important; }
+}
 
 /* ─── SCROLLBAR ─── */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
@@ -873,24 +996,43 @@ table.patient-table td {
 }
 .no-data svg { width: 40px; height: 40px; margin: 0 auto 12px; display: block; opacity: .3; }
 
+/* ─── TABLET / LARGE PHONE (≤700px) ─── */
 @media (max-width: 700px) {
+  /* Header */
   #header { flex-wrap: wrap; height: auto; padding: 10px; gap: 8px; }
-  .floor-tabs { order: 3; width: 100%; justify-content: center; }
-  .header-actions { 
-    width: 100%; 
-    justify-content: space-between;
-    order: 4;
-    margin-top: 8px;
-  }
+  .floor-tabs { order: 3; width: 100%; }           /* full-width, scrolls horizontally */
+  .header-actions { width: 100%; justify-content: space-between; order: 4; margin-top: 4px; }
   .search-box { min-width: auto; flex: 1; }
-  .btn span { display: none; }
+  /* Buttons: show only icons, except "Copiar al día anterior" keeps its label shortened */
+  .btn span:not(#btn-copy-prev-label) { display: none; }
   .btn svg { width: 16px; height: 16px; }
+  #btn-copy-prev-label { font-size: 10px; }
+
+  /* Panels full-width */
   #entry-panel { width: 100%; right: -100%; }
   #entry-panel.open { right: 0; }
   #patient-days-panel { width: 100%; right: -100%; }
   #patient-days-panel.open { right: 0; }
-  .config-form { grid-template-columns: 1fr; }
-  .config-form input.full { grid-column: 1; }
+
+  /* Modals */
+  #csv-modal, #add-patient-modal, #move-patient-modal { width: 95vw; max-width: 95vw; }
+  .modal-header { padding: 14px 15px; }
+  .modal-body { padding: 12px 15px; }
+  .modal-footer { padding: 10px 15px; }
+
+  /* Panel */
+  .panel-header { padding: 12px 15px; }
+  .panel-patient-name { font-size: 13px; }
+  .panel-body { padding: 12px 15px; }
+  .panel-footer { padding: 10px 12px; gap: 6px; }
+  .day-selector { padding: 8px 12px; }
+  .day-btn { font-size: 9px; padding: 5px 6px; }
+  .cat-header { padding: 6px 10px; }
+  .cat-label { font-size: 11px; }
+  .tag-chip { font-size: 10px; padding: 2px 6px; }
+  .cat-textarea { font-size: 11px; padding: 6px 8px; }
+
+  /* Table */
   .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   table.patient-table { font-size: 11px; }
   table.patient-table thead th { font-size: 8px; padding: 5px 6px; }
@@ -900,57 +1042,111 @@ table.patient-table td {
   .cell-diag { font-size: 9px; padding: 1px 4px; }
   .day-cell-btn { min-height: 36px; padding: 4px; }
   .badge { font-size: 8px; padding: 1px 3px; }
-  #csv-modal, #add-patient-modal { width: 95vw; max-width: 95vw; }
-  .modal-header { padding: 14px 15px; }
-  .modal-body { padding: 15px; }
-  .modal-footer { padding: 10px 15px; }
-  .panel-header { padding: 12px 15px; }
-  .panel-patient-name { font-size: 13px; }
-  .panel-body { padding: 12px 15px; }
-  .panel-footer { padding: 12px 15px; }
-  .day-selector { padding: 8px 15px; }
-  .day-btn { font-size: 9px; padding: 5px; }
-  .cat-header { padding: 6px 10px; }
-  .cat-label { font-size: 11px; }
-  .tag-chip { font-size: 10px; padding: 2px 6px; }
-  .cat-textarea { font-size: 11px; padding: 6px 8px; }
+
+  /* Days expanded */
   .days-row-card { min-height: 70px; padding: 8px; }
   .days-row-day { font-size: 9px; }
   .days-row-summary { font-size: 10px; }
+  .days-row-cards-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
+
+  /* Header nav */
   .week-nav { padding: 2px 6px; }
   #week-label { min-width: 60px; font-size: 10px; }
+  .week-dates { display: none; }
   .logo { font-size: 11px; }
+
+  /* History */
+  .history-filters { flex-direction: column; }
+  .filter-input { width: 100%; }
+
+  /* Config */
+  .config-form { grid-template-columns: 1fr; }
+  .config-form input.full { grid-column: 1; }
+
+  /* Move bed grid */
+  #move-bed-grid { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); max-height: 220px; }
+  #move-floor-filter { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  #move-floor-filter::-webkit-scrollbar { display: none; }
+  .move-floor-btn { white-space: nowrap; flex-shrink: 0; }
 }
 
+/* ─── MOBILE CARD TABLE (≤640px) ─── */
+@media (max-width: 640px) {
+  #main-area { padding: 10px 12px; }
+  .table-wrap { border: none; border-radius: 0; background: transparent; overflow: visible; }
+  table.patient-table { display: block; min-width: unset; width: 100%; }
+  table.patient-table thead { display: none; }
+  table.patient-table tbody { display: flex; flex-direction: column; gap: 8px; }
+  /* Each patient row = card */
+  table.patient-table tr.patient-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    background: var(--surface);
+    position: relative;
+    cursor: pointer;
+  }
+  table.patient-table tr.patient-row:hover { background: var(--surface2); border-color: var(--border2); }
+  /* Cama */
+  table.patient-table tr.patient-row td:nth-child(1) { display: block; flex-shrink: 0; }
+  /* Nombre */
+  table.patient-table tr.patient-row td:nth-child(2) { display: block; flex: 1; min-width: 0; }
+  /* Médico — oculto, se ve al expandir */
+  table.patient-table tr.patient-row td:nth-child(3) { display: none; }
+  /* Diagnóstico — tag pequeño debajo */
+  table.patient-table tr.patient-row td:nth-child(4) { display: block; width: 100%; padding-left: 32px; }
+  /* Acciones */
+  table.patient-table tr.patient-row td:nth-child(5) {
+    display: flex;
+    justify-content: flex-end;
+    position: absolute;
+    top: 10px; right: 10px;
+    padding: 0;
+  }
+  /* Days expanded row */
+  table.patient-table tr.days-row { display: block; }
+  table.patient-table tr.days-row td { display: block; padding: 0; }
+  .days-row-cards-grid { grid-template-columns: 1fr 1fr; padding: 8px 12px; }
+}
+
+/* ─── SMALL PHONE (≤480px) ─── */
 @media (max-width: 480px) {
-  #header { padding: 8px; }
+  #header { padding: 8px; gap: 6px; }
   .logo { font-size: 10px; }
   .week-nav button { width: 18px; height: 18px; font-size: 12px; }
-  .floor-tab { padding: 3px 8px; font-size: 10px; }
+  .floor-tab { padding: 3px 8px; font-size: 10px; white-space: nowrap; }
   .section-title { font-size: 9px; }
   .patient-count { font-size: 9px; }
-  table.patient-table thead th { font-size: 7px; padding: 4px; }
-  table.patient-table td { padding: 4px; }
   .cell-room { font-size: 10px; }
   .cell-patient-name { font-size: 10px; }
   .cell-sub { font-size: 9px; }
   .cell-diag { font-size: 8px; padding: 1px 3px; }
-  .btn-action-td { display: none; }
   .day-badges { gap: 1px; }
   .badge { font-size: 7px; padding: 1px 2px; }
+  /* Panel footer: "Copiar al día anterior" arriba ocupando toda la fila */
+  #btn-copy-prev { order: -1; width: 100%; justify-content: center; }
+  #btn-copy-prev-label { font-size: 11px; }
+  /* Config */
   #config-banner { padding: 12px; }
   .config-banner-icon { font-size: 24px; }
   .config-banner-text h3 { font-size: 13px; }
   .config-banner-text p { font-size: 11px; }
   .config-form input { font-size: 11px; padding: 6px 8px; }
+  /* CSV modal */
   .drop-zone { padding: 20px 10px; }
   .drop-zone svg { width: 24px; height: 24px; }
   .drop-zone p { font-size: 11px; }
   .preview-info { font-size: 10px; padding: 8px 10px; }
   .preview-row { font-size: 9px; padding: 5px 8px; gap: 8px; }
-  .day-list-item { padding: 10px 15px; }
-  .day-list-day { font-size: 11px; min-width: 55px; }
-  .day-list-summary { font-size: 10px; }
+  /* Days grid: 1 column on very small */
+  .days-row-cards-grid { grid-template-columns: 1fr; }
+  /* Move floor filter */
+  #move-floor-filter { flex-wrap: nowrap; overflow-x: auto; }
+  .move-floor-btn { white-space: nowrap; flex-shrink: 0; }
 }
 </style>
 </head>
@@ -1069,6 +1265,10 @@ table.patient-table td {
   <div class="panel-body" id="panel-body"></div>
   <div class="panel-footer">
     <button class="btn" onclick="closePanel()">Cancelar</button>
+    <button class="btn" id="btn-copy-prev" onclick="copyToPrevDay()" title="Copia lo cargado acá al día anterior y te lleva a editarlo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/><line x1="9" y1="12" x2="21" y2="12"/></svg>
+      <span id="btn-copy-prev-label">Copiar al día anterior</span>
+    </button>
     <button class="btn primary" onclick="saveEntry()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
       Guardar
@@ -1139,23 +1339,42 @@ table.patient-table td {
 <div id="move-patient-overlay" onclick="closeMovePatientOnOverlay(event)">
   <div id="move-patient-modal">
     <div class="modal-header">
-      <span class="modal-title">Mover de Cama</span>
+      <div>
+        <div class="modal-title">Mover de Cama</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:3px;">
+          <span id="move-patient-name-label"></span> · Cama actual: <strong id="move-current-room" style="color:var(--accent)"></strong>
+        </div>
+      </div>
       <button class="panel-close" onclick="closeMovePatientModal()">✕</button>
     </div>
-    <div class="modal-body">
-      <p style="font-size:12px; color:var(--text2); margin-bottom:16px;">
-        Paciente: <strong id="move-patient-name" style="color:var(--text)"></strong><br>
-        Cama actual: <strong id="move-current-room" style="color:var(--accent)"></strong>
-      </p>
-      <label style="font-size:11px; color:var(--text3); display:block; margin-bottom:8px;">Nueva Cama / Habitación</label>
-      <input type="text" id="new-move-room" placeholder="Ej: 305" style="width:100%; background:var(--surface2); border:1px solid var(--border2); border-radius:5px; color:var(--text); font-size:13px; padding:10px 12px;">
-      <p id="move-room-warning" style="font-size:11px; color:var(--cat-qmt); margin-top:8px; display:none;"></p>
+    <div class="modal-body" style="padding:16px 20px;">
+      <!-- Floor filter -->
+      <div style="margin-bottom:12px;">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:6px;font-weight:600;">Filtrar por sector</div>
+        <div id="move-floor-filter" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
+      </div>
+      <!-- Search -->
+      <div class="search-box" style="margin-bottom:12px;min-width:unset;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input id="move-search" placeholder="Buscar cama o paciente..." oninput="renderMoveGrid()" style="width:100%;">
+      </div>
+      <!-- Bed grid -->
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:8px;font-weight:600;">Seleccioná la cama destino</div>
+      <div id="move-bed-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px;max-height:280px;overflow-y:auto;padding-right:2px;"></div>
+      <!-- Custom room input -->
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:6px;font-weight:600;">O ingresá una cama manualmente</div>
+        <input type="text" id="new-move-room" placeholder="Ej: 405, TAMO-02..." 
+               style="width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);font-size:13px;padding:9px 12px;outline:none;transition:border-color .15s;"
+               oninput="clearMoveGridSelection()" onfocus="clearMoveGridSelection()">
+      </div>
+      <p id="move-room-warning" style="font-size:11px;color:var(--cat-qmt);margin-top:8px;display:none;"></p>
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeMovePatientModal()">Cancelar</button>
       <button class="btn primary" onclick="confirmMovePatient()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-        Mover Paciente
+        Confirmar Mudanza
       </button>
     </div>
   </div>
@@ -1174,9 +1393,21 @@ table.patient-table td {
     <div class="panel-body" id="patient-days-body" style="padding:0;">
       <div id="patient-days-list"></div>
     </div>
-    <div class="panel-footer">
+    <div class="panel-footer" style="flex-wrap:wrap;gap:6px;">
       <button class="btn" onclick="closePatientDays()">Cerrar</button>
-      <button class="btn primary" id="btn-add-day-entry" onclick="addDayEntry()">
+      <button class="btn" id="days-panel-copy-prev" style="display:none;gap:5px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><path d="M3 12h18M3 6h18M3 18h12"/></svg>
+        Sem. anterior
+      </button>
+      <button class="btn" onclick="openMovePatient(currentDaysHc)" style="gap:5px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M5 9l7-7 7 7M5 15l7 7 7-7"/></svg>
+        Mover
+      </button>
+      <button class="btn" onclick="dischargePatient(currentDaysHc)" style="gap:5px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Alta
+      </button>
+      <button class="btn primary" id="btn-add-day-entry" onclick="addDayEntry()" style="gap:5px;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
         Cargar Día
       </button>
@@ -1239,7 +1470,8 @@ const TAGS = {
 
 const DAYS = ['lunes','martes','miercoles','jueves','viernes'];
 const DAY_LABELS = { lunes:'Lun', martes:'Mar', miercoles:'Mié', jueves:'Jue', viernes:'Vie' };
-const FLOORS = ['1','2','3','4','5'];
+const FLOORS = ['3','4','5','tamo','uti','utiq'];
+const FLOOR_LABELS = { '3':'Piso 3', '4':'Piso 4', '5':'Piso 5', 'tamo':'TAMO', 'uti':'UTI', 'utiq':'UTI-Q' };
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
 let db = null;
@@ -1339,25 +1571,44 @@ window.changeWeek = async function(dir) {
 };
 
 function updateWeekLabel() {
-  document.getElementById('week-label').textContent =
-    currentWeek.replace('-', ' ') + ' · ' + getWeekDates(currentWeek);
+  const dates = getWeekDates(currentWeek);
+  const shortId = currentWeek.replace('-', ' ');
+  document.getElementById('week-label').innerHTML =
+    `${shortId} <span class="week-dates">· ${dates}</span>`;
 }
 
 // ─── FLOOR TABS ───────────────────────────────────────────────────────────────
+function getPatientCountForFloor(f) {
+  const numericFloors = ['3','4','5'];
+  return Object.values(allPatients).filter(p => {
+    if (numericFloors.includes(f)) return String(p.cama).startsWith(f) && String(p.cama).length === 3;
+    return (p.floor||'').toLowerCase() === f.toLowerCase();
+  }).length;
+}
+
 function renderFloorTabs() {
   const el = document.getElementById('floor-tabs');
-  el.innerHTML = FLOORS.map(f =>
-    `<button class="floor-tab ${f===currentFloor?'active':''}" onclick="selectFloor('${f}')">Piso ${f}</button>`
-  ).join('');
+  el.innerHTML = FLOORS.map(f => {
+    const count = getPatientCountForFloor(f);
+    const countBadge = count > 0 ? `<span style="background:rgba(255,255,255,0.25);border-radius:10px;padding:0 5px;font-size:10px;margin-left:4px;">${count}</span>` : '';
+    return `<button class="floor-tab ${f===currentFloor?'active':''}" onclick="selectFloor('${f}')">${FLOOR_LABELS[f]||f}${countBadge}</button>`;
+  }).join('');
 }
 window.selectFloor = function(f) { currentFloor = f; renderTable(); renderFloorTabs(); };
 
 // ─── PATIENTS TABLE ───────────────────────────────────────────────────────────
 function getFloorPatients() {
-  const prefix = currentFloor;
+  const numericFloors = ['3','4','5'];
   return Object.values(allPatients)
-    .filter(p => String(p.cama).startsWith(prefix) && String(p.cama).length === 3)
-    .sort((a,b) => Number(a.cama) - Number(b.cama));
+    .filter(p => {
+      if (numericFloors.includes(currentFloor)) {
+        return String(p.cama).startsWith(currentFloor) && String(p.cama).length === 3;
+      } else {
+        // Named floors: match by p.floor field
+        return (p.floor||'').toLowerCase() === currentFloor.toLowerCase();
+      }
+    })
+    .sort((a,b) => String(a.cama).localeCompare(String(b.cama)));
 }
 
 function renderTable(filter='') {
@@ -1365,7 +1616,7 @@ function renderTable(filter='') {
     !filter || p.paciente.toLowerCase().includes(filter.toLowerCase())
   );
   const tbody = document.getElementById('patient-tbody');
-  document.getElementById('floor-title').textContent = `Piso ${currentFloor}`;
+  document.getElementById('floor-title').textContent = FLOOR_LABELS[currentFloor] || currentFloor;
   document.getElementById('patient-count').textContent = `${patients.length} paciente${patients.length!==1?'s':''}`;
 
   if (!patients.length) {
@@ -1378,7 +1629,7 @@ function renderTable(filter='') {
   tbody.innerHTML = patients.map(p => {
     const hc = String(p.hc);
     return `
-      <tr class="patient-row" data-hc="${hc}" style="cursor:pointer" onclick="toggleDaysRow('${hc}')">
+      <tr class="patient-row" data-hc="${hc}" style="cursor:pointer" onclick="handlePatientRowClick('${hc}')">
         <td><div class="cell-room">${p.cama}</div></td>
         <td>
           <div class="cell-patient-name">${p.paciente}</div>
@@ -1390,10 +1641,6 @@ function renderTable(filter='') {
         </td>
         <td><span class="cell-diag">${p.diagnostico||'—'}</span></td>
         <td style="text-align:right;padding-right:16px;" class="btn-action-td">
-          <button class="btn primary" onclick="event.stopPropagation(); openMovePatient('${hc}')" title="Mover de cama" style="padding:4px 10px;font-size:11px;margin-right:6px;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 9l7-7 7 7M5 15l7 7 7-7"/></svg>
-            Mover
-          </button>
           <button class="btn" onclick="event.stopPropagation(); dischargePatient('${hc}')" title="Dar de alta" style="padding:4px 10px;font-size:11px;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
             Alta
@@ -1431,9 +1678,11 @@ window.toggleDaysRow = function(hc) {
   const isOpen = row.style.display !== 'none';
 
   document.querySelectorAll('.days-row').forEach(r => { r.style.display = 'none'; });
+  currentDaysHc = null;
 
   if (isOpen) return;
 
+  currentDaysHc = hc;
   row.style.display = 'table-row';
   renderDaysRowContent(hc);
 };
@@ -1441,39 +1690,59 @@ window.toggleDaysRow = function(hc) {
 function renderDaysRowContent(hc) {
   const container = document.getElementById(`days-content-${hc}`);
   if (!container) return;
+  const p = allPatients[hc];
 
-  container.innerHTML = DAYS.map(day => {
+  const dayCards = DAYS.map(day => {
     const entry = weekData[`${hc}_${day}`];
     const hasEntry = entry && CATS.some(c => entry[c.id] && (entry[c.id].text || entry[c.id].tags?.length));
 
-    let summary = 'Sin datos cargados';
+    let summary = 'Sin datos';
     if (hasEntry) {
       const parts = [];
       CATS.forEach(c => {
         const d = entry[c.id];
         if (!d) return;
-        if (d.tags?.length) parts.push(`${c.label}:\n${d.tags.join(', ')}`);
-        else if (d.text) parts.push(`${c.label}:\n${d.text}`);
+        if (d.tags?.length) parts.push(`<span style="color:${c.dot};font-size:9px;font-weight:600">${c.label}:</span> ${d.tags.join(', ')}`);
+        else if (d.text) parts.push(`<span style="color:${c.dot};font-size:9px;font-weight:600">${c.label}:</span> ${d.text.substring(0,60)}`);
       });
-      summary = parts.join('\n');
-      if (summary.length > 200) summary = summary.substring(0, 200) + '…';
+      summary = parts.join('<br>');
     }
 
     return `
-      <button class="days-row-card" onclick="openPanel('${hc}','${day}')">
+      <button class="days-row-card ${hasEntry?'has-data':''}" onclick="openPanel('${hc}','${day}')">
         <div class="days-row-card-header">
           <span class="days-row-day">${DAY_LABELS[day]}</span>
           <div class="day-badges">${renderDayBadges(hc, day)}</div>
         </div>
-        <div class="days-row-summary">${summary}</div>
+        <div class="days-row-summary" style="font-size:11px;line-height:1.5">${summary}</div>
       </button>`;
   }).join('');
+
+  container.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px 4px;border-bottom:1px solid var(--border);background:var(--surface);">
+      <span style="font-size:11px;color:var(--text3);">
+        Semana <strong style="color:var(--text2)">${currentWeek}</strong>
+        ${hasPrevWeekData(hc) ? `<button class="btn" onclick="event.stopPropagation();copiarSemanaAnterior('${hc}')" style="margin-left:10px;padding:2px 8px;font-size:10px;">↩ Copiar semana anterior</button>` : ''}
+      </span>
+      <button class="btn" onclick="event.stopPropagation();openMovePatient('${hc}')" style="padding:3px 10px;font-size:11px;gap:4px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><path d="M5 9l7-7 7 7M5 15l7 7 7-7"/></svg>
+        Mover cama
+      </button>
+    </div>
+    <div class="days-row-cards-grid">${dayCards}</div>`;
 }
 
 // ─── ENTRY PANEL ──────────────────────────────────────────────────────────────
 window.openPanel = function(hc, day) {
   const p = allPatients[hc];
   if (!p) return;
+
+  // On mobile, patient-days-panel may be open — close it first (no animation flicker)
+  if (document.getElementById('patient-days-overlay').classList.contains('open')) {
+    document.getElementById('patient-days-panel').classList.remove('open');
+    document.getElementById('patient-days-overlay').classList.remove('open');
+  }
+
   panelState.hc = hc;
   panelState.day = day;
   panelState.data = JSON.parse(JSON.stringify(weekData[`${hc}_${day}`] || {}));
@@ -1495,6 +1764,29 @@ function renderDaySelector() {
     `<button class="day-btn ${d===panelState.day?'active':''}"
              onclick="switchPanelDay('${d}')">${DAY_LABELS[d]}</button>`
   ).join('');
+  updateCopyPrevBtn();
+}
+
+function updateCopyPrevBtn() {
+  const btn = document.getElementById('btn-copy-prev');
+  const label = document.getElementById('btn-copy-prev-label');
+  if (!btn) return;
+  const idx = DAYS.indexOf(panelState.day);
+  if (idx === 0) {
+    // Lunes — no hay día anterior en la semana
+    btn.disabled = true;
+    btn.title = 'No hay día anterior (es Lunes)';
+    btn.style.opacity = '0.4';
+    btn.style.cursor = 'not-allowed';
+    if (label) label.textContent = 'Copiar al día anterior';
+  } else {
+    btn.disabled = false;
+    btn.title = `Copia lo cargado acá al ${DAY_LABELS[DAYS[idx-1]]} y te lleva a editarlo`;
+    btn.style.opacity = '';
+    btn.style.cursor = '';
+    const prevLabel = Object.values(DAY_LABELS)[idx-1];
+    if (label) label.textContent = `Copiar al ${prevLabel}`;
+  }
 }
 
 window.switchPanelDay = function(day) {
@@ -1553,16 +1845,6 @@ window.toggleTag = function(catId, tag, btn) {
   if (idx >= 0) { tags.splice(idx,1); btn.classList.remove('active'); }
   else { tags.push(tag); btn.classList.add('active'); }
   panelState.data[catId].tags = tags;
-  
-  // Copy tag to textarea for editing
-  const ta = document.getElementById(`ta-${catId}`);
-  if (ta) {
-    const currentText = ta.value.trim();
-    if (!currentText.includes(tag)) {
-      ta.value = currentText ? currentText + '\n' + tag : tag;
-    }
-  }
-  
   updateCatSummary(catId);
   // Auto-open category body
   const body = document.getElementById(`cat-body-${catId}`);
@@ -1591,11 +1873,100 @@ window.saveEntry = function() {
   collectPanelData();
   const key = `${panelState.hc}_${panelState.day}`;
   weekData[key] = panelState.data;
-  // Persist locally always
   localStorage.setItem(`sc_week_${currentWeek}`, JSON.stringify(weekData));
-  renderTable(document.getElementById('search-input').value);
+  const savedHc = panelState.hc;
   closePanel();
-  showToast('Entrada guardada');
+
+  const expandedHc = currentDaysHc;
+  renderTable(document.getElementById('search-input').value);
+
+  if (window.innerWidth <= 640) {
+    // Mobile: reopen the days panel with updated data
+    openPatientDays(savedHc);
+  } else if (expandedHc) {
+    // Desktop: re-expand the inline row
+    const row = document.getElementById(`days-row-${expandedHc}`);
+    if (row) {
+      currentDaysHc = expandedHc;
+      row.style.display = 'table-row';
+      renderDaysRowContent(expandedHc);
+    }
+  }
+  showToast('Entrada guardada ✓');
+};
+
+window.copyToPrevDay = function() {
+  const idx = DAYS.indexOf(panelState.day);
+  if (idx <= 0) return; // Lunes, no hay anterior
+
+  // Capturar datos actuales del formulario primero
+  collectPanelData();
+
+  const prevDay = DAYS[idx - 1];
+  const prevKey = `${panelState.hc}_${prevDay}`;
+  const prevHasData = weekData[prevKey] && CATS.some(c => {
+    const d = weekData[prevKey][c.id];
+    return d && (d.text || d.tags?.length);
+  });
+
+  const doCopy = () => {
+    // Guardar día actual también para no perder cambios
+    weekData[`${panelState.hc}_${panelState.day}`] = panelState.data;
+    localStorage.setItem(`sc_week_${currentWeek}`, JSON.stringify(weekData));
+
+    // Copiar datos al día anterior
+    weekData[prevKey] = JSON.parse(JSON.stringify(panelState.data));
+    localStorage.setItem(`sc_week_${currentWeek}`, JSON.stringify(weekData));
+
+    // Cambiar el panel al día anterior con los datos copiados para editar
+    panelState.day = prevDay;
+    panelState.data = JSON.parse(JSON.stringify(weekData[prevKey]));
+    renderDaySelector();
+    renderPanelBody();
+    showToast(`Datos copiados al ${DAY_LABELS[prevDay]} — podés editarlos`);
+  };
+
+  if (prevHasData) {
+    // Mostrar mini-confirmación inline en el footer
+    showOverwriteConfirm(prevDay, doCopy);
+  } else {
+    doCopy();
+  }
+};
+
+// Mini confirmación inline en el footer cuando el día destino ya tiene datos
+function showOverwriteConfirm(prevDay, onConfirm) {
+  const footer = document.querySelector('#entry-panel .panel-footer');
+  const originalHTML = footer.innerHTML;
+
+  footer.innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:8px;width:100%;">
+      <div style="font-size:12px;color:var(--cat-atb);display:flex;align-items:center;gap:6px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;flex-shrink:0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        El ${DAY_LABELS[prevDay]} ya tiene datos cargados. ¿Sobreescribir?
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button class="btn" onclick="restorePanelFooter()" style="font-size:11px;padding:5px 10px;">Cancelar</button>
+        <button class="btn primary" id="btn-confirm-overwrite" style="font-size:11px;padding:5px 10px;background:var(--cat-atb);border-color:var(--cat-atb);">
+          Sí, sobreescribir
+        </button>
+      </div>
+    </div>`;
+
+  window._panelFooterOriginal = originalHTML;
+  document.getElementById('btn-confirm-overwrite').onclick = () => {
+    restorePanelFooter();
+    onConfirm();
+  };
+}
+
+window.restorePanelFooter = function() {
+  const footer = document.querySelector('#entry-panel .panel-footer');
+  if (window._panelFooterOriginal) {
+    footer.innerHTML = window._panelFooterOriginal;
+    window._panelFooterOriginal = null;
+    updateCopyPrevBtn();
+  }
 };
 
 window.saveWeek = async function() {
@@ -1694,6 +2065,7 @@ window.importPatients = async function() {
   if (db) { for (const [hc,p] of Object.entries(allPatients)) { try { await setDoc(doc(db,'patients',hc),p); } catch(e){} } }
   closeCSV();
   renderTable();
+  renderFloorTabs(); // update counts
   showToast(`${pendingCSV.length} pacientes importados ✓`);
   pendingCSV = [];
 };
@@ -1706,39 +2078,39 @@ window.toggleView = function(view) {
 };
 
 window.searchHistory = function() {
-  const patQ = document.getElementById('hist-search-patient').value.toLowerCase();
-  const drugQ = document.getElementById('hist-search-drug').value.toLowerCase();
-  const weekQ = document.getElementById('hist-search-week').value; // YYYY-Www
+  const patQ = document.getElementById('hist-search-patient').value.toLowerCase().trim();
+  const drugQ = document.getElementById('hist-search-drug').value.toLowerCase().trim();
+  const weekQ = document.getElementById('hist-search-week').value; // "YYYY-Www" from input[type=week]
 
-  // Gather all local weeks
+  // Gather all weeks stored locally
   const weeks = {};
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
     if (!key.startsWith('sc_week_')) continue;
-    const wid = key.replace('sc_week_','');
-    if (weekQ && wid !== weekQ.replace('-W','-W').replace('-W0','-W').replace('-W','-W')) {
-      // rough match
-      if (!wid.includes(weekQ.replace('W',''))) continue;
-    }
-    try { weeks[wid] = JSON.parse(localStorage.getItem(key)); } catch(e){}
+    const wid = key.replace('sc_week_', '');
+    // Filter by week: input gives "2025-W17", wid is "2025-W17" — direct match
+    if (weekQ && wid !== weekQ) continue;
+    try { weeks[wid] = JSON.parse(localStorage.getItem(key)); } catch(e) {}
   }
 
   const results = [];
   for (const [wid, data] of Object.entries(weeks)) {
     for (const [key, dayData] of Object.entries(data)) {
-      const [hc, day] = key.split('_');
+      const parts = key.split('_');
+      const hc = parts[0];
+      const day = parts[1];
+      if (!day || !DAYS.includes(day)) continue;
       const patient = allPatients[hc];
       if (!patient) continue;
       if (patQ && !patient.paciente.toLowerCase().includes(patQ)) continue;
 
-      // Check drug match
       let drugMatch = !drugQ;
       if (drugQ) {
         for (const cat of CATS) {
           const cd = dayData[cat.id];
           if (!cd) continue;
-          if ((cd.text||'').toLowerCase().includes(drugQ)) { drugMatch=true; break; }
-          if ((cd.tags||[]).some(t=>t.toLowerCase().includes(drugQ))) { drugMatch=true; break; }
+          if ((cd.text || '').toLowerCase().includes(drugQ)) { drugMatch = true; break; }
+          if ((cd.tags || []).some(t => t.toLowerCase().includes(drugQ))) { drugMatch = true; break; }
         }
       }
       if (!drugMatch) continue;
@@ -1825,7 +2197,7 @@ window.saveNewPatient = function() {
     return;
   }
 
-  const floor = cama.charAt(0);
+  const floor = detectFloor(cama);
   const newPatient = {
     cama,
     hc,
@@ -1848,6 +2220,7 @@ window.saveNewPatient = function() {
 
   closeAddPatientModal();
   renderTable();
+  renderFloorTabs();
   showToast('Paciente agregado ✓');
 };
 
@@ -1863,6 +2236,11 @@ window.openPatientDays = function(hc) {
   document.getElementById('days-patient-meta').textContent = 
     `Cama ${p.cama} · HC ${p.hc} · ${p.medico||''}`;
   
+  // Show/hide copy-prev-week button
+  const copyBtn = document.getElementById('days-panel-copy-prev');
+  if (copyBtn) copyBtn.style.display = hasPrevWeekData(hc) ? 'flex' : 'none';
+  if (copyBtn) copyBtn.onclick = () => copiarSemanaAnterior(hc);
+
   renderPatientDaysList();
   
   document.getElementById('patient-days-overlay').classList.add('open');
@@ -1924,17 +2302,55 @@ function renderPatientDaysList() {
 }
 
 window.addDayEntry = function() {
-  if (currentDaysHc) {
-    openPanel(currentDaysHc, 'lunes');
-  }
+  if (!currentDaysHc) return;
+  // Map JS day (0=Sun..6=Sat) to DAYS index
+  const dayMap = { 1:'lunes', 2:'martes', 3:'miercoles', 4:'jueves', 5:'viernes' };
+  const todayDay = new Date().getDay();
+  const targetDay = dayMap[todayDay] || 'lunes'; // weekends → lunes
+  openPanel(currentDaysHc, targetDay);
 };
 
 window.dischargePatient = async function(hc) {
   const p = allPatients[hc];
   if (!p) return;
-  const ok = confirm(`¿Dar de alta a ${p.paciente} y liberar la cama ${p.cama}?`);
-  if (!ok) return;
 
+  // Show inline confirmation instead of browser confirm()
+  showDischargeConfirm(hc, p);
+};
+
+function showDischargeConfirm(hc, p) {
+  // Remove any existing confirm
+  document.getElementById('discharge-confirm')?.remove();
+
+  const div = document.createElement('div');
+  div.id = 'discharge-confirm';
+  div.style.cssText = `
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+    background:var(--surface3); border:1px solid var(--cat-qmt);
+    border-radius:8px; padding:14px 18px; z-index:500;
+    display:flex; align-items:center; gap:12px; max-width:90vw;
+    box-shadow:0 8px 32px rgba(0,0,0,0.4); animation: slideUp .2s ease;
+  `;
+  div.innerHTML = `
+    <span style="font-size:12px;color:var(--text2);">
+      ¿Dar de alta a <strong style="color:var(--text)">${p.paciente.split(',')[0]}</strong> (cama ${p.cama})?
+    </span>
+    <div style="display:flex;gap:6px;flex-shrink:0;">
+      <button class="btn" onclick="document.getElementById('discharge-confirm').remove()" style="padding:4px 10px;font-size:11px;">Cancelar</button>
+      <button class="btn" id="btn-confirm-discharge" style="padding:4px 10px;font-size:11px;background:var(--cat-qmt);border-color:var(--cat-qmt);color:#fff;">Confirmar alta</button>
+    </div>`;
+  document.body.appendChild(div);
+
+  document.getElementById('btn-confirm-discharge').onclick = async () => {
+    div.remove();
+    await executeDischarge(hc, p);
+  };
+
+  // Auto-dismiss after 8s
+  setTimeout(() => div?.remove(), 8000);
+}
+
+async function executeDischarge(hc, p) {
   const currentWeekEntries = {};
   for (const day of DAYS) {
     const key = `${hc}_${day}`;
@@ -1971,28 +2387,108 @@ window.dischargePatient = async function(hc) {
   }
 
   renderTable(document.getElementById('search-input').value);
-  showToast(`Paciente ${p.paciente} dado de alta ✓`);
-};
+  renderFloorTabs(); // update patient counts
+  showToast(`${p.paciente.split(',')[0]} dado/a de alta ✓`);
+}
 
 // ─── MOVE PATIENT ─────────────────────────────────────────────────────────────
 let movePatientHc = null;
+let moveFilterFloor = 'all';
+let moveSelectedRoom = null;
 
 window.openMovePatient = function(hc) {
   const p = allPatients[hc];
   if (!p) return;
   
   movePatientHc = hc;
-  document.getElementById('move-patient-name').textContent = p.paciente;
+  moveFilterFloor = 'all';
+  moveSelectedRoom = null;
+
+  document.getElementById('move-patient-name-label').textContent = p.paciente;
   document.getElementById('move-current-room').textContent = p.cama;
   document.getElementById('new-move-room').value = '';
+  document.getElementById('move-search').value = '';
   document.getElementById('move-room-warning').style.display = 'none';
-  
+
+  // Render floor filter buttons
+  const filterEl = document.getElementById('move-floor-filter');
+  filterEl.innerHTML = [
+    `<button class="move-floor-btn active" onclick="setMoveFloor('all',this)">Todos</button>`,
+    ...FLOORS.map(f => `<button class="move-floor-btn" onclick="setMoveFloor('${f}',this)">${FLOOR_LABELS[f]||f}</button>`)
+  ].join('');
+
+  renderMoveGrid();
   document.getElementById('move-patient-overlay').classList.add('open');
+};
+
+window.setMoveFloor = function(floor, btn) {
+  moveFilterFloor = floor;
+  document.querySelectorAll('.move-floor-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderMoveGrid();
+};
+
+window.renderMoveGrid = function() {
+  const search = (document.getElementById('move-search')?.value || '').toLowerCase();
+  const grid = document.getElementById('move-bed-grid');
+  const p = allPatients[movePatientHc];
+
+  // Build list of all rooms from allPatients
+  const rooms = Object.values(allPatients)
+    .filter(pat => {
+      if (pat.hc === movePatientHc) return false; // exclude self
+      if (moveFilterFloor !== 'all') {
+        const numericFloors = ['3','4','5'];
+        if (numericFloors.includes(moveFilterFloor)) {
+          if (!String(pat.cama).startsWith(moveFilterFloor)) return false;
+        } else {
+          if ((pat.floor||'').toLowerCase() !== moveFilterFloor) return false;
+        }
+      }
+      if (search && !String(pat.cama).includes(search) && !pat.paciente.toLowerCase().includes(search)) return false;
+      return true;
+    })
+    .sort((a,b) => String(a.cama).localeCompare(String(b.cama)));
+
+  if (!rooms.length) {
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3);font-size:12px;">Sin camas en este sector</div>`;
+    return;
+  }
+
+  grid.innerHTML = rooms.map(pat => {
+    const isSelected = moveSelectedRoom === pat.cama;
+    return `
+      <div class="bed-card occupied ${isSelected?'selected':''}" onclick="selectMoveRoom('${pat.cama}',this)">
+        <div class="bed-card-room">${pat.cama}</div>
+        <div class="bed-card-name">${pat.paciente.split(',')[0]}</div>
+        <div class="bed-card-status busy">● Ocupada</div>
+      </div>`;
+  }).join('');
+};
+
+window.selectMoveRoom = function(room, el) {
+  // Toggle selection
+  if (moveSelectedRoom === room) {
+    moveSelectedRoom = null;
+    el.classList.remove('selected');
+  } else {
+    moveSelectedRoom = room;
+    document.querySelectorAll('.bed-card').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+    document.getElementById('new-move-room').value = '';
+  }
+  document.getElementById('move-room-warning').style.display = 'none';
+};
+
+window.clearMoveGridSelection = function() {
+  moveSelectedRoom = null;
+  document.querySelectorAll('.bed-card').forEach(c => c.classList.remove('selected'));
 };
 
 window.closeMovePatientModal = function() {
   document.getElementById('move-patient-overlay').classList.remove('open');
   movePatientHc = null;
+  moveSelectedRoom = null;
 };
 
 window.closeMovePatientOnOverlay = function(e) {
@@ -2002,36 +2498,123 @@ window.closeMovePatientOnOverlay = function(e) {
 window.confirmMovePatient = function() {
   if (!movePatientHc) return;
   
-  const newRoom = document.getElementById('new-move-room').value.trim();
+  // Priority: grid selection > manual input
+  const newRoom = moveSelectedRoom || document.getElementById('new-move-room').value.trim();
   if (!newRoom) {
-    showToast('Ingrese una nueva cama');
+    showToast('Seleccioná una cama o ingresá una manualmente');
     return;
   }
   
   const p = allPatients[movePatientHc];
   if (!p) return;
-  
-  // Verificar si la nueva cama ya está ocupada por otro paciente
-  const existingPatient = Object.values(allPatients).find(pat => pat.cama === newRoom && pat.hc !== movePatientHc);
+
+  const oldRoom = p.cama;
+
+  // Check if room is occupied by another patient
+  const existingPatient = Object.values(allPatients).find(pat => pat.cama === newRoom && String(pat.hc) !== String(movePatientHc));
   if (existingPatient) {
-    document.getElementById('move-room-warning').textContent = `La cama ${newRoom} ya está ocupada por ${existingPatient.paciente}`;
-    document.getElementById('move-room-warning').style.display = 'block';
+    const warn = document.getElementById('move-room-warning');
+    warn.textContent = `⚠ La cama ${newRoom} está ocupada por ${existingPatient.paciente}. ¿Querés intercambiar posiciones?`;
+    warn.style.display = 'block';
+    // On second click with warning visible, do the swap
+    warn.onclick = () => { doSwapRooms(movePatientHc, String(existingPatient.hc)); };
+    warn.style.cursor = 'pointer';
+    warn.textContent += ' (clic para intercambiar)';
     return;
   }
-  
-  // Actualizar la cama del paciente
+
   p.cama = newRoom;
-  p.floor = newRoom.charAt(0);
+  p.floor = detectFloor(newRoom);
   
   localStorage.setItem('sc_patients', JSON.stringify(allPatients));
-  
-  if (db) {
-    setDoc(doc(db, 'patients', movePatientHc), p).catch(() => {});
-  }
+  if (db) setDoc(doc(db, 'patients', movePatientHc), p).catch(() => {});
   
   closeMovePatientModal();
   renderTable();
-  showToast(`Paciente movido a cama ${newRoom} ✓`);
+  showToast(`${p.paciente.split(',')[0]} movido/a de ${oldRoom} → ${newRoom} ✓`);
+};
+
+function doSwapRooms(hc1, hc2) {
+  const p1 = allPatients[hc1];
+  const p2 = allPatients[hc2];
+  if (!p1 || !p2) return;
+  const tmp = p1.cama;
+  p1.cama = p2.cama; p1.floor = detectFloor(p2.cama);
+  p2.cama = tmp;     p2.floor = detectFloor(tmp);
+  localStorage.setItem('sc_patients', JSON.stringify(allPatients));
+  if (db) {
+    setDoc(doc(db,'patients',hc1),p1).catch(()=>{});
+    setDoc(doc(db,'patients',hc2),p2).catch(()=>{});
+  }
+  closeMovePatientModal();
+  renderTable();
+  showToast(`Camas intercambiadas ✓`);
+}
+
+function detectFloor(cama) {
+  const s = String(cama);
+  const numericFloors = ['3','4','5'];
+  for (const f of numericFloors) {
+    if (s.startsWith(f) && s.length === 3) return f;
+  }
+  // Named floors: check if starts with known prefix
+  for (const f of ['tamo','uti','utiq']) {
+    if (s.toLowerCase().startsWith(f)) return f;
+  }
+  return s.charAt(0);
+}
+
+// In mobile card mode, patient row click opens the side panel instead of inline expand
+function handlePatientRowClick(hc) {
+  if (window.innerWidth <= 640) {
+    openPatientDays(hc);
+  } else {
+    toggleDaysRow(hc);
+  }
+}
+function getPrevWeekId(weekId) {
+  const [y, wn] = weekId.replace('W','').split('-').map(Number);
+  const jan4 = new Date(y, 0, 4);
+  const startOfWeek = new Date(jan4);
+  startOfWeek.setDate(jan4.getDate() - (jan4.getDay()+6)%7 + (wn-1)*7 - 7);
+  return getWeekId(startOfWeek);
+}
+
+function hasPrevWeekData(hc) {
+  const prevWeek = getPrevWeekId(currentWeek);
+  const prevData = JSON.parse(localStorage.getItem(`sc_week_${prevWeek}`) || '{}');
+  return DAYS.some(d => {
+    const e = prevData[`${hc}_${d}`];
+    return e && CATS.some(c => e[c.id] && (e[c.id].text || e[c.id].tags?.length));
+  });
+}
+
+window.copiarSemanaAnterior = function(hc) {
+  const prevWeek = getPrevWeekId(currentWeek);
+  const prevData = JSON.parse(localStorage.getItem(`sc_week_${prevWeek}`) || '{}');
+  let copied = 0;
+  DAYS.forEach(d => {
+    const key = `${hc}_${d}`;
+    const prev = prevData[key];
+    if (prev && CATS.some(c => prev[c.id] && (prev[c.id].text || prev[c.id].tags?.length))) {
+      if (!weekData[key]) { // only copy if current day is empty
+        weekData[key] = JSON.parse(JSON.stringify(prev));
+        copied++;
+      }
+    }
+  });
+  if (copied === 0) {
+    showToast('Los días de esta semana ya tienen datos cargados');
+    return;
+  }
+  localStorage.setItem(`sc_week_${currentWeek}`, JSON.stringify(weekData));
+  // Refresh whichever view is open
+  if (window.innerWidth <= 640 && document.getElementById('patient-days-overlay').classList.contains('open')) {
+    renderPatientDaysList();
+  } else {
+    renderDaysRowContent(hc);
+  }
+  showToast(`${copied} día${copied!==1?'s':''} copiados de la semana anterior ✓`);
 };
 
 // ─── SEARCH ───────────────────────────────────────────────────────────────────
@@ -2057,26 +2640,50 @@ async function init() {
   updateWeekLabel();
   renderFloorTabs();
 
+  // If patients already in localStorage, show them immediately
+  if (Object.keys(allPatients).length > 0) {
+    document.getElementById('config-banner').classList.add('hidden');
+    renderTable();
+  }
+
   // Try to restore Firebase config
   const saved = localStorage.getItem('sc_fb_config');
   if (saved) {
     try {
       const cfg = JSON.parse(saved);
-      await initFirebase(cfg);
-    } catch(e) { renderAll(); }
-  } else {
-    renderAll();
+      await initFirebase(cfg); // initFirebase calls renderAll() on success
+      return;
+    } catch(e) { /* fall through to local mode */ }
   }
 
-  // If patients already loaded, render immediately
+  // No Firebase config — use local mode silently if patients exist, show banner if not
   if (Object.keys(allPatients).length > 0) {
-    document.getElementById('config-banner').classList.add('hidden');
+    localMode = true;
+    // banner already hidden above
+  } else {
+    // Show banner so user can configure Firebase or opt into local mode
     renderAll();
-    useLocalMode(); // don't require firebase if we have data
   }
 }
 
 init();
+
+// ─── KEYBOARD SHORTCUTS ───────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  // Close in priority order: entry panel > move modal > add patient > csv > days panel
+  if (document.getElementById('entry-panel').classList.contains('open')) { closePanel(); return; }
+  if (document.getElementById('move-patient-overlay').classList.contains('open')) { closeMovePatientModal(); return; }
+  if (document.getElementById('add-patient-overlay').classList.contains('open')) { closeAddPatientModal(); return; }
+  if (document.getElementById('csv-overlay').classList.contains('open')) { closeCSV(); return; }
+  if (document.getElementById('patient-days-overlay').classList.contains('open')) { closePatientDays(); return; }
+  // Close inline expanded row
+  if (currentDaysHc) {
+    const row = document.getElementById(`days-row-${currentDaysHc}`);
+    if (row) row.style.display = 'none';
+    currentDaysHc = null;
+  }
+});
 </script>
 </body>
 </html>
