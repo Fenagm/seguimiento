@@ -760,87 +760,135 @@ function parseCSV(text) {
   const patients = [];
   const lines = text.split(/\r?\n/);
   
-  let currentService = '';
-  let i = 0;
-  
-  while (i < lines.length) {
-    const line = lines[i].trim();
+  for (const line of lines) {
+    if (!line.trim() || !line.includes('"Cama"')) continue;
     
-    // Detectar servicio (TAMO, U.T.I PISO 4, "U.T.I.Q PISO2")
-    if (line.includes('TAMO') && !line.includes('Cama')) {
-      currentService = 'tamo';
-      i++;
-      continue;
-    } else if (line.includes('U.T.I    PISO 4') || line.includes('U.T.I PISO 4')) {
-      currentService = 'uti';
-      i++;
-      continue;
-    } else if (line.includes('U.T.I.Q') || line.includes('"U.T.I.Q  PISO2"')) {
-      currentService = 'utiq';
-      i++;
-      continue;
-    }
+    // Parsear la línea respetando comillas escapadas ("")
+    const fields = [];
+    let current = '';
+    let i = 0;
+    let inQuotes = false;
     
-    // Buscar línea de encabezados "Cama","Paciente","HC",...
-    if (line.includes('"Cama"') && line.includes('"Paciente"') && line.includes('"HC"')) {
-      // Saltar línea de encabezados
-      i++;
-      continue;
-    }
-    
-    // Procesar línea de datos (debe tener comillas y al menos 9 campos)
-    if (line.startsWith('"') && line.includes('","')) {
-      // Parsear línea CSV respetando comillas
-      const parsed = parseCSVLine(line);
+    while (i < line.length) {
+      const char = line[i];
+      const nextChar = line[i + 1];
       
-      if (parsed.length >= 9) {
-        let cama = parsed[0].replace(/^"|"$/g, '').trim();
-        const paciente = parsed[1].replace(/^"|"$/g, '').trim();
-        const hc = parsed[2].replace(/^"|"$/g, '').trim().replace('.0', '');
-        const medico = parsed[3].replace(/^"|"$/g, '').trim();
-        const ingreso = parsed[4].replace(/^"|"$/g, '').trim();
-        const dias = parsed[5].replace(/^"|"$/g, '').trim();
-        const cobertura = parsed[6].replace(/^"|"$/g, '').trim();
-        const servicio = parsed[7].replace(/^"|"$/g, '').trim();
-        let diagnostico = parsed[8].replace(/^"|"$/g, '').trim();
-        
-        // Si hay más campos (como número de credencial), ignorarlos
-        
-        // Limpiar cama: eliminar "Cama " si está presente y espacios
-        if (cama.startsWith('Cama ')) cama = cama.substring(5);
-        cama = cama.trim();
-        
-        // Determinar piso según el servicio detectado o por el contenido
-        let floor = currentService;
-        if (!floor) {
-          if (servicio.includes('TAMO')) floor = 'tamo';
-          else if (servicio.includes('U.T.I.Q') || servicio.includes('UTIQ')) floor = 'utiq';
-          else if (servicio.includes('U.T.I') || servicio.includes('UTI')) floor = 'uti';
-          else if (cama.startsWith('3')) floor = '3';
-          else if (cama.startsWith('4')) floor = '4';
-          else if (cama.startsWith('5')) floor = '5';
-          else floor = '3';
-        }
-        
-        // Solo agregar si tiene cama y paciente válidos
-        if (cama && paciente && hc && !isNaN(parseInt(hc))) {
-          patients.push({
-            cama: cama,
-            hc: hc,
-            paciente: paciente,
-            medico: medico || '—',
-            ingreso: ingreso,
-            dias: dias || '0',
-            cobertura: cobertura || '—',
-            servicio: servicio || '—',
-            diagnostico: diagnostico || 'SIN DIAGNÓSTICO',
-            floor: floor,
-          });
+      if (char === '"') {
+        if (nextChar === '"') {
+          // Comilla doble escapada -> agregar una comilla literal
+          current += '"';
+          i += 2;
+          continue;
+        } else {
+          // Alternar estado de comillas
+          inQuotes = !inQuotes;
+          i++;
+          continue;
         }
       }
+      
+      if (char === ',' && !inQuotes) {
+        fields.push(current);
+        current = '';
+        i++;
+        continue;
+      }
+      
+      current += char;
+      i++;
+    }
+    fields.push(current); // último campo
+    
+    // Limpiar comillas exteriores de cada campo
+    const cleanFields = fields.map(f => {
+      let cleaned = f;
+      if (cleaned.startsWith('"')) cleaned = cleaned.substring(1);
+      if (cleaned.endsWith('"')) cleaned = cleaned.substring(0, cleaned.length - 1);
+      return cleaned.trim();
+    });
+    
+    // Buscar índices de las columnas que nos interesan
+    // El formato tiene: ... "PISO 3","Cama","Paciente","HC","Medico","Ingreso","Dias","Cobertura / Plan","Servicio","Diagnóstico","301",...
+    let pisoIndex = -1;
+    let camaIndex = -1;
+    let pacienteIndex = -1;
+    let hcIndex = -1;
+    let medicoIndex = -1;
+    let ingresoIndex = -1;
+    let diasIndex = -1;
+    let coberturaIndex = -1;
+    let servicioIndex = -1;
+    let diagnosticoIndex = -1;
+    
+    for (let idx = 0; idx < cleanFields.length; idx++) {
+      const field = cleanFields[idx];
+      if (field === 'PISO 3' || field === 'PISO 4' || field === 'PISO 5' || 
+          field === 'TAMO' || field === 'U.T.I    PISO 4' || field === 'U.T.I.Q  PISO2') {
+        pisoIndex = idx;
+      } else if (field === 'Cama') camaIndex = idx;
+      else if (field === 'Paciente') pacienteIndex = idx;
+      else if (field === 'HC') hcIndex = idx;
+      else if (field === 'Medico') medicoIndex = idx;
+      else if (field === 'Ingreso') ingresoIndex = idx;
+      else if (field === 'Dias') diasIndex = idx;
+      else if (field === 'Cobertura / Plan') coberturaIndex = idx;
+      else if (field === 'Servicio') servicioIndex = idx;
+      else if (field === 'Diagnóstico') diagnosticoIndex = idx;
     }
     
-    i++;
+    // Si encontramos los índices y tenemos datos después de los encabezados
+    if (camaIndex !== -1 && pacienteIndex !== -1 && hcIndex !== -1 && 
+        cleanFields.length > Math.max(camaIndex, pacienteIndex, hcIndex, medicoIndex, ingresoIndex, diasIndex, coberturaIndex, servicioIndex, diagnosticoIndex)) {
+      
+      const cama = cleanFields[camaIndex];
+      const paciente = cleanFields[pacienteIndex];
+      const hc = cleanFields[hcIndex].replace('.0', '');
+      const medico = cleanFields[medicoIndex] || '—';
+      const ingreso = cleanFields[ingresoIndex] || '';
+      const dias = cleanFields[diasIndex] || '0';
+      const cobertura = cleanFields[coberturaIndex] || '—';
+      const servicio = cleanFields[servicioIndex] || '—';
+      const diagnostico = cleanFields[diagnosticoIndex] || 'SIN DIAGNÓSTICO';
+      
+      // Determinar el piso según el encabezado PISO X o TAMO/UTI
+      let floor = '';
+      if (pisoIndex !== -1) {
+        const pisoValue = cleanFields[pisoIndex];
+        if (pisoValue === 'PISO 3') floor = '3';
+        else if (pisoValue === 'PISO 4') floor = '4';
+        else if (pisoValue === 'PISO 5') floor = '5';
+        else if (pisoValue === 'TAMO') floor = 'tamo';
+        else if (pisoValue === 'U.T.I    PISO 4') floor = 'uti';
+        else if (pisoValue === 'U.T.I.Q  PISO2') floor = 'utiq';
+      }
+      
+      // Si no se detectó por el encabezado, usar el servicio o la cama
+      if (!floor) {
+        if (servicio.includes('TAMO')) floor = 'tamo';
+        else if (servicio.includes('U.T.I.Q')) floor = 'utiq';
+        else if (servicio.includes('U.T.I')) floor = 'uti';
+        else if (cama.startsWith('3')) floor = '3';
+        else if (cama.startsWith('4')) floor = '4';
+        else if (cama.startsWith('5')) floor = '5';
+        else floor = '3';
+      }
+      
+      // Validar que tengamos datos mínimos
+      if (cama && paciente && hc && !isNaN(parseInt(hc))) {
+        patients.push({
+          cama: cama,
+          hc: hc,
+          paciente: paciente,
+          medico: medico,
+          ingreso: ingreso,
+          dias: dias,
+          cobertura: cobertura,
+          servicio: servicio,
+          diagnostico: diagnostico,
+          floor: floor,
+        });
+      }
+    }
   }
   
   return patients;
