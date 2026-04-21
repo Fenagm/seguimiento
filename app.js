@@ -239,6 +239,11 @@ function renderFloorTabs() {
     const countBadge = count > 0 ? `<span style="background:rgba(255,255,255,0.25);border-radius:10px;padding:0 5px;font-size:10px;margin-left:4px;">${count}</span>` : '';
     return `<button class="floor-tab ${f === currentFloor ? 'active' : ''}" data-floor="${f}">${FLOOR_LABELS[f] || f}${countBadge}</button>`;
   }).join('');
+
+  // Wire up click listeners every time tabs are re-rendered
+  el.querySelectorAll('.floor-tab').forEach(btn => {
+    btn.addEventListener('click', () => selectFloor(btn.dataset.floor));
+  });
 }
 
 function selectFloor(f) {
@@ -537,7 +542,7 @@ function renderPanelBody() {
           <div class="cat-dot" style="background:${cat.dot}"></div>
           <span class="cat-label" style="color:${cat.dot}">${cat.label}</span>
           <span class="cat-summary" id="cat-sum-${cat.id}">${summary}</span>
-          <span class="cat-toggle">▾</span>
+          <span class="cat-toggle">${(activeTags.length || text) ? '▴' : '▾'}</span>
         </div>
         <div class="cat-body" id="cat-body-${cat.id}" style="${activeTags.length || text ? '' : 'display:none'}">
           <div class="tags-row">
@@ -570,7 +575,21 @@ function renderPanelBody() {
 
 function toggleCat(catId) {
   const body = document.getElementById(`cat-body-${catId}`);
-  body.style.display = body.style.display === 'none' ? '' : 'none';
+  const section = body.closest('.cat-section');
+  const toggle = section?.querySelector('.cat-toggle');
+  const isOpen = body.style.display !== 'none';
+
+  if (isOpen) {
+    body.style.display = 'none';
+    if (toggle) toggle.textContent = '▾';
+  } else {
+    body.style.display = '';
+    if (toggle) toggle.textContent = '▴';
+    // Scroll the section into view after the DOM has expanded
+    setTimeout(() => {
+      section?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 60);
+  }
 }
 
 function toggleTag(catId, tag, btn) {
