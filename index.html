@@ -965,6 +965,78 @@ table.patient-table td {
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes slideUp { from { transform:translateX(-50%) translateY(20px); opacity:0; } to { transform:translateX(-50%) translateY(0); opacity:1; } }
 
+/* ─── MOBILE CARDS ─── */
+#mobile-card-list { display: none; }
+
+@media (max-width: 640px) {
+  .table-wrap { display: none; }          /* hide desktop table */
+  #mobile-card-list { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+
+  .mobile-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mobile-card:active { background: var(--surface2); border-color: var(--border2); }
+
+  .mobile-card-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .mobile-card-days {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+  }
+  .mobile-day-pill {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 5px 10px;
+    border-radius: 20px;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--text2);
+    cursor: pointer;
+    transition: all .12s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mobile-day-pill.has-data {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .mobile-day-pill:active { opacity: 0.7; }
+
+  .mobile-card-hint {
+    font-size: 11px;
+    color: var(--text3);
+    font-style: italic;
+  }
+  .mobile-card-diag {
+    font-size: 10px;
+    font-family: var(--mono);
+    color: var(--text3);
+    background: var(--surface2);
+    padding: 2px 7px;
+    border-radius: 3px;
+    align-self: flex-start;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .mobile-card-diag:empty { display: none; }
+}
+
 /* ─── TOUCH TARGETS ─── */
 .btn, .floor-tab, .day-btn, .tag-chip, .panel-close,
 .week-nav button, .cat-header, .days-row-card, .bed-card {
@@ -1068,49 +1140,6 @@ table.patient-table td {
   #move-floor-filter { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
   #move-floor-filter::-webkit-scrollbar { display: none; }
   .move-floor-btn { white-space: nowrap; flex-shrink: 0; }
-}
-
-/* ─── MOBILE CARD TABLE (≤640px) ─── */
-@media (max-width: 640px) {
-  #main-area { padding: 10px 12px; }
-  .table-wrap { border: none; border-radius: 0; background: transparent; overflow: visible; }
-  table.patient-table { display: block; min-width: unset; width: 100%; }
-  table.patient-table thead { display: none; }
-  table.patient-table tbody { display: flex; flex-direction: column; gap: 8px; }
-  /* Each patient row = card */
-  table.patient-table tr.patient-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 4px 10px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 10px 12px;
-    background: var(--surface);
-    position: relative;
-    cursor: pointer;
-  }
-  table.patient-table tr.patient-row:hover { background: var(--surface2); border-color: var(--border2); }
-  /* Cama */
-  table.patient-table tr.patient-row td:nth-child(1) { display: block; flex-shrink: 0; }
-  /* Nombre */
-  table.patient-table tr.patient-row td:nth-child(2) { display: block; flex: 1; min-width: 0; }
-  /* Médico — oculto, se ve al expandir */
-  table.patient-table tr.patient-row td:nth-child(3) { display: none; }
-  /* Diagnóstico — tag pequeño debajo */
-  table.patient-table tr.patient-row td:nth-child(4) { display: block; width: 100%; padding-left: 32px; }
-  /* Acciones */
-  table.patient-table tr.patient-row td:nth-child(5) {
-    display: flex;
-    justify-content: flex-end;
-    position: absolute;
-    top: 10px; right: 10px;
-    padding: 0;
-  }
-  /* Days expanded row */
-  table.patient-table tr.days-row { display: block; }
-  table.patient-table tr.days-row td { display: block; padding: 0; }
-  .days-row-cards-grid { grid-template-columns: 1fr 1fr; padding: 8px 12px; }
 }
 
 /* ─── SMALL PHONE (≤480px) ─── */
@@ -1228,6 +1257,8 @@ table.patient-table td {
         <tbody id="patient-tbody"></tbody>
       </table>
     </div>
+    <!-- Mobile-only card list (shown below 640px instead of table) -->
+    <div id="mobile-card-list"></div>
     <div id="no-patients" class="no-data" style="display:none">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       <p>Sin pacientes en este piso.<br><small>Cargá el CSV para importar la lista.</small></p>
@@ -1615,18 +1646,20 @@ function renderTable(filter='') {
   const patients = getFloorPatients().filter(p =>
     !filter || p.paciente.toLowerCase().includes(filter.toLowerCase())
   );
-  const tbody = document.getElementById('patient-tbody');
   document.getElementById('floor-title').textContent = FLOOR_LABELS[currentFloor] || currentFloor;
   document.getElementById('patient-count').textContent = `${patients.length} paciente${patients.length!==1?'s':''}`;
 
+  const noPatients = document.getElementById('no-patients');
   if (!patients.length) {
-    tbody.innerHTML = '';
-    document.getElementById('no-patients').style.display = 'block';
+    document.getElementById('patient-tbody').innerHTML = '';
+    document.getElementById('mobile-card-list').innerHTML = '';
+    noPatients.style.display = 'block';
     return;
   }
-  document.getElementById('no-patients').style.display = 'none';
+  noPatients.style.display = 'none';
 
-  tbody.innerHTML = patients.map(p => {
+  // ── Desktop: tabla normal ──────────────────────────────────────────
+  document.getElementById('patient-tbody').innerHTML = patients.map(p => {
     const hc = String(p.hc);
     return `
       <tr class="patient-row" data-hc="${hc}" style="cursor:pointer" onclick="handlePatientRowClick('${hc}')">
@@ -1652,6 +1685,39 @@ function renderTable(filter='') {
           <div class="days-row-content" id="days-content-${hc}"></div>
         </td>
       </tr>`;
+  }).join('');
+
+  // ── Mobile: cards independientes (no table) ───────────────────────
+  document.getElementById('mobile-card-list').innerHTML = patients.map(p => {
+    const hc = String(p.hc);
+    const allBadges = DAYS.map(day => renderDayBadges(hc, day)).join('');
+    const hasSomeData = DAYS.some(d => hasData(hc, d));
+    return `
+      <div class="mobile-card" onclick="handlePatientRowClick('${hc}')">
+        <div class="mobile-card-top">
+          <div class="cell-room" style="font-size:14px;min-width:42px">${p.cama}</div>
+          <div style="flex:1;min-width:0;">
+            <div class="cell-patient-name" style="font-size:13px;">${p.paciente}</div>
+            <div class="cell-sub">HC ${p.hc}${p.ingreso ? ' · Ing. '+p.ingreso : ''}</div>
+          </div>
+          <button class="btn" onclick="event.stopPropagation(); dischargePatient('${hc}')"
+                  style="padding:4px 8px;font-size:10px;flex-shrink:0;gap:3px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Alta
+          </button>
+        </div>
+        ${hasSomeData ? `<div class="mobile-card-days">${
+          DAYS.map(d => {
+            const entry = weekData[`${hc}_${d}`];
+            const cats = CATS.filter(c => entry?.[c.id] && (entry[c.id].tags?.length || entry[c.id].text));
+            return `<span class="mobile-day-pill ${cats.length ? 'has-data' : ''}"
+                         onclick="event.stopPropagation(); openPanel('${hc}','${d}')">
+              ${DAY_LABELS[d]}${cats.length ? ' <span style="color:var(--text3);font-size:9px">(${cats.length})</span>' : ''}
+            </span>`;
+          }).join('')
+        }</div>` : `<div class="mobile-card-hint">Tocá para cargar medicación →</div>`}
+        <div class="mobile-card-diag">${p.diagnostico||''}</div>
+      </div>`;
   }).join('');
 }
 
@@ -2565,13 +2631,13 @@ function detectFloor(cama) {
 }
 
 // In mobile card mode, patient row click opens the side panel instead of inline expand
-function handlePatientRowClick(hc) {
+window.handlePatientRowClick = function(hc) {
   if (window.innerWidth <= 640) {
     openPatientDays(hc);
   } else {
     toggleDaysRow(hc);
   }
-}
+};
 function getPrevWeekId(weekId) {
   const [y, wn] = weekId.replace('W','').split('-').map(Number);
   const jan4 = new Date(y, 0, 4);
