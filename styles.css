@@ -1656,21 +1656,4 @@ table.patient-table td {
     transform: translateX(-50%) translateY(0);
     opacity: 1;
   }
-
-/* Loading overlay */
-#loading-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.8);
-  z-index: 500;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  gap: 16px;
-}
-#loading-overlay.open {
-  display: flex;
-}
-
 }
