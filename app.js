@@ -758,19 +758,127 @@ function closeCSV() { document.getElementById('csv-overlay').classList.remove('o
 
 function parseCSV(text) {
   const patients = [];
-  const re = /["']?(\d{3})["']?\s*,\s*["']?([\w,\s\.ÑÁÉÍÓÚÜ\/\-]+?)["']?\s*,\s*["']?(\d+\.?\d*)["']?\s*,\s*["']?([\w\s\'`ÁÉÍÓÚÜ]+?)["']?\s*,\s*["']?(\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2})["']?\s*,\s*["']?(\d+)["']?\s*,\s*["']?(.*?)["']?\s*,\s*["']?(.*?)["']?\s*,\s*["']?(.*?)["']?(?:,|$)/gi;
-  let m;
-  while ((m = re.exec(text)) !== null) {
-    const cama = m[1];
-    const servicio = (m[8] || '').trim().toUpperCase();
-    let floor = '';
-    if (servicio.includes('TAMO')) floor = 'tamo';
-    else if (servicio.includes('U.T.I.Q') || servicio.includes('UTIQ')) floor = 'utiq';
-    else if (servicio.includes('U.T.I') || servicio.includes('UTI')) floor = 'uti';
-    else floor = cama.charAt(0);
-    patients.push({ cama, hc: m[3].replace('.0', ''), paciente: m[2].trim(), medico: m[4].trim(), ingreso: m[5], dias: m[6], cobertura: (m[7] || '').trim(), servicio, diagnostico: (m[9] || '').trim() || 'SIN DIAGNÓSTICO', floor });
+  const lines = text.split(/\r?\n/);
+  
+  let currentService = '';
+  let i = 0;
+  
+  while (i < lines.length) {
+    const line = lines[i].trim();
+    
+    // Detectar servicio (TAMO, U.T.I PISO 4, "U.T.I.Q PISO2")
+    if (line.includes('TAMO') && !line.includes('Cama')) {
+      currentService = 'tamo';
+      i++;
+      continue;
+    } else if (line.includes('U.T.I    PISO 4') || line.includes('U.T.I PISO 4')) {
+      currentService = 'uti';
+      i++;
+      continue;
+    } else if (line.includes('U.T.I.Q') || line.includes('"U.T.I.Q  PISO2"')) {
+      currentService = 'utiq';
+      i++;
+      continue;
+    }
+    
+    // Buscar línea de encabezados "Cama","Paciente","HC",...
+    if (line.includes('"Cama"') && line.includes('"Paciente"') && line.includes('"HC"')) {
+      // Saltar línea de encabezados
+      i++;
+      continue;
+    }
+    
+    // Procesar línea de datos (debe tener comillas y al menos 9 campos)
+    if (line.startsWith('"') && line.includes('","')) {
+      // Parsear línea CSV respetando comillas
+      const parsed = parseCSVLine(line);
+      
+      if (parsed.length >= 9) {
+        let cama = parsed[0].replace(/^"|"$/g, '').trim();
+        const paciente = parsed[1].replace(/^"|"$/g, '').trim();
+        const hc = parsed[2].replace(/^"|"$/g, '').trim().replace('.0', '');
+        const medico = parsed[3].replace(/^"|"$/g, '').trim();
+        const ingreso = parsed[4].replace(/^"|"$/g, '').trim();
+        const dias = parsed[5].replace(/^"|"$/g, '').trim();
+        const cobertura = parsed[6].replace(/^"|"$/g, '').trim();
+        const servicio = parsed[7].replace(/^"|"$/g, '').trim();
+        let diagnostico = parsed[8].replace(/^"|"$/g, '').trim();
+        
+        // Si hay más campos (como número de credencial), ignorarlos
+        
+        // Limpiar cama: eliminar "Cama " si está presente y espacios
+        if (cama.startsWith('Cama ')) cama = cama.substring(5);
+        cama = cama.trim();
+        
+        // Determinar piso según el servicio detectado o por el contenido
+        let floor = currentService;
+        if (!floor) {
+          if (servicio.includes('TAMO')) floor = 'tamo';
+          else if (servicio.includes('U.T.I.Q') || servicio.includes('UTIQ')) floor = 'utiq';
+          else if (servicio.includes('U.T.I') || servicio.includes('UTI')) floor = 'uti';
+          else if (cama.startsWith('3')) floor = '3';
+          else if (cama.startsWith('4')) floor = '4';
+          else if (cama.startsWith('5')) floor = '5';
+          else floor = '3';
+        }
+        
+        // Solo agregar si tiene cama y paciente válidos
+        if (cama && paciente && hc && !isNaN(parseInt(hc))) {
+          patients.push({
+            cama: cama,
+            hc: hc,
+            paciente: paciente,
+            medico: medico || '—',
+            ingreso: ingreso,
+            dias: dias || '0',
+            cobertura: cobertura || '—',
+            servicio: servicio || '—',
+            diagnostico: diagnostico || 'SIN DIAGNÓSTICO',
+            floor: floor,
+          });
+        }
+      }
+    }
+    
+    i++;
   }
+  
   return patients;
+}
+
+// Función auxiliar para parsear líneas CSV respetando comillas
+function parseCSVLine(line) {
+  const result = [];
+  let current = '';
+  let inQuotes = false;
+  let i = 0;
+  
+  while (i < line.length) {
+    const char = line[i];
+    
+    if (char === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        // Comillas dobles escapadas
+        current += '"';
+        i++;
+      } else {
+        // Alternar estado de comillas
+        inQuotes = !inQuotes;
+      }
+    } else if (char === ',' && !inQuotes) {
+      // Fin de campo
+      result.push(current);
+      current = '';
+    } else {
+      current += char;
+    }
+    i++;
+  }
+  
+  // Agregar último campo
+  result.push(current);
+  
+  return result;
 }
 
 function showCSVPreview(patients) {
