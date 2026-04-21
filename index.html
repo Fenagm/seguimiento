@@ -1887,23 +1887,42 @@ window.toggleCat = function(catId) {
 
 window.toggleTag = function(catId, tag, btn) {
   if (!panelState.data[catId]) panelState.data[catId] = { tags: [], text: '' };
+  
   const tags = panelState.data[catId].tags || [];
+  const textarea = document.getElementById(`ta-${catId}`);
+  let currentText = textarea ? textarea.value : panelState.data[catId].text || '';
+  
   const idx = tags.indexOf(tag);
-  if (idx >= 0) { tags.splice(idx,1); btn.classList.remove('active'); }
-  else { tags.push(tag); btn.classList.add('active'); }
+  
+  if (idx >= 0) {
+    // Si ya estaba seleccionado, lo removemos de la lista de tags
+    tags.splice(idx, 1);
+    btn.classList.remove('active');
+    // También removemos el tag del texto si está presente como línea independiente
+    const tagLines = currentText.split('\n').filter(line => line.trim() !== tag);
+    currentText = tagLines.join('\n');
+  } else {
+    // Nuevo tag seleccionado
+    tags.push(tag);
+    btn.classList.add('active');
+    // Agregar el tag al textarea (al final, en nueva línea)
+    if (currentText.trim()) {
+      currentText = currentText + '\n' + tag;
+    } else {
+      currentText = tag;
+    }
+  }
+  
   panelState.data[catId].tags = tags;
+  panelState.data[catId].text = currentText;
+  
+  // Actualizar textarea y resumen
+  if (textarea) textarea.value = currentText;
   updateCatSummary(catId);
+  
+  // Auto-abrir el cuerpo de la categoría si estaba cerrado
   const body = document.getElementById(`cat-body-${catId}`);
-  if (body.style.display === 'none') body.style.display = '';
-};
-
-window.updateCatSummary = function(catId) {
-  const entry = panelState.data[catId] || {};
-  const tags = entry.tags || [];
-  const ta = document.getElementById(`ta-${catId}`);
-  const text = ta ? ta.value : '';
-  const sum = document.getElementById(`cat-sum-${catId}`);
-  if (sum) sum.textContent = tags.length ? tags.join(', ') : text.substring(0,40);
+  if (body && body.style.display === 'none') body.style.display = '';
 };
 
 function collectPanelData() {
