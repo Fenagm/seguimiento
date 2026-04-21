@@ -776,43 +776,61 @@ function closeCSV() {
 }
 
 function parseCSV(text) {
-  const patients = [];
-  const re = /["']?(\d{3})["']?\s*,\s*["']?([\w,\s\.ÑÁÉÍÓÚÜ\/\-]+?)["']?\s*,\s*["']?(\d+\.?\d*)["']?\s*,\s*["']?([\w\s\'`ÁÉÍÓÚÜ]+?)["']?\s*,\s*["']?(\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2})["']?\s*,\s*["']?(\d+)["']?\s*,\s*["']?(.*?)["']?\s*,\s*["']?(.*?)["']?\s*,\s*["']?(.*?)["']?(?:,|$)/gi;
-  let m;
-  while ((m = re.exec(text)) !== null) {
-    const cama = m[1];
-    const servicio = (m[8] || '').trim().toUpperCase();
-    let floor = '';
+  const lines = text.split('\n');
+  const parsedPatients = [];
 
-    if (servicio.includes('TAMO')) {
-      floor = 'tamo';
-    } else if (servicio.includes('U.T.I.Q') || servicio.includes('UTIQ') || servicio.includes('PISO 2')) {
-      floor = 'utiq';
-    } else if (servicio.includes('U.T.I') || servicio.includes('UTI') || servicio.includes('PISO 4')) {
-      floor = 'uti';
-    } else {
-      const firstChar = cama.charAt(0);
-      if (['3', '4', '5'].includes(firstChar)) {
-        floor = firstChar;
-      } else {
-        floor = '3';
+  for (let line of lines) {
+    if (!line.trim()) continue;
+
+    // Regex para manejar valores entre comillas correctamente separados por comas
+    const regex = /(".*?"|[^",\s]+)(?=\s*,|\s*$)/g;
+    let tokens = line.match(regex);
+    
+    if (!tokens) continue;
+
+    // Limpiamos las comillas extra de los tokens
+    tokens = tokens.map(t => t.replace(/^"|"$/g, '').trim());
+
+    // Buscamos si la línea tiene el patrón de datos (revisando la cantidad de columnas del formato)
+    if (tokens.length >= 26 && tokens[0] === 'Listado de Internaciones') {
+      
+      const agrupacion = tokens[8]; // Ej: "PISO 3", "U.T.I.Q  PISO2", "TAMO"
+      const cama = tokens[18];
+      const paciente = tokens[19];
+      const hc = tokens[20];
+      const medico = tokens[21];
+      const ingreso = tokens[22];
+      const cobertura = tokens[24];
+      const servicio = tokens[25];
+      const diagnostico = tokens[26] || '';
+
+      // Usamos nuestra función para detectar a qué piso pertenece
+      const floorId = detectFloor(agrupacion, cama);
+
+      // Si detectFloor devuelve null, significa que es Piso 1, Piso 2 o un área no deseada
+      if (floorId && hc && paciente && cama && cama !== 'Cama') {
+        parsedPatients.push({
+          hc: hc,
+          cama: cama,
+          paciente: paciente,
+          medico: medico,
+          ingreso: ingreso.split(' ')[0], // Solo la fecha
+          cobertura: cobertura,
+          servicio: servicio,
+          diagnostico: diagnostico,
+          floor: floorId
+        });
       }
     }
-
-    patients.push({
-      cama: cama,
-      hc: m[3].replace('.0', ''),
-      paciente: m[2].trim(),
-      medico: m[4].trim(),
-      ingreso: m[5],
-      dias: m[6],
-      cobertura: (m[7] || '').trim(),
-      servicio: servicio,
-      diagnostico: (m[9] || '').trim() || 'SIN DIAGNÓSTICO',
-      floor: floor,
-    });
   }
-  return patients;
+
+  // Filtrar posibles duplicados por número de HC
+  const uniquePatients = {};
+  for (const p of parsedPatients) {
+    uniquePatients[p.hc] = p;
+  }
+
+  return Object.values(uniquePatients);
 }
 
 function showCSVPreview(patients) {
@@ -987,22 +1005,26 @@ function closeAddPatientModal() {
   document.getElementById('add-patient-form').reset();
 }
 
-function detectFloor(cama, servicio = '') {
-  const s = String(cama);
-  const servUpper = String(servicio).toUpperCase();
+// ─── LÓGICA DE DETECCIÓN DE PISOS ──────────────────────────────────────────────
+function detectFloor(agrupacion, cama) {
+  const agrp = (agrupacion || '').toUpperCase();
+  const numCama = String(cama || '').trim();
 
-  if (servUpper.includes('TAMO')) return 'tamo';
-  if (servUpper.includes('U.T.I.Q') || servUpper.includes('UTIQ')) return 'utiq';
-  if (servUpper.includes('U.T.I') || servUpper.includes('UTI')) return 'uti';
+  // Si es TAMO, UTI o UTIQ (sin importar en qué piso físico estén)
+  if (agrp.includes('TAMO')) return 'tamo';
+  if (agrp.includes('U.T.I.Q') || agrp.includes('UTIQ')) return 'utiq';
+  if (agrp.includes('U.T.I') || agrp.includes('UTI')) return 'uti';
 
-  const numericFloors = ['3', '4', '5'];
-  for (const f of numericFloors) {
-    if (s.startsWith(f) && s.length === 3) return f;
-  }
-  for (const f of ['tamo', 'uti', 'utiq']) {
-    if (s.toLowerCase().startsWith(f)) return f;
-  }
-  return s.charAt(0);
+  // Excluir explícitamente Piso 1 y Piso 2 (a menos que haya caído en las UTIs arriba)
+  if (agrp.includes('PISO 1') || numCama.startsWith('10')) return null;
+  if (agrp.includes('PISO 2') || numCama.startsWith('20')) return null;
+
+  // Detección de Pisos 3, 4, 5
+  if (agrp.includes('PISO 3') || numCama.startsWith('3')) return '3';
+  if (agrp.includes('PISO 4') || numCama.startsWith('4')) return '4';
+  if (agrp.includes('PISO 5') || numCama.startsWith('5')) return '5';
+
+  return null; // Si no coincide con ninguno, lo descartamos
 }
 
 function saveNewPatient() {
