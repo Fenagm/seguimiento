@@ -226,8 +226,8 @@ function updateWeekLabel() {
 // ─── FLOOR TABS ───────────────────────────────────────────────────────────────
 function getPatientCountForFloor(f) {
   return Object.values(allPatients).filter(p => {
-    // Simplemente comparamos el ID del piso guardado con el de la pestaña
-    return (p.floor || '').toLowerCase() === f.toLowerCase();
+    return p.status !== 'discharged' &&
+           (p.floor || '').toLowerCase() === f.toLowerCase();
   }).length;
 }
 
@@ -256,8 +256,9 @@ function selectFloor(f) {
 function getFloorPatients() {
   return Object.values(allPatients)
     .filter(p => {
-      // Filtramos usando la misma lógica directa
-      return (p.floor || '').toLowerCase() === currentFloor.toLowerCase();
+      // Solo pacientes activos y que pertenecen al piso actual
+      return p.status !== 'discharged' &&
+             (p.floor || '').toLowerCase() === currentFloor.toLowerCase();
     })
     .sort((a, b) => String(a.cama).localeCompare(String(b.cama)));
 }
@@ -875,8 +876,16 @@ function showCSVPreview(patients) {
 function importPatients() {
   if (!pendingCSV.length) return;
   for (const p of pendingCSV) {
-    allPatients[p.hc] = p;
+  // Si el paciente ya existe y está activo, se sobreescribe; si está dado de alta, se reactiva
+  const existing = allPatients[p.hc];
+  if (existing && existing.status === 'discharged') {
+    // Reactivar paciente dado de alta
+    p.status = 'active';
+  } else {
+    p.status = p.status || 'active';
   }
+  allPatients[p.hc] = p;
+}
   localStorage.setItem('sc_patients', JSON.stringify(allPatients));
   if (db) {
     for (const [hc, p] of Object.entries(allPatients)) {
@@ -1059,7 +1068,7 @@ function saveNewPatient() {
     return;
   }
 
-  const camaOcupada = Object.values(allPatients).find(p => p.cama === cama);
+  const camaOcupada = Object.values(allPatients).find(p => p.cama === cama && p.status !== 'discharged');
   if (camaOcupada) {
     showToast(`La cama ${cama} ya está ocupada por ${camaOcupada.paciente}`);
     return;
@@ -1067,10 +1076,11 @@ function saveNewPatient() {
 
   const floor = detectFloor(cama, servicio);
   const newPatient = {
-    cama, hc, paciente, medico: medico || '—', cobertura: cobertura || '—',
-    ingreso: ingreso || '—', dias: dias || '0', servicio: servicio || '—',
-    diagnostico: diagnostico || 'SIN DIAGNÓSTICO', floor,
-  };
+  cama, hc, paciente, medico: medico || '—', cobertura: cobertura || '—',
+  ingreso: ingreso || '—', dias: dias || '0', servicio: servicio || '—',
+  diagnostico: diagnostico || 'SIN DIAGNÓSTICO', floor,
+  status: 'active'   // ✅ nuevo campo
+};
 
   allPatients[hc] = newPatient;
   localStorage.setItem('sc_patients', JSON.stringify(allPatients));
@@ -1197,33 +1207,49 @@ function showDischargeConfirm(hc, p) {
 }
 
 async function executeDischarge(hc, p) {
+  // Guardar entradas de la semana actual para historial
   const currentWeekEntries = {};
   for (const day of DAYS) {
     const key = `${hc}_${day}`;
     if (weekData[key]) currentWeekEntries[key] = weekData[key];
   }
+
+  // Registrar el alta en el objeto del paciente
+  p.status = 'discharged';
+  p.dischargeAt = new Date().toISOString();
+  p.dischargeWeek = currentWeek;
+
+  // Guardar el registro completo de alta (opcional, para auditoría)
   const dischargeRecord = {
-    ...p, hc: String(hc), dischargeAt: new Date().toISOString(),
-    dischargeWeek: currentWeek, weekEntries: currentWeekEntries,
+    ...p,
+    weekEntries: currentWeekEntries,
   };
   const discharges = JSON.parse(localStorage.getItem('sc_discharges') || '[]');
   discharges.unshift(dischargeRecord);
   localStorage.setItem('sc_discharges', JSON.stringify(discharges));
-  delete allPatients[hc];
+
+  // Actualizar allPatients (el paciente permanece, pero con status 'discharged')
+  allPatients[hc] = p;
   localStorage.setItem('sc_patients', JSON.stringify(allPatients));
-  for (const day of DAYS) delete weekData[`${hc}_${day}`];
+
+  // Eliminar sus entradas de la semana actual (para que no aparezca en la vista activa)
+  for (const day of DAYS) {
+    delete weekData[`${hc}_${day}`];
+  }
   localStorage.setItem(`sc_week_${currentWeek}`, JSON.stringify(weekData));
 
   saveAudit('delete', hc, null, { action: 'discharge', patientName: p.paciente, cama: p.cama });
 
+  // Sync con Firestore si está activo
   if (db) {
     try {
       await setDoc(doc(db, 'discharges', `${hc}_${Date.now()}`), dischargeRecord);
-      await deleteDoc(doc(db, 'patients', String(hc)));
+      await setDoc(doc(db, 'patients', String(hc)), p);  // actualiza con status discharged
     } catch (e) {
       showToast('Alta guardada localmente, pero falló sync en Firestore');
     }
   }
+
   renderTable(document.getElementById('search-input').value);
   renderFloorTabs();
   showToast(`${p.paciente.split(',')[0]} dado/a de alta ✓`);
@@ -1264,9 +1290,10 @@ function setMoveFloor(floor, btn) {
 function renderMoveGrid() {
   const search = (document.getElementById('move-search')?.value || '').toLowerCase();
   const grid = document.getElementById('move-bed-grid');
-  const rooms = Object.values(allPatients)
-    .filter(pat => {
-      if (pat.hc === movePatientHc) return false;
+ const rooms = Object.values(allPatients)
+  .filter(pat => {
+    if (pat.hc === movePatientHc) return false;
+    if (pat.status === 'discharged') return false;
       if (moveFilterFloor !== 'all') {
         const numericFloors = ['3', '4', '5'];
         if (numericFloors.includes(moveFilterFloor)) {
