@@ -942,7 +942,10 @@ function searchHistory() {
   const patQ = document.getElementById('hist-search-patient').value.toLowerCase().trim();
   const drugQ = document.getElementById('hist-search-drug').value.toLowerCase().trim();
   const weekQ = document.getElementById('hist-search-week').value;
+  
   const weeks = {};
+  
+  // 1. Cargar semanas normales
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
     if (!key.startsWith('sc_week_')) continue;
@@ -950,6 +953,23 @@ function searchHistory() {
     if (weekQ && wid !== weekQ) continue;
     try { weeks[wid] = JSON.parse(localStorage.getItem(key)); } catch (e) { }
   }
+  
+  // 2. Cargar datos de pacientes dados de alta (de sc_discharges)
+  const discharges = JSON.parse(localStorage.getItem('sc_discharges') || '[]');
+  for (const discharge of discharges) {
+    const dischargeWeek = discharge.dischargeWeek;
+    if (weekQ && dischargeWeek !== weekQ) continue;
+    
+    if (!weeks[dischargeWeek]) {
+      weeks[dischargeWeek] = {};
+    }
+    
+    // Agregar las entradas de la semana del alta
+    if (discharge.weekEntries) {
+      Object.assign(weeks[dischargeWeek], discharge.weekEntries);
+    }
+  }
+  
   const results = [];
   for (const [wid, data] of Object.entries(weeks)) {
     for (const [key, dayData] of Object.entries(data)) {
@@ -957,9 +977,12 @@ function searchHistory() {
       const hc = parts[0];
       const day = parts[1];
       if (!day || !DAYS.includes(day)) continue;
+      
       const patient = allPatients[hc];
       if (!patient) continue;
+      
       if (patQ && !patient.paciente.toLowerCase().includes(patQ)) continue;
+      
       let drugMatch = !drugQ;
       if (drugQ) {
         for (const cat of CATS) {
@@ -970,9 +993,11 @@ function searchHistory() {
         }
       }
       if (!drugMatch) continue;
+      
       results.push({ wid, day, patient, hc, dayData });
     }
   }
+  
   renderHistoryResults(results);
 }
 
@@ -1219,7 +1244,7 @@ async function executeDischarge(hc, p) {
   p.dischargeAt = new Date().toISOString();
   p.dischargeWeek = currentWeek;
 
-  // Guardar el registro completo de alta (opcional, para auditoría)
+  // Guardar el registro completo de alta
   const dischargeRecord = {
     ...p,
     weekEntries: currentWeekEntries,
@@ -1232,10 +1257,12 @@ async function executeDischarge(hc, p) {
   allPatients[hc] = p;
   localStorage.setItem('sc_patients', JSON.stringify(allPatients));
 
-  // Eliminar sus entradas de la semana actual (para que no aparezca en la vista activa)
-  for (const day of DAYS) {
-    delete weekData[`${hc}_${day}`];
-  }
+  // ❌ ELIMINAR ESTE BLOQUE - NO borrar los datos de la semana
+  // for (const day of DAYS) {
+  //   delete weekData[`${hc}_${day}`];
+  // }
+  
+  // ✅ En su lugar, guardar weekData sin cambios
   localStorage.setItem(`sc_week_${currentWeek}`, JSON.stringify(weekData));
 
   saveAudit('delete', hc, null, { action: 'discharge', patientName: p.paciente, cama: p.cama });
@@ -1244,7 +1271,7 @@ async function executeDischarge(hc, p) {
   if (db) {
     try {
       await setDoc(doc(db, 'discharges', `${hc}_${Date.now()}`), dischargeRecord);
-      await setDoc(doc(db, 'patients', String(hc)), p);  // actualiza con status discharged
+      await setDoc(doc(db, 'patients', String(hc)), p);
     } catch (e) {
       showToast('Alta guardada localmente, pero falló sync en Firestore');
     }
