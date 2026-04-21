@@ -225,12 +225,12 @@ function updateWeekLabel() {
 
 // ─── FLOOR TABS ───────────────────────────────────────────────────────────────
 function getPatientCountForFloor(f) {
-  const numericFloors = ['3', '4', '5'];
   return Object.values(allPatients).filter(p => {
-    if (numericFloors.includes(f)) return String(p.cama).startsWith(f) && String(p.cama).length === 3;
+    // Simplemente comparamos el ID del piso guardado con el de la pestaña
     return (p.floor || '').toLowerCase() === f.toLowerCase();
   }).length;
 }
+
 
 function renderFloorTabs() {
   const el = document.getElementById('floor-tabs');
@@ -249,14 +249,10 @@ function selectFloor(f) {
 
 // ─── PATIENTS TABLE ───────────────────────────────────────────────────────────
 function getFloorPatients() {
-  const numericFloors = ['3', '4', '5'];
   return Object.values(allPatients)
     .filter(p => {
-      if (numericFloors.includes(currentFloor)) {
-        return String(p.cama).startsWith(currentFloor) && String(p.cama).length === 3;
-      } else {
-        return (p.floor || '').toLowerCase() === currentFloor.toLowerCase();
-      }
+      // Filtramos usando la misma lógica directa
+      return (p.floor || '').toLowerCase() === currentFloor.toLowerCase();
     })
     .sort((a, b) => String(a.cama).localeCompare(String(b.cama)));
 }
