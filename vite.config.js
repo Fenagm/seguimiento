@@ -3,7 +3,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
   // Cambiá 'seguimiento' por el nombre exacto de tu repo en GitHub
-  base: '/seguimiento/',
+  base: 'https://fenagm.github.io/seguimiento/',
   plugins: [
     VitePWA({
       registerType: 'autoUpdate',
