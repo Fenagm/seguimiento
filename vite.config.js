@@ -17,7 +17,7 @@ export default defineConfig({
         display: 'standalone',
         orientation: 'portrait-primary',
         scope: '/seguimiento/',
-        start_url: '/seguimiento/',
+        start_url: 'https://fenagm.github.io/seguimiento/',
         lang: 'es',
         icons: [
           { src: 'icons/icon-72x72.png',   sizes: '72x72',   type: 'image/png' },
