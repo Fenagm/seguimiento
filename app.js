@@ -1,6 +1,65 @@
+// ─── PWA INSTALL PROMPT ───────────────────────────────────────────────────────
+let deferredInstallPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  showInstallBanner();
+});
+
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null;
+  hideInstallBanner();
+  showToast('App instalada correctamente ✓');
+});
+
+function showInstallBanner() {
+  const existing = document.getElementById('pwa-install-banner');
+  if (existing) return;
+
+  const banner = document.createElement('div');
+  banner.id = 'pwa-install-banner';
+  banner.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0;">
+      <img src="icons/icon-72x72.png" alt="" style="width:36px;height:36px;border-radius:8px;flex-shrink:0;">
+      <div style="min-width:0;">
+        <div style="font-size:13px;font-weight:600;color:var(--text);">Instalá la app</div>
+        <div style="font-size:11px;color:var(--text3);">Acceso rápido desde la pantalla de inicio</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;flex-shrink:0;">
+      <button id="pwa-install-dismiss" style="background:none;border:1px solid var(--border2);border-radius:6px;color:var(--text2);font-size:11px;padding:5px 10px;cursor:pointer;font-family:var(--sans);">Ahora no</button>
+      <button id="pwa-install-btn" style="background:var(--accent);border:none;border-radius:6px;color:#fff;font-size:11px;font-weight:600;padding:5px 12px;cursor:pointer;font-family:var(--sans);">Instalar</button>
+    </div>`;
+  document.body.appendChild(banner);
+
+  document.getElementById('pwa-install-btn').onclick = async () => {
+    if (!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    const { outcome } = await deferredInstallPrompt.userChoice;
+    if (outcome === 'accepted') deferredInstallPrompt = null;
+    hideInstallBanner();
+  };
+  document.getElementById('pwa-install-dismiss').onclick = () => {
+    hideInstallBanner();
+    localStorage.setItem('pwa-dismissed', Date.now());
+  };
+}
+
+function hideInstallBanner() {
+  document.getElementById('pwa-install-banner')?.remove();
+}
+
 // ─── IMPORTS ──────────────────────────────────────────────────────────────────
 import { initializeApp } from 'firebase/app';
 import { getFirestore, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from 'firebase/firestore';
+import {
+  getAuth,
+  signInWithEmailAndPassword,
+  signOut,
+  sendPasswordResetEmail,
+  onAuthStateChanged,
+} from 'firebase/auth';
 
 // ─── CATEGORIES & TAGS ───────────────────────────────────────────────────────
 export const CATS = [
@@ -26,6 +85,7 @@ export const FLOOR_LABELS = { '3': 'Piso 3', '4': 'Piso 4', '5': 'Piso 5', 'tamo
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
 let db = null;
+let auth = null;
 let localMode = false;
 let currentWeek = getWeekId(new Date());
 let currentFloor = '3';
@@ -38,23 +98,17 @@ let movePatientHc = null;
 let moveFilterFloor = 'all';
 let moveSelectedRoom = null;
 
-// ─── USERS & AUDIT ──────────────────────────────────────────────────────────
-const VALID_USERS = [
-  { user: 'admin', pass: 'admin123', name: 'Administrador' },
-  { user: 'doctor', pass: 'doctor123', name: 'Dr. García' },
-  { user: 'enfermero', pass: 'nurse123', name: 'Enf. Rodríguez' },
-];
-let currentUser = JSON.parse(localStorage.getItem('sc_current_user') || 'null');
+// currentUser is set by Firebase Auth — single source of truth
+let currentUser = null;
 let auditLog = JSON.parse(localStorage.getItem('sc_audit_log') || '[]');
 
+// ─── AUDIT ────────────────────────────────────────────────────────────────────
 function saveAudit(action, hc, day, details) {
   const entry = {
     timestamp: new Date().toISOString(),
-    user: currentUser?.name || 'anónimo',
-    userId: currentUser?.user || 'anonymous',
-    action,
-    hc,
-    day,
+    user: currentUser?.displayName || currentUser?.email || 'anónimo',
+    userId: currentUser?.uid || 'anonymous',
+    action, hc, day,
     week: currentWeek,
     details,
   };
@@ -62,66 +116,102 @@ function saveAudit(action, hc, day, details) {
   if (auditLog.length > 1000) auditLog.pop();
   localStorage.setItem('sc_audit_log', JSON.stringify(auditLog));
   if (db) {
-    try {
-      setDoc(doc(db, 'audit', `${Date.now()}_${hc}_${day}`), entry).catch(() => { });
-    } catch (e) { }
+    setDoc(doc(db, 'audit', `${Date.now()}_${hc || 'sys'}_${day || 'na'}`), entry).catch(() => {});
+  }
+}
+
+// ─── AUTH ─────────────────────────────────────────────────────────────────────
+function showLoginScreen() {
+  document.getElementById('login-screen').classList.add('visible');
+  document.getElementById('login-email').focus();
+}
+
+function hideLoginScreen() {
+  document.getElementById('login-screen').classList.remove('visible');
+  clearLoginError();
+}
+
+function setLoginLoading(on) {
+  document.getElementById('login-btn-text').style.display = on ? 'none' : '';
+  document.getElementById('login-spinner').style.display = on ? 'inline-block' : 'none';
+  document.getElementById('btn-login').disabled = on;
+}
+
+function showLoginError(msg) {
+  const el = document.getElementById('login-error');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function clearLoginError() {
+  const el = document.getElementById('login-error');
+  el.style.display = 'none';
+  el.textContent = '';
+}
+
+async function doLogin() {
+  if (!auth) { showLoginError('Firebase no está configurado todavía.'); return; }
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-pass').value;
+  if (!email || !pass) { showLoginError('Ingresá email y contraseña.'); return; }
+
+  clearLoginError();
+  setLoginLoading(true);
+  try {
+    await signInWithEmailAndPassword(auth, email, pass);
+    // onAuthStateChanged handles the rest
+  } catch (e) {
+    setLoginLoading(false);
+    const msgs = {
+      'auth/invalid-credential':      'Email o contraseña incorrectos.',
+      'auth/user-not-found':          'No existe una cuenta con ese email.',
+      'auth/wrong-password':          'Contraseña incorrecta.',
+      'auth/invalid-email':           'El email no es válido.',
+      'auth/too-many-requests':       'Demasiados intentos. Esperá unos minutos.',
+      'auth/user-disabled':           'Esta cuenta está deshabilitada.',
+      'auth/network-request-failed':  'Error de red. Verificá tu conexión.',
+    };
+    showLoginError(msgs[e.code] || `Error: ${e.message}`);
+  }
+}
+
+async function doForgotPassword() {
+  if (!auth) return;
+  const email = document.getElementById('login-email').value.trim();
+  if (!email) {
+    showLoginError('Ingresá tu email primero para restablecer la contraseña.');
+    return;
+  }
+  try {
+    await sendPasswordResetEmail(auth, email);
+    document.getElementById('login-forgot').style.display = 'none';
+    document.getElementById('reset-sent').style.display = 'flex';
+  } catch (e) {
+    showLoginError('No se pudo enviar el email. Verificá que el email sea correcto.');
+  }
+}
+
+async function doLogout() {
+  if (!auth) return;
+  saveAudit('logout', null, null, `Sesión cerrada`);
+  await signOut(auth);
+  // onAuthStateChanged handles UI reset
+}
+
+function updateUserUI(user) {
+  const panel = document.getElementById('user-panel');
+  const nameSpan = document.getElementById('user-name-display');
+  if (user) {
+    panel.style.display = 'flex';
+    nameSpan.textContent = user.displayName || user.email;
+  } else {
+    panel.style.display = 'none';
   }
 }
 
 function requireAuth() {
-  if (!currentUser) {
-    openLoginModal();
-    return false;
-  }
+  if (!currentUser) { showLoginScreen(); return false; }
   return true;
-}
-
-function openLoginModal() {
-  document.getElementById('login-modal').classList.add('open');
-  document.getElementById('login-user').focus();
-}
-
-function closeLoginModal() {
-  document.getElementById('login-modal').classList.remove('open');
-  document.getElementById('login-user').value = '';
-  document.getElementById('login-pass').value = '';
-}
-
-function doLogin() {
-  const user = document.getElementById('login-user').value.trim();
-  const pass = document.getElementById('login-pass').value;
-  const found = VALID_USERS.find(u => u.user === user && u.pass === pass);
-  if (found) {
-    currentUser = { user: found.user, name: found.name };
-    localStorage.setItem('sc_current_user', JSON.stringify(currentUser));
-    updateUserUI();
-    closeLoginModal();
-    saveAudit('login', null, null, `Usuario ${found.name} inició sesión`);
-    showToast(`Bienvenido, ${found.name}`);
-    renderAll();
-  } else {
-    showToast('Usuario o contraseña incorrectos');
-  }
-}
-
-function logout() {
-  saveAudit('logout', null, null, `Usuario ${currentUser?.name} cerró sesión`);
-  currentUser = null;
-  localStorage.removeItem('sc_current_user');
-  updateUserUI();
-  showToast('Sesión cerrada');
-  renderAll();
-}
-
-function updateUserUI() {
-  const panel = document.getElementById('user-panel');
-  const nameSpan = document.getElementById('user-name-display');
-  if (currentUser) {
-    panel.style.display = 'flex';
-    nameSpan.textContent = currentUser.name;
-  } else {
-    panel.style.display = 'none';
-  }
 }
 
 // ─── FIREBASE ─────────────────────────────────────────────────────────────────
@@ -145,17 +235,34 @@ function getWeekDates(weekId) {
   return `${fmt(startOfWeek)} – ${fmt(endOfWeek)}`;
 }
 
+// ─── FIREBASE CONFIG ──────────────────────────────────────────────────────────
+// Lee credenciales desde variables de entorno de Vite (definidas en .env.local)
+const ENV_CONFIG = {
+  apiKey:      import.meta.env.VITE_FB_API_KEY,
+  authDomain:  import.meta.env.VITE_FB_AUTH_DOMAIN,
+  projectId:   import.meta.env.VITE_FB_PROJECT_ID,
+  appId:       import.meta.env.VITE_FB_APP_ID,
+};
+const HAS_ENV_CONFIG = !!(ENV_CONFIG.apiKey && ENV_CONFIG.projectId);
+
 async function saveConfig() {
+  // Si hay env vars, no hace falta el formulario manual
+  if (HAS_ENV_CONFIG) {
+    await initFirebase(ENV_CONFIG);
+    return;
+  }
   const cfg = {
-    apiKey: document.getElementById('cfg-apiKey').value.trim(),
+    apiKey:     document.getElementById('cfg-apiKey').value.trim(),
     authDomain: document.getElementById('cfg-authDomain').value.trim(),
-    projectId: document.getElementById('cfg-projectId').value.trim(),
-    appId: document.getElementById('cfg-appId').value.trim(),
+    projectId:  document.getElementById('cfg-projectId').value.trim(),
+    appId:      document.getElementById('cfg-appId').value.trim(),
   };
   if (!cfg.apiKey || !cfg.projectId) {
     showToast('Completá al menos apiKey y projectId');
     return;
   }
+  // Guardamos en localStorage solo si el usuario lo ingresó manualmente
+  // (nunca las env vars, que son compile-time)
   localStorage.setItem('sc_fb_config', JSON.stringify(cfg));
   await initFirebase(cfg);
 }
@@ -170,13 +277,29 @@ function useLocalMode() {
 async function initFirebase(cfg) {
   try {
     const app = initializeApp(cfg);
-    db = getFirestore(app);
+    db   = getFirestore(app);
+    auth = getAuth(app);
     document.getElementById('config-banner').classList.add('hidden');
-    showToast('Firebase conectado ✓');
-    await loadWeekFromFirestore();
-    renderAll();
+
+    // onAuthStateChanged is the single source of truth for auth state
+    onAuthStateChanged(auth, async (user) => {
+      currentUser = user;
+      updateUserUI(user);
+
+      if (user) {
+        hideLoginScreen();
+        saveAudit('login', null, null, `Sesión iniciada`);
+        await loadWeekFromFirestore();
+        renderAll();
+        showToast(`Bienvenido, ${user.displayName || user.email} ✓`);
+      } else {
+        // Not logged in → show login screen, blank app behind it
+        showLoginScreen();
+        setLoginLoading(false);
+      }
+    });
   } catch (e) {
-    showToast('Error conectando Firebase: ' + e.message);
+    showToast('Error inicializando Firebase: ' + e.message);
   }
 }
 
@@ -1523,27 +1646,32 @@ function renderAll() {
 async function init() {
   updateWeekLabel();
   renderFloorTabs();
-  updateUserUI();
+  updateUserUI(null);
 
-  if (Object.keys(allPatients).length > 0) {
-    document.getElementById('config-banner').classList.add('hidden');
-    renderTable();
+  // Show login screen immediately — onAuthStateChanged will hide it if session is valid
+  showLoginScreen();
+
+  // 1. Priority: build-time env vars → always use Firebase Auth
+  if (HAS_ENV_CONFIG) {
+    await initFirebase(ENV_CONFIG);
+    return;
   }
 
+  // 2. Fallback: manually saved config in localStorage
   const saved = localStorage.getItem('sc_fb_config');
   if (saved) {
     try {
       const cfg = JSON.parse(saved);
       await initFirebase(cfg);
       return;
-    } catch (e) { }
+    } catch (e) { /* invalid config, fall through */ }
   }
 
-  if (Object.keys(allPatients).length > 0) {
-    localMode = true;
-  } else {
-    renderAll();
-  }
+  // 3. No Firebase config → local mode (no login required)
+  localMode = true;
+  hideLoginScreen();
+  document.getElementById('config-banner').classList.remove('hidden');
+  renderAll();
 }
 
 // ─── EVENT LISTENERS ──────────────────────────────────────────────────────────
@@ -1554,11 +1682,25 @@ document.getElementById('btn-history').addEventListener('click', () => toggleVie
 document.getElementById('btn-back-main').addEventListener('click', () => toggleView('main'));
 document.getElementById('btn-save-week').addEventListener('click', () => saveWeek());
 document.getElementById('btn-add-patient').addEventListener('click', () => openAddPatientModal());
+
+// Config banner (shown when no env vars are set)
 document.getElementById('btn-save-config').addEventListener('click', () => saveConfig());
 document.getElementById('btn-local-mode').addEventListener('click', () => useLocalMode());
 document.getElementById('btn-login').addEventListener('click', () => doLogin());
-document.getElementById('btn-cancel-login').addEventListener('click', () => closeLoginModal());
-document.getElementById('btn-logout').addEventListener('click', () => logout());
+document.getElementById('login-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+document.getElementById('login-email').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('login-pass').focus(); });
+document.getElementById('btn-forgot').addEventListener('click', () => doForgotPassword());
+document.getElementById('btn-logout').addEventListener('click', () => doLogout());
+
+// Password visibility toggle
+document.getElementById('btn-toggle-pass').addEventListener('click', () => {
+  const input = document.getElementById('login-pass');
+  const isText = input.type === 'text';
+  input.type = isText ? 'password' : 'text';
+  document.getElementById('eye-icon').innerHTML = isText
+    ? '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>'
+    : '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
+});
 
 document.getElementById('search-input').addEventListener('input', (e) => filterPatients(e.target.value));
 
@@ -1593,6 +1735,9 @@ document.getElementById('new-move-room').addEventListener('focus', () => clearMo
 // Patient days panel
 document.getElementById('close-patient-days').addEventListener('click', () => closePatientDays());
 document.getElementById('close-days-panel').addEventListener('click', () => closePatientDays());
+document.getElementById('days-panel-copy-prev').addEventListener('click', () => {
+  if (currentDaysHc) copiarSemanaAnterior(currentDaysHc);
+});
 document.getElementById('days-panel-move').addEventListener('click', () => {
   if (currentDaysHc) openMovePatient(currentDaysHc);
 });

@@ -1336,50 +1336,182 @@ table.patient-table td {
   color: var(--text);
 }
 
-.login-modal {
+/* ─── LOGIN SCREEN ─── */
+#login-screen {
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.7);
-  z-index: 400;
+  background: var(--bg);
+  z-index: 500;
   align-items: center;
   justify-content: center;
+  overflow: auto;
+}
+#login-screen.visible { display: flex; }
+
+.login-bg-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 30%, transparent 100%);
+  pointer-events: none;
 }
 
-.login-modal.open {
+.login-container {
+  position: relative;
+  z-index: 1;
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  padding: 24px 16px;
+  width: 100%;
+  max-width: 400px;
+}
+
+.login-logo {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.login-logo svg { width: 44px; height: 44px; flex-shrink: 0; }
+.login-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+.login-subtitle {
+  font-size: 12px;
+  color: var(--text3);
+  margin-top: 2px;
 }
 
 .login-card {
-  background: var(--surface);
-  border-radius: 12px;
-  padding: 24px;
-  width: 320px;
-  max-width: 90vw;
-  border: 1px solid var(--border2);
-}
-
-.login-card h3 {
-  margin-bottom: 16px;
-  font-size: 16px;
-  color: var(--accent);
-}
-
-.login-card input {
   width: 100%;
-  padding: 10px;
-  margin-bottom: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+}
+
+.login-card-header {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.login-error {
+  background: rgba(239,94,94,0.12);
+  border: 1px solid rgba(239,94,94,0.3);
+  border-radius: 7px;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: #ef5e5e;
+  line-height: 1.5;
+}
+
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.login-field label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text3);
+}
+.login-field input {
   background: var(--surface2);
   border: 1px solid var(--border2);
-  border-radius: 6px;
+  border-radius: 8px;
   color: var(--text);
-  font-size: 13px;
+  font-size: 14px;
+  padding: 11px 14px;
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+  font-family: var(--sans);
+  width: 100%;
 }
+.login-field input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(61,126,245,0.15);
+}
+.login-field input::placeholder { color: var(--text3); }
 
-.login-card .btn {
+.login-pass-wrap {
+  position: relative;
+}
+.login-pass-wrap input { padding-right: 42px; }
+.pass-toggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text3);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+}
+.pass-toggle svg { width: 16px; height: 16px; }
+.pass-toggle:hover { color: var(--text2); }
+
+.login-forgot {
+  text-align: right;
+  margin-top: -8px;
+}
+.login-forgot button {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+  font-family: var(--sans);
+}
+.login-forgot button:hover { text-decoration: underline; }
+
+.login-btn {
   width: 100%;
   justify-content: center;
-  margin-top: 8px;
+  padding: 12px;
+  font-size: 14px;
+  border-radius: 8px;
+  margin-top: 4px;
+  gap: 8px;
+}
+
+.login-reset-msg {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(45,164,78,0.1);
+  border: 1px solid rgba(45,164,78,0.25);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 12px;
+  color: #2da44e;
+  width: 100%;
+}
+
+@media (max-width: 420px) {
+  .login-card { padding: 22px 18px; border-radius: 12px; }
+  .login-logo svg { width: 36px; height: 36px; }
+  .login-title { font-size: 17px; }
 }
 
 /* ─── MOBILE CARD TABLE ─── */
@@ -1680,4 +1812,22 @@ table.patient-table td {
     transform: translateX(-50%) translateY(0);
     opacity: 1;
   }
+}
+/* ─── PWA INSTALL BANNER ─── */
+#pwa-install-banner {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  padding: 12px 16px;
+  z-index: 490;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+  width: min(420px, calc(100vw - 32px));
+  animation: slideUp .3s ease;
 }

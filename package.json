@@ -1,0 +1,17 @@
+{
+  "name": "seguimiento-clinico",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "firebase": "^10.12.0"
+  },
+  "devDependencies": {
+    "vite": "^5.2.0",
+    "vite-plugin-pwa": "^1.2.0"
+  }
+}

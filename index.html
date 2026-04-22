@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 <title>Seguimiento Clínico Semanal</title>
+<meta name="description" content="Sistema de seguimiento semanal de pacientes internados">
+<meta name="theme-color" content="#0e1621">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Seg. Clínico">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/svg+xml" href="icons/icon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -67,14 +75,58 @@
   </div>
 </div>
 
-<!-- LOGIN MODAL -->
-<div id="login-modal" class="login-modal">
-  <div class="login-card">
-    <h3>🔐 Acceso al sistema</h3>
-    <input type="text" id="login-user" placeholder="Usuario" autocomplete="off">
-    <input type="password" id="login-pass" placeholder="Contraseña">
-    <button class="btn primary" id="btn-login">Ingresar</button>
-    <button class="btn" id="btn-cancel-login" style="margin-top: 8px;">Cancelar</button>
+<!-- LOGIN SCREEN (full page, shown before auth) -->
+<div id="login-screen">
+  <div class="login-bg-grid"></div>
+  <div class="login-container">
+    <div class="login-logo">
+      <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="40" height="40" rx="10" fill="#3d7ef5" fill-opacity="0.15"/>
+        <path d="M10 28V14a2 2 0 012-2h16a2 2 0 012 2v14" stroke="#3d7ef5" stroke-width="2" stroke-linecap="round"/>
+        <path d="M7 28h26" stroke="#3d7ef5" stroke-width="2" stroke-linecap="round"/>
+        <path d="M17 22h6M20 19v6" stroke="#3d7ef5" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <div>
+        <div class="login-title">Seguimiento Clínico</div>
+        <div class="login-subtitle">Sistema de seguimiento semanal</div>
+      </div>
+    </div>
+
+    <div class="login-card">
+      <div class="login-card-header">Iniciar sesión</div>
+
+      <div id="login-error" class="login-error" style="display:none"></div>
+
+      <div class="login-field">
+        <label>Email</label>
+        <input type="email" id="login-email" placeholder="usuario@hospital.com"
+               autocomplete="email" inputmode="email">
+      </div>
+      <div class="login-field">
+        <label>Contraseña</label>
+        <div class="login-pass-wrap">
+          <input type="password" id="login-pass" placeholder="••••••••"
+                 autocomplete="current-password">
+          <button type="button" id="btn-toggle-pass" class="pass-toggle" tabindex="-1">
+            <svg id="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div id="login-forgot" class="login-forgot">
+        <button type="button" id="btn-forgot">¿Olvidaste tu contraseña?</button>
+      </div>
+
+      <button class="btn primary login-btn" id="btn-login">
+        <span id="login-btn-text">Ingresar</span>
+        <span id="login-spinner" class="spinner" style="display:none"></span>
+      </button>
+    </div>
+
+    <div id="reset-sent" class="login-reset-msg" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;flex-shrink:0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      Te enviamos un email para restablecer tu contraseña.
+    </div>
   </div>
 </div>
 
@@ -315,15 +367,6 @@
 <!-- TOAST -->
 <div id="toast"></div>
 
-<!-- Firebase SDK -->
-<script type="importmap">
-  {
-    "imports": {
-      "firebase/app": "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js",
-      "firebase/firestore": "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"
-    }
-  }
-</script>
 <script type="module" src="app.js"></script>
 </body>
 </html>
