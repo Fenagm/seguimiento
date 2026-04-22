@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="110" fill="#0e1621"/>
+  <rect x="30" y="30" width="452" height="452" rx="90" fill="#161f2e"/>
+  <!-- Cross / medical -->
+  <rect x="220" y="120" width="72" height="272" rx="18" fill="#3d7ef5"/>
+  <rect x="120" y="220" width="272" height="72" rx="18" fill="#3d7ef5"/>
+  <!-- Small pills / tags -->
+  <rect x="130" y="370" width="80" height="22" rx="11" fill="#2da44e" opacity=".9"/>
+  <rect x="222" y="370" width="80" height="22" rx="11" fill="#f5a623" opacity=".9"/>
+  <rect x="314" y="370" width="68" height="22" rx="11" fill="#c87af0" opacity=".9"/>
+</svg>
