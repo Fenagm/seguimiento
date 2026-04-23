@@ -106,7 +106,7 @@ let auditLog = JSON.parse(localStorage.getItem('sc_audit_log') || '[]');
 function saveAudit(action, hc, day, details) {
   const entry = {
     timestamp: new Date().toISOString(),
-    user: currentUser?.displayName || currentUser?.email || 'anónimo',
+    user: getDisplayName(currentUser),
     userId: currentUser?.uid || 'anonymous',
     action, hc, day,
     week: currentWeek,
@@ -118,6 +118,72 @@ function saveAudit(action, hc, day, details) {
   if (db) {
     setDoc(doc(db, 'audit', `${Date.now()}_${hc || 'sys'}_${day || 'na'}`), entry).catch(() => {});
   }
+}
+
+// ─── USER PROFILE ─────────────────────────────────────────────────────────────
+// Display name priority: Firestore users/{uid}.name > Auth displayName > email prefix
+let userProfileName = null;
+
+async function loadUserProfile(uid) {
+  if (!db || !uid) return;
+  try {
+    const snap = await getDoc(doc(db, 'users', uid));
+    if (snap.exists()) {
+      userProfileName = snap.data().name || null;
+    }
+  } catch (e) { /* offline */ }
+}
+
+function getDisplayName(user) {
+  if (!user) return 'anónimo';
+  return userProfileName || user.displayName || user.email.split('@')[0];
+}
+
+function updateUserUI(user) {
+  const panel = document.getElementById('user-panel');
+  const nameSpan = document.getElementById('user-name-display');
+  if (user) {
+    panel.style.display = 'flex';
+    nameSpan.textContent = getDisplayName(user);
+  } else {
+    panel.style.display = 'none';
+  }
+}
+
+function openProfileModal() {
+  if (!currentUser) return;
+  document.getElementById('profile-email').textContent = currentUser.email;
+  document.getElementById('profile-name').value = getDisplayName(currentUser);
+  const overlay = document.getElementById('profile-overlay');
+  overlay.style.display = 'flex';
+  setTimeout(() => document.getElementById('profile-name').select(), 50);
+}
+
+function closeProfileModal() {
+  document.getElementById('profile-overlay').style.display = 'none';
+}
+
+async function saveUserProfile() {
+  if (!currentUser) return;
+  const name = document.getElementById('profile-name').value.trim();
+  if (!name) { showToast('Ingresá un nombre'); return; }
+
+  userProfileName = name;
+  updateUserUI(currentUser);
+  closeProfileModal();
+
+  // Persist to Firestore
+  if (db) {
+    await setDoc(doc(db, 'users', currentUser.uid), {
+      name,
+      email: currentUser.email,
+      uid: currentUser.uid,
+      updatedAt: new Date().toISOString(),
+    }, { merge: true }).catch(() => {});
+  }
+  // Also persist locally as fallback
+  localStorage.setItem(`sc_profile_${currentUser.uid}`, name);
+  showToast('Nombre actualizado ✓');
 }
 
 // ─── AUTH ─────────────────────────────────────────────────────────────────────
@@ -198,17 +264,6 @@ async function doLogout() {
   // onAuthStateChanged handles UI reset
 }
 
-function updateUserUI(user) {
-  const panel = document.getElementById('user-panel');
-  const nameSpan = document.getElementById('user-name-display');
-  if (user) {
-    panel.style.display = 'flex';
-    nameSpan.textContent = user.displayName || user.email;
-  } else {
-    panel.style.display = 'none';
-  }
-}
-
 function requireAuth() {
   if (!currentUser) { showLoginScreen(); return false; }
   return true;
@@ -284,16 +339,26 @@ async function initFirebase(cfg) {
     // onAuthStateChanged is the single source of truth for auth state
     onAuthStateChanged(auth, async (user) => {
       currentUser = user;
-      updateUserUI(user);
 
       if (user) {
+        // Load profile name (Firestore first, localStorage fallback)
+        userProfileName = localStorage.getItem(`sc_profile_${user.uid}`) || null;
+        await loadUserProfile(user.uid);
+
+        updateUserUI(user);
         hideLoginScreen();
-        saveAudit('login', null, null, `Sesión iniciada`);
+        saveAudit('login', null, null, 'Sesión iniciada');
         await loadWeekFromFirestore();
         renderAll();
-        showToast(`Bienvenido, ${user.displayName || user.email} ✓`);
+        showToast(`Bienvenido, ${getDisplayName(user)} ✓`);
+
+        // First login with no name set → prompt to set one
+        if (!getDisplayName(user).includes('@') === false && !userProfileName && !user.displayName) {
+          setTimeout(() => openProfileModal(), 800);
+        }
       } else {
-        // Not logged in → show login screen, blank app behind it
+        userProfileName = null;
+        updateUserUI(null);
         showLoginScreen();
         setLoginLoading(false);
       }
@@ -377,13 +442,21 @@ function selectFloor(f) {
 
 // ─── PATIENTS TABLE ───────────────────────────────────────────────────────────
 function getFloorPatients() {
-  return Object.values(allPatients)
-    .filter(p => {
-      // Solo pacientes activos y que pertenecen al piso actual
-      return p.status !== 'discharged' &&
-             (p.floor || '').toLowerCase() === currentFloor.toLowerCase();
-    })
+  const knownBeds = BED_STRUCTURE[currentFloor] || [];
+  // Map cama → patient for this floor
+  const byBed = {};
+  Object.values(allPatients).forEach(p => {
+    if (p.status !== 'discharged' &&
+        (p.floor || '').toLowerCase() === currentFloor.toLowerCase()) {
+      byBed[p.cama] = p;
+    }
+  });
+  // Canonical bed order first, then any extras at the end
+  const ordered = knownBeds.filter(c => byBed[c]).map(c => byBed[c]);
+  const extra   = Object.values(byBed)
+    .filter(p => !knownBeds.includes(p.cama))
     .sort((a, b) => String(a.cama).localeCompare(String(b.cama)));
+  return [...ordered, ...extra];
 }
 
 function renderTable(filter = '') {
@@ -976,14 +1049,30 @@ function showCSVPreview(patients) {
   const el = document.getElementById('csv-preview');
   if (!patients.length) {
     el.style.display = 'none';
+    document.getElementById('csv-archive-summary').style.display = 'none';
     showToast('No se encontraron pacientes');
     return;
   }
+
+  // Calculate who would be archived (active patients absent from new CSV)
+  const incomingHCs = new Set(patients.map(p => String(p.hc)));
+  const toArchive = Object.values(allPatients).filter(p =>
+    p.status === 'active' && !incomingHCs.has(String(p.hc))
+  );
+  showArchiveSummary(toArchive);
+
+  const byFloor = {};
+  patients.forEach(p => { byFloor[p.floor] = (byFloor[p.floor] || 0) + 1; });
+  const floorSummary = Object.entries(byFloor)
+    .filter(([f]) => f && FLOOR_LABELS[f])
+    .map(([f, n]) => `${FLOOR_LABELS[f]}: ${n}`)
+    .join(' · ');
+
   el.style.display = 'flex';
   el.innerHTML = `
     <div class="preview-info">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-      <span>${patients.length} pacientes encontrados en ${new Set(patients.map(p => p.floor)).size} pisos</span>
+      <span>${patients.length} pacientes · ${floorSummary || `${new Set(patients.map(p => p.floor)).size} sectores`}</span>
     </div>
     <div class="preview-list">
       ${patients.map(p => `
@@ -998,30 +1087,75 @@ function showCSVPreview(patients) {
 
 function importPatients() {
   if (!pendingCSV.length) return;
-  for (const p of pendingCSV) {
-  // Si el paciente ya existe y está activo, se sobreescribe; si está dado de alta, se reactiva
-  const existing = allPatients[p.hc];
-  if (existing && existing.status === 'discharged') {
-    // Reactivar paciente dado de alta
-    p.status = 'active';
-  } else {
-    p.status = p.status || 'active';
-  }
-  allPatients[p.hc] = p;
-}
-  localStorage.setItem('sc_patients', JSON.stringify(allPatients));
-  if (db) {
-    for (const [hc, p] of Object.entries(allPatients)) {
-      try {
-        setDoc(doc(db, 'patients', hc), p).catch(() => { });
-      } catch (e) { }
+
+  const incomingHCs = new Set(pendingCSV.map(p => String(p.hc)));
+  const archivedPatients = [];
+
+  // Archive active patients NOT in the new CSV
+  for (const [hc, p] of Object.entries(allPatients)) {
+    if (p.status === 'active' && !incomingHCs.has(String(hc))) {
+      allPatients[hc] = {
+        ...p,
+        status: 'archived',
+        archivedAt: new Date().toISOString(),
+        archivedReason: 'csv_import',
+        archivedBy: getDisplayName(currentUser),
+      };
+      archivedPatients.push(p);
     }
   }
+
+  // Upsert incoming patients
+  for (const p of pendingCSV) {
+    const existing = allPatients[p.hc];
+    p.status = 'active';
+    // Preserve week data link if patient already existed
+    if (existing) p.createdAt = existing.createdAt;
+    allPatients[p.hc] = p;
+  }
+
+  localStorage.setItem('sc_patients', JSON.stringify(allPatients));
+
+  if (db) {
+    for (const [hc, p] of Object.entries(allPatients)) {
+      setDoc(doc(db, 'patients', hc), p).catch(() => {});
+    }
+  }
+
+  saveAudit('csv_import', null, null, {
+    imported: pendingCSV.length,
+    archived: archivedPatients.length,
+    archivedNames: archivedPatients.map(p => p.paciente),
+  });
+
   closeCSV();
   renderTable();
   renderFloorTabs();
-  showToast(`${pendingCSV.length} pacientes importados ✓`);
+
+  const archiveMsg = archivedPatients.length
+    ? ` · ${archivedPatients.length} archivado${archivedPatients.length !== 1 ? 's' : ''}`
+    : '';
+  showToast(`${pendingCSV.length} pacientes importados${archiveMsg} ✓`);
   pendingCSV = [];
+}
+
+function showArchiveSummary(toArchive) {
+  const el = document.getElementById('csv-archive-summary');
+  if (!toArchive.length) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  el.innerHTML = `
+    <div style="background:rgba(245,166,35,0.1);border:1px solid rgba(245,166,35,0.3);border-radius:7px;padding:10px 12px;">
+      <div style="font-size:11px;font-weight:600;color:var(--cat-atb);margin-bottom:6px;">
+        ⚠ ${toArchive.length} paciente${toArchive.length !== 1 ? 's' : ''} no aparece${toArchive.length === 1 ? '' : 'n'} en el nuevo CSV y será${toArchive.length !== 1 ? 'n' : ''} archivado${toArchive.length !== 1 ? 's' : ''}:
+      </div>
+      <div style="display:flex;flex-direction:column;gap:3px;max-height:100px;overflow-y:auto;">
+        ${toArchive.map(p => `
+          <div style="font-size:11px;color:var(--text2);display:flex;gap:8px;">
+            <span style="color:var(--accent);font-family:var(--mono);min-width:35px">${p.cama}</span>
+            <span>${p.paciente}</span>
+          </div>`).join('')}
+      </div>
+    </div>`;
 }
 
 function readCSVFile(file) {
@@ -1169,8 +1303,55 @@ function renderHistoryResults(results) {
 // ─── ADD PATIENT MODAL ────────────────────────────────────────────────────────
 function openAddPatientModal() {
   if (!requireAuth()) return;
+  document.getElementById('add-patient-form').reset();
+  document.getElementById('new-cama').value = '';
+  document.getElementById('new-floor-display').dataset.floor = '';
+
+  // Render sector tabs
+  const tabs = document.getElementById('new-sector-tabs');
+  tabs.innerHTML = FLOORS.map(f => `
+    <button type="button" class="move-floor-btn" data-floor="${f}"
+            onclick="selectNewSector('${f}')">${FLOOR_LABELS[f]}</button>`
+  ).join('');
+
+  // Reset bed grid
+  document.getElementById('new-bed-grid').innerHTML =
+    '<span style="color:var(--text3);font-size:12px;">← Elegí un sector primero</span>';
+
   document.getElementById('add-patient-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('add-patient-modal').classList.add('open'), 10);
 }
+
+window.selectNewSector = function(floorId) {
+  document.querySelectorAll('#new-sector-tabs .move-floor-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.floor === floorId));
+  renderNewBedGrid(floorId);
+};
+
+function renderNewBedGrid(floorId) {
+  const beds = BED_STRUCTURE[floorId] || [];
+  const occupied = new Set(Object.values(allPatients).map(p => p.cama));
+  const selected = document.getElementById('new-cama').value;
+  document.getElementById('new-bed-grid').innerHTML = beds.map(cama => {
+    const isBusy = occupied.has(cama);
+    const isSel  = cama === selected;
+    return `
+      <button type="button"
+              class="bed-card ${isBusy ? 'occupied' : ''} ${isSel ? 'selected' : ''}"
+              onclick="selectNewBed('${cama}','${floorId}',this)"
+              ${isBusy ? `title="Ocupada por ${allPatients[Object.keys(allPatients).find(k=>allPatients[k].cama===cama)]?.paciente||''}"` : ''}>
+        <div class="bed-card-room">${cama}</div>
+        <div class="bed-card-status ${isBusy ? 'busy' : 'free'}">${isBusy ? '● Ocupada' : '○ Libre'}</div>
+      </button>`;
+  }).join('');
+}
+
+window.selectNewBed = function(cama, floorId, el) {
+  document.querySelectorAll('#new-bed-grid .bed-card').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('new-cama').value = cama;
+  document.getElementById('new-floor-display').dataset.floor = floorId;
+};
 
 function closeAddPatientModal() {
   document.getElementById('add-patient-overlay').classList.remove('open');
@@ -1178,25 +1359,60 @@ function closeAddPatientModal() {
 }
 
 // ─── LÓGICA DE DETECCIÓN DE PISOS ──────────────────────────────────────────────
-function detectFloor(agrupacion, cama) {
-  const agrp = (agrupacion || '').toUpperCase();
-  const numCama = String(cama || '').trim();
+// ─── BED STRUCTURE (fuente de verdad para camas y pisos) ──────────────────────
+const BED_STRUCTURE = {
+  '3': [
+    '301','302','303','304','305','306','307','308','309','310',
+    '311','312','314','315','316','317','318','319','321','322',
+    '323','324','325','326','327','328','329','330','331','332',
+    '333','334','335','336','337','338','339','340',
+  ],
+  '4': [
+    '414','415','416','417','418','419','420','421','422','423',
+    '424','425','426','427','428',
+  ],
+  '5': [
+    '501','502','503','504','505','506','507','508','509',
+    '514','515','516','517','518','519','520','521','522','523',
+    '524','525','526','527','528',
+  ],
+  'tamo': [
+    'TAMO 01','TAMO 02','TAMO 03','TAMO 04','TAMO 05','TAMO 06',
+  ],
+  'uti': [
+    'UTI 01','UTI 02','UTI 03','UTI 04','UTI 05','UTI 07',
+  ],
+  'utiq': [
+    'U.T.Q 01','U.T.Q 02','U.T.Q 03','U.T.Q 04','U.T.Q 05','U.T.Q 06',
+  ],
+};
 
-  // Si es TAMO, UTI o UTIQ (sin importar en qué piso físico estén)
-  if (agrp.includes('TAMO')) return 'tamo';
-  if (agrp.includes('U.T.I.Q') || agrp.includes('UTIQ')) return 'utiq';
-  if (agrp.includes('U.T.I') || agrp.includes('UTI')) return 'uti';
+// Reverse lookup: cama → floorId  (built once at startup)
+const CAMA_TO_FLOOR = {};
+for (const [floorId, camas] of Object.entries(BED_STRUCTURE)) {
+  for (const cama of camas) {
+    CAMA_TO_FLOOR[cama.toUpperCase()] = floorId;
+  }
+}
 
-  // Excluir explícitamente Piso 1 y Piso 2 (a menos que haya caído en las UTIs arriba)
-  if (agrp.includes('PISO 1') || numCama.startsWith('10')) return null;
-  if (agrp.includes('PISO 2') || numCama.startsWith('20')) return null;
+// detectFloor: primero busca en la estructura fija, luego heurística para CSV imports
+function detectFloor(cama, agrupacionHint = '') {
+  if (!cama) return null;
 
-  // Detección de Pisos 3, 4, 5
-  if (agrp.includes('PISO 3') || numCama.startsWith('3')) return '3';
-  if (agrp.includes('PISO 4') || numCama.startsWith('4')) return '4';
-  if (agrp.includes('PISO 5') || numCama.startsWith('5')) return '5';
+  // 1. Lookup exacto en la estructura
+  const key = String(cama).trim().toUpperCase();
+  if (CAMA_TO_FLOOR[key]) return CAMA_TO_FLOOR[key];
 
-  return null; // Si no coincide con ninguno, lo descartamos
+  // 2. Heurística para CSV (agrupación del listado de internaciones)
+  const agrp = (agrupacionHint || '').toUpperCase();
+  if (agrp.includes('TAMO'))                               return 'tamo';
+  if (agrp.includes('U.T.I.Q') || agrp.includes('UTIQ'))  return 'utiq';
+  if (agrp.includes('U.T.I')   || agrp.includes('UTI'))   return 'uti';
+  if (agrp.includes('PISO 3')  || key.startsWith('3'))    return '3';
+  if (agrp.includes('PISO 4')  || key.startsWith('4'))    return '4';
+  if (agrp.includes('PISO 5')  || key.startsWith('5'))    return '5';
+
+  return null;
 }
 
 function saveNewPatient() {
@@ -1222,7 +1438,12 @@ function saveNewPatient() {
     return;
   }
 
-  const floor = detectFloor(cama, servicio);
+  // Floor viene directo del selector — no hace falta detectar
+  const floor = document.getElementById('new-floor-display').dataset.floor || detectFloor(cama, servicio);
+  if (!floor) {
+    showToast('Seleccioná un sector y una cama');
+    return;
+  }
   const newPatient = {
   cama, hc, paciente, medico: medico || '—', cobertura: cobertura || '—',
   ingreso: ingreso || '—', dias: dias || '0', servicio: servicio || '—',
@@ -1440,39 +1661,50 @@ function setMoveFloor(floor, btn) {
 function renderMoveGrid() {
   const search = (document.getElementById('move-search')?.value || '').toLowerCase();
   const grid = document.getElementById('move-bed-grid');
- const rooms = Object.values(allPatients)
-  .filter(pat => {
-    if (pat.hc === movePatientHc) return false;
-    if (pat.status === 'discharged') return false;
-      if (moveFilterFloor !== 'all') {
-        const numericFloors = ['3', '4', '5'];
-        if (numericFloors.includes(moveFilterFloor)) {
-          if (!String(pat.cama).startsWith(moveFilterFloor)) return false;
-        } else {
-          if ((pat.floor || '').toLowerCase() !== moveFilterFloor) return false;
-        }
-      }
-      if (search && !String(pat.cama).includes(search) && !pat.paciente.toLowerCase().includes(search)) return false;
-      return true;
-    })
-    .sort((a, b) => String(a.cama).localeCompare(String(b.cama)));
-  if (!rooms.length) {
-    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3);font-size:12px;">Sin camas en este sector</div>`;
+
+  // Build occupied map
+  const occupiedBy = {};
+  Object.values(allPatients).forEach(p => {
+    if (p.status !== 'discharged' && String(p.hc) !== String(movePatientHc)) {
+      occupiedBy[p.cama] = p;
+    }
+  });
+
+  // Determine which floors to show
+  const floorsToShow = moveFilterFloor === 'all' ? FLOORS : [moveFilterFloor];
+
+  // Collect all beds in canonical order
+  const allBeds = [];
+  for (const f of floorsToShow) {
+    for (const cama of (BED_STRUCTURE[f] || [])) {
+      if (search && !cama.toLowerCase().includes(search) &&
+          !(occupiedBy[cama]?.paciente || '').toLowerCase().includes(search)) continue;
+      allBeds.push({ cama, floor: f, patient: occupiedBy[cama] || null });
+    }
+  }
+
+  if (!allBeds.length) {
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3);font-size:12px;">Sin camas para los filtros actuales</div>`;
     return;
   }
-  grid.innerHTML = rooms.map(pat => {
-    const isSelected = moveSelectedRoom === pat.cama;
+
+  grid.innerHTML = allBeds.map(({ cama, patient }) => {
+    const isBusy     = !!patient;
+    const isSelected = moveSelectedRoom === cama;
+    const nameLine   = isBusy
+      ? `<div class="bed-card-name">${patient.paciente.split(',')[0]}</div>`
+      : '';
     return `
-      <div class="bed-card occupied ${isSelected ? 'selected' : ''}" data-room="${pat.cama}">
-        <div class="bed-card-room">${pat.cama}</div>
-        <div class="bed-card-name">${pat.paciente.split(',')[0]}</div>
-        <div class="bed-card-status busy">● Ocupada</div>
+      <div class="bed-card ${isBusy ? 'occupied' : ''} ${isSelected ? 'selected' : ''}"
+           data-room="${cama}" title="${isBusy ? 'Ocupada — clic para intercambiar' : 'Libre'}">
+        <div class="bed-card-room">${cama}</div>
+        ${nameLine}
+        <div class="bed-card-status ${isBusy ? 'busy' : 'free'}">${isBusy ? '● Ocupada' : '○ Libre'}</div>
       </div>`;
   }).join('');
 
-  document.querySelectorAll('.bed-card').forEach(card => {
-    const room = card.dataset.room;
-    card.addEventListener('click', () => selectMoveRoom(room, card));
+  grid.querySelectorAll('.bed-card').forEach(card => {
+    card.addEventListener('click', () => selectMoveRoom(card.dataset.room, card));
   });
 }
 
@@ -1691,6 +1923,14 @@ document.getElementById('login-pass').addEventListener('keydown', e => { if (e.k
 document.getElementById('login-email').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('login-pass').focus(); });
 document.getElementById('btn-forgot').addEventListener('click', () => doForgotPassword());
 document.getElementById('btn-logout').addEventListener('click', () => doLogout());
+document.getElementById('btn-edit-profile').addEventListener('click', () => openProfileModal());
+document.getElementById('close-profile').addEventListener('click', () => closeProfileModal());
+document.getElementById('cancel-profile').addEventListener('click', () => closeProfileModal());
+document.getElementById('save-profile').addEventListener('click', () => saveUserProfile());
+document.getElementById('profile-name').addEventListener('keydown', e => { if (e.key === 'Enter') saveUserProfile(); });
+document.getElementById('profile-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('profile-overlay')) closeProfileModal();
+});
 
 // Password visibility toggle
 document.getElementById('btn-toggle-pass').addEventListener('click', () => {

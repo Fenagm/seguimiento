@@ -38,7 +38,7 @@ body {
   font-family: var(--sans);
   background: var(--bg);
   color: var(--text);
-  min-height: 100vh;
+  min-height: 100dvh;
   overflow-x: hidden;
 }
 
@@ -477,7 +477,7 @@ table.patient-table td {
   top: 0;
   right: -520px;
   width: 520px;
-  height: 100vh;
+  height: 100dvh;
   background: var(--surface);
   border-left: 1px solid var(--border);
   z-index: 201;
@@ -485,7 +485,6 @@ table.patient-table td {
   flex-direction: column;
   transition: right .25s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
-  max-height: 90vh;
 }
 
 #entry-panel.open {
@@ -772,30 +771,113 @@ table.patient-table td {
 }
 
 /* ─── CSV UPLOAD MODAL ─── */
+/* ─── OVERLAY BASE (todos los overlays) ─── */
+.overlay-base {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 300;
+  display: none;
+  align-items: flex-start;    /* ← flex-start + padding, no center, así el modal nunca queda fuera */
+  justify-content: center;
+  backdrop-filter: blur(4px);
+  overflow-y: auto;
+  padding: 16px;
+}
+.overlay-base.open { display: flex; }
+
+/* ─── MODAL BASE (todos los modals centrados) ─── */
+.modal-card {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  width: 480px;
+  max-width: 100%;
+  max-height: calc(100dvh - 32px); /* nunca más alto que la pantalla */
+  display: flex;
+  flex-direction: column;
+  margin: auto;                    /* centra verticalmente cuando hay espacio */
+}
+
+/* ─── CSV MODAL ─── */
 #csv-overlay {
   display: none;
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.7);
   z-index: 300;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   backdrop-filter: blur(4px);
+  overflow-y: auto;
+  padding: 16px;
 }
-
-#csv-overlay.open {
-  display: flex;
-}
+#csv-overlay.open { display: flex; }
 
 #csv-modal {
   background: var(--surface);
   border: 1px solid var(--border2);
   border-radius: 10px;
   width: 480px;
-  max-width: 95vw;
+  max-width: 100%;
+  max-height: calc(100dvh - 32px);
+  display: flex;
+  flex-direction: column;
+  margin: auto;
 }
 
-.drop-zone {
+#csv-modal .modal-body {
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* ─── ADD PATIENT MODAL ─── */
+#add-patient-overlay,
+#move-patient-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 300;
+  align-items: flex-start;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+  overflow-y: auto;
+  padding: 16px;
+}
+
+#add-patient-overlay.open,
+#move-patient-overlay.open {
+  display: flex;
+}
+
+#add-patient-modal,
+#move-patient-modal {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  width: 480px;
+  max-width: 100%;
+  max-height: calc(100dvh - 32px);
+  display: flex;
+  flex-direction: column;
+  margin: auto;
+}
+
+#move-patient-modal {
+  width: 520px;
+}
+
+/* Make modal body scroll, footer stays fixed */
+#add-patient-modal .modal-body,
+#move-patient-modal .modal-body {
+  overflow-y: auto;
+  flex: 1;
+}
+
+#add-patient-modal input,
+#add-patient-modal textarea,
+#move-patient-modal input {
   border: 2px dashed var(--border2);
   border-radius: 8px;
   padding: 36px 20px;
@@ -853,7 +935,7 @@ table.patient-table td {
 }
 
 .preview-list {
-  max-height: 200px;
+  max-height: min(200px, 30dvh);
   overflow-y: auto;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -966,7 +1048,7 @@ table.patient-table td {
   margin-right: 6px;
 }
 
-/* ─── MODALS ─── */
+/* ─── MODALS shared ─── */
 .modal-header {
   padding: 18px 20px 14px;
   border-bottom: 1px solid var(--border);
@@ -992,38 +1074,7 @@ table.patient-table td {
   justify-content: flex-end;
 }
 
-#add-patient-overlay,
-#move-patient-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.7);
-  z-index: 300;
-  align-items: center;
-  justify-content: center;
-  backdrop-filter: blur(4px);
-}
-
-#add-patient-overlay.open,
-#move-patient-overlay.open {
-  display: flex;
-}
-
-#add-patient-modal,
-#move-patient-modal {
-  background: var(--surface);
-  border: 1px solid var(--border2);
-  border-radius: 10px;
-  width: 480px;
-  max-width: 95vw;
-}
-
-#move-patient-modal {
-  width: 520px;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-}
+/* old block removed — see new #add-patient-overlay above */
 
 #add-patient-modal input,
 #add-patient-modal textarea,
@@ -1148,7 +1199,7 @@ table.patient-table td {
   top: 0;
   right: -520px;
   width: 520px;
-  height: 100vh;
+  height: 100dvh;
   background: var(--surface);
   border-left: 1px solid var(--border);
   z-index: 201;
@@ -1314,12 +1365,22 @@ table.patient-table td {
   border: 1px solid var(--border);
 }
 
-.user-name {
+.user-name-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: background .12s;
   font-size: 11px;
   font-family: var(--mono);
   color: var(--accent);
   font-weight: 500;
 }
+.user-name-btn:hover { background: var(--surface3); }
 
 .user-logout-btn {
   background: none;
@@ -1666,6 +1727,7 @@ table.patient-table td {
   #entry-panel {
     width: 100%;
     right: -100%;
+    height: 100dvh;
   }
 
   #entry-panel.open {
@@ -1675,11 +1737,30 @@ table.patient-table td {
   #patient-days-panel {
     width: 100%;
     right: -100%;
+    height: 100dvh;
   }
 
   #patient-days-panel.open {
     right: 0;
   }
+
+  /* Modals: reduce padding so they fit on small screens */
+  #csv-overlay,
+  #add-patient-overlay,
+  #move-patient-overlay {
+    padding: 8px;
+  }
+
+  #csv-modal,
+  #add-patient-modal,
+  #move-patient-modal {
+    max-height: calc(100dvh - 16px);
+    border-radius: 8px;
+  }
+
+  .modal-header { padding: 14px 16px 12px; }
+  .modal-body   { padding: 14px 16px; }
+  .modal-footer { padding: 10px 16px; }
 
   .days-row-cards-grid {
     grid-template-columns: 1fr 1fr;
