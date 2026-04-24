@@ -847,7 +847,7 @@ function saveEntry() {
   const key = `${panelState.hc}_${panelState.day}`;
   const wasExisting = !!weekData[key];
 
-  panelState.data._lastModifiedBy = currentUser?.name || 'anónimo';
+  panelState.data._lastModifiedBy = getDisplayName(currentUser);
   panelState.data._lastModifiedAt = new Date().toISOString();
   panelState.data._lastWeek = currentWeek;
 
@@ -1264,32 +1264,51 @@ function renderHistoryResults(results) {
     el.innerHTML = '<div class="no-data"><p>Sin resultados para los filtros aplicados.</p></div>';
     return;
   }
+
   const grouped = {};
   for (const r of results) {
     const gkey = `${r.wid}_${r.hc}`;
     if (!grouped[gkey]) grouped[gkey] = { wid: r.wid, patient: r.patient, hc: r.hc, days: {} };
     grouped[gkey].days[r.day] = r.dayData;
   }
+
   el.innerHTML = Object.values(grouped).map(g => `
     <div class="hist-card">
       <div class="hist-card-header">
-        <span class="cell-room" style="font-size:12px;min-width:35px">${g.patient.cama}</span>
-        <strong style="flex:1;font-size:13px">${g.patient.paciente}</strong>
-        <span style="font-family:var(--mono);font-size:11px;color:var(--text3)">${g.wid} · ${getWeekDates(g.wid)}</span>
-        <span style="margin-left:8px;color:var(--text3)">▾</span>
+        <span class="cell-room" style="font-size:12px;min-width:35px">${g.patient.cama || g.patient.camaAnterior || '—'}</span>
+        <strong style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${g.patient.paciente}</strong>
+        <span style="font-family:var(--mono);font-size:11px;color:var(--text3);flex-shrink:0">${g.wid} · ${getWeekDates(g.wid)}</span>
+        <span style="margin-left:8px;color:var(--text3);flex-shrink:0">▾</span>
       </div>
       <div class="hist-card-body">
-        ${DAYS.filter(d => g.days[d]).map(d => `
-          <div>
-            <span class="hist-day-label">${DAY_LABELS[d]}:</span>
-            ${CATS.filter(c => { const e = g.days[d][c.id]; return e && (e.tags?.length || e.text); }).map(c => {
-      const e = g.days[d][c.id];
-      const parts = [];
-      if (e.tags?.length) parts.push(e.tags.map(t => `<span class="badge ${c.cls}">${t}</span>`).join(' '));
-      if (e.text) parts.push(`<span style="color:var(--text2);font-size:11px">${e.text}</span>`);
-      return `<span style="margin-right:10px"><span style="color:${c.dot};font-size:11px;font-weight:600">${c.label}:</span> ${parts.join(' ')}</span>`;
-    }).join('')}
-          </div>`).join('')}
+        ${DAYS.filter(d => g.days[d]).map(d => {
+          const dayData = g.days[d];
+          const who = dayData._lastModifiedBy;
+          const when = dayData._lastModifiedAt
+            ? new Date(dayData._lastModifiedAt).toLocaleString('es-AR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })
+            : null;
+          const whoLine = who
+            ? `<div style="font-size:10px;color:var(--text3);margin-top:4px;display:flex;align-items:center;gap:4px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:10px;height:10px;flex-shrink:0"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                ${who}${when ? ` · ${when}` : ''}
+               </div>`
+            : '';
+          const cats = CATS.filter(c => { const e = dayData[c.id]; return e && (e.tags?.length || e.text); });
+          return `
+            <div style="border-left:2px solid var(--border2);padding-left:10px;margin-bottom:6px;">
+              <span class="hist-day-label">${DAY_LABELS[d]}</span>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;">
+                ${cats.map(c => {
+                  const e = dayData[c.id];
+                  const parts = [];
+                  if (e.tags?.length) parts.push(e.tags.map(t => `<span class="badge ${c.cls}">${t}</span>`).join(' '));
+                  if (e.text) parts.push(`<span style="color:var(--text2);font-size:11px;font-style:italic">${e.text.substring(0, 80)}${e.text.length > 80 ? '…' : ''}</span>`);
+                  return `<div><span style="color:${c.dot};font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em">${c.label}</span> ${parts.join(' ')}</div>`;
+                }).join('')}
+              </div>
+              ${whoLine}
+            </div>`;
+        }).join('')}
       </div>
     </div>`).join('');
 
@@ -1584,9 +1603,13 @@ async function executeDischarge(hc, p) {
   }
 
   // Registrar el alta en el objeto del paciente
+  const camaLiberada = p.cama;
   p.status = 'discharged';
   p.dischargeAt = new Date().toISOString();
   p.dischargeWeek = currentWeek;
+  p.dischargedBy = getDisplayName(currentUser);
+  p.camaAnterior = camaLiberada;
+  p.cama = '';          // liberar la cama — ya no figura como ocupada
 
   // Guardar el registro completo de alta
   const dischargeRecord = {
@@ -1906,6 +1929,124 @@ async function init() {
   renderAll();
 }
 
+// ─── PRINT ────────────────────────────────────────────────────────────────────
+let printDay   = null;
+let printFloor = null;
+
+function openPrintModal() {
+  if (!requireAuth()) return;
+
+  // Default: today's weekday, current floor
+  const todayMap = { 1:'lunes',2:'martes',3:'miercoles',4:'jueves',5:'viernes' };
+  printDay   = todayMap[new Date().getDay()] || 'lunes';
+  printFloor = currentFloor;
+
+  // Day picker
+  document.getElementById('print-day-picker').innerHTML = DAYS.map(d => `
+    <button type="button" class="move-floor-btn ${d === printDay ? 'active' : ''}"
+            data-day="${d}" id="pday-${d}">${DAY_LABELS[d]}</button>`).join('');
+
+  // Floor picker
+  document.getElementById('print-floor-picker').innerHTML = FLOORS.map(f => `
+    <button type="button" class="move-floor-btn ${f === printFloor ? 'active' : ''}"
+            data-floor="${f}" id="pfloor-${f}">${FLOOR_LABELS[f]}</button>`).join('');
+
+  document.querySelectorAll('#print-day-picker .move-floor-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      printDay = btn.dataset.day;
+      document.querySelectorAll('#print-day-picker .move-floor-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      updatePrintCount();
+    });
+  });
+
+  document.querySelectorAll('#print-floor-picker .move-floor-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      printFloor = btn.dataset.floor;
+      document.querySelectorAll('#print-floor-picker .move-floor-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      updatePrintCount();
+    });
+  });
+
+  updatePrintCount();
+  document.getElementById('print-overlay').style.display = 'flex';
+}
+
+function updatePrintCount() {
+  const patients = getPrintPatients();
+  const withMeds = patients.filter(p => hasMedsForDay(p.hc, printDay));
+  document.getElementById('print-preview-count').textContent =
+    `${patients.length} paciente${patients.length !== 1 ? 's' : ''} en ${FLOOR_LABELS[printFloor]} · ${withMeds.length} con medicación cargada`;
+}
+
+function getPrintPatients() {
+  const knownBeds = BED_STRUCTURE[printFloor] || [];
+  const byBed = {};
+  Object.values(allPatients).forEach(p => {
+    if (p.status === 'active' && (p.floor || '').toLowerCase() === printFloor.toLowerCase()) {
+      byBed[p.cama] = p;
+    }
+  });
+  const ordered = knownBeds.filter(c => byBed[c]).map(c => byBed[c]);
+  const extra   = Object.values(byBed).filter(p => !knownBeds.includes(p.cama))
+                        .sort((a, b) => String(a.cama).localeCompare(String(b.cama)));
+  return [...ordered, ...extra];
+}
+
+function hasMedsForDay(hc, day) {
+  const entry = weekData[`${hc}_${day}`];
+  return entry && CATS.some(c => entry[c.id] && (entry[c.id].tags?.length || entry[c.id].text));
+}
+
+function buildMedLine(entry) {
+  // Returns a flat array of medication strings for a day entry
+  const lines = [];
+  CATS.forEach(cat => {
+    const d = entry?.[cat.id];
+    if (!d) return;
+    const parts = [];
+    if (d.tags?.length) parts.push(d.tags.join(', '));
+    if (d.text?.trim()) parts.push(d.text.trim());
+    if (parts.length) lines.push(`[${cat.label}] ${parts.join(' — ')}`);
+  });
+  return lines;
+}
+
+function doPrint() {
+  const patients = getPrintPatients();
+  const dayLabel = { lunes:'Lunes',martes:'Martes',miercoles:'Miércoles',jueves:'Jueves',viernes:'Viernes' }[printDay] || printDay;
+  const dateStr  = new Date().toLocaleDateString('es-AR', { weekday:'long', day:'2-digit', month:'2-digit', year:'numeric' });
+  const weekStr  = `Semana ${currentWeek} · ${getWeekDates(currentWeek)}`;
+
+  const rows = patients.map(p => {
+    const entry   = weekData[`${p.hc}_${printDay}`];
+    const medLines = buildMedLine(entry);
+    const medsHtml = medLines.length
+      ? medLines.map(l => `<div class="print-meds-line">• ${l}</div>`).join('')
+      : '<div class="print-no-meds">Sin medicación cargada</div>';
+
+    return `
+      <div class="print-patient">
+        <div class="print-patient-line">${p.cama} &nbsp;${p.paciente}</div>
+        <div class="print-meds">${medsHtml}</div>
+      </div>
+      <hr class="print-separator">`;
+  }).join('');
+
+  document.getElementById('print-content').innerHTML = `
+    <div class="print-header">Reporte de Medicación — ${FLOOR_LABELS[printFloor]} · ${dayLabel}</div>
+    <div class="print-subheader">${weekStr} &nbsp;|&nbsp; ${dateStr} &nbsp;|&nbsp; ${getDisplayName(currentUser)}</div>
+    ${rows || '<p style="color:#888;font-style:italic">Sin pacientes en este sector.</p>'}`;
+
+  document.getElementById('print-overlay').style.display = 'none';
+  requestAnimationFrame(() => window.print());
+}
+
+function closePrintModal() {
+  document.getElementById('print-overlay').style.display = 'none';
+}
+
 // ─── EVENT LISTENERS ──────────────────────────────────────────────────────────
 document.getElementById('prev-week').addEventListener('click', () => changeWeek(-1));
 document.getElementById('next-week').addEventListener('click', () => changeWeek(1));
@@ -1923,7 +2064,13 @@ document.getElementById('login-pass').addEventListener('keydown', e => { if (e.k
 document.getElementById('login-email').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('login-pass').focus(); });
 document.getElementById('btn-forgot').addEventListener('click', () => doForgotPassword());
 document.getElementById('btn-logout').addEventListener('click', () => doLogout());
-document.getElementById('btn-edit-profile').addEventListener('click', () => openProfileModal());
+document.getElementById('btn-print').addEventListener('click', () => openPrintModal());
+document.getElementById('confirm-print').addEventListener('click', () => doPrint());
+document.getElementById('cancel-print').addEventListener('click', () => closePrintModal());
+document.getElementById('close-print').addEventListener('click', () => closePrintModal());
+document.getElementById('print-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('print-overlay')) closePrintModal();
+});
 document.getElementById('close-profile').addEventListener('click', () => closeProfileModal());
 document.getElementById('cancel-profile').addEventListener('click', () => closeProfileModal());
 document.getElementById('save-profile').addEventListener('click', () => saveUserProfile());

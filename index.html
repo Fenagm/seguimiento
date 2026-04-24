@@ -67,6 +67,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
       Guardar semana
     </button>
+    <button class="btn" id="btn-print">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      Imprimir
+    </button>
   </div>
 
   <div class="user-panel" id="user-panel" style="display: none;">
@@ -414,5 +418,36 @@
 <div id="toast"></div>
 
 <script type="module" src="app.js"></script>
+<!-- PRINT MODAL -->
+<div id="print-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:310;align-items:center;justify-content:center;backdrop-filter:blur(4px);">
+  <div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;width:380px;max-width:95vw;display:flex;flex-direction:column;">
+    <div class="modal-header">
+      <span class="modal-title">Imprimir reporte del día</span>
+      <button class="panel-close" id="close-print">✕</button>
+    </div>
+    <div class="modal-body" style="padding:20px;display:flex;flex-direction:column;gap:16px;">
+      <div>
+        <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Día</label>
+        <div id="print-day-picker" style="display:flex;gap:5px;flex-wrap:wrap;"></div>
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Sector</label>
+        <div id="print-floor-picker" style="display:flex;gap:5px;flex-wrap:wrap;"></div>
+      </div>
+      <div id="print-preview-count" style="font-size:12px;color:var(--text3);min-height:18px;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" id="cancel-print">Cancelar</button>
+      <button class="btn primary" id="confirm-print">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        Imprimir
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Populated right before window.print() -->
+<div id="print-content" aria-hidden="true"></div>
+
 </body>
 </html>

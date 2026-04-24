@@ -478,6 +478,8 @@ table.patient-table td {
   right: -520px;
   width: 520px;
   height: 100dvh;
+  /* iOS Safari fallback */
+  height: -webkit-fill-available;
   background: var(--surface);
   border-left: 1px solid var(--border);
   z-index: 201;
@@ -1200,6 +1202,7 @@ table.patient-table td {
   right: -520px;
   width: 520px;
   height: 100dvh;
+  height: -webkit-fill-available;
   background: var(--surface);
   border-left: 1px solid var(--border);
   z-index: 201;
@@ -1357,12 +1360,15 @@ table.patient-table td {
 .user-panel {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   margin-left: auto;
   background: var(--surface2);
-  padding: 4px 12px;
+  padding: 4px 8px 4px 12px;
   border-radius: 6px;
   border: 1px solid var(--border);
+  min-width: 0;          /* allow shrinking */
+  max-width: 240px;      /* cap so logout never gets pushed off */
+  flex-shrink: 0;
 }
 
 .user-name-btn {
@@ -1379,6 +1385,14 @@ table.patient-table td {
   font-family: var(--mono);
   color: var(--accent);
   font-weight: 500;
+  min-width: 0;          /* allow text truncation */
+  flex: 1;
+}
+.user-name-btn #user-name-display {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
 }
 .user-name-btn:hover { background: var(--surface3); }
 
@@ -1390,6 +1404,8 @@ table.patient-table td {
   font-size: 11px;
   padding: 4px 6px;
   border-radius: 4px;
+  flex-shrink: 0;        /* never shrink — always visible */
+  white-space: nowrap;
 }
 
 .user-logout-btn:hover {
@@ -1911,4 +1927,67 @@ table.patient-table td {
   box-shadow: 0 8px 40px rgba(0,0,0,0.5);
   width: min(420px, calc(100vw - 32px));
   animation: slideUp .3s ease;
+}
+
+/* ─── PRINT ─── */
+#print-content { display: none; }
+
+@media print {
+  /* Hide everything except the print content */
+  body > *:not(#print-content) { display: none !important; }
+
+  #print-content {
+    display: block !important;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 11pt;
+    color: #000;
+    background: #fff;
+    padding: 0;
+    margin: 0;
+  }
+
+  .print-header {
+    font-size: 13pt;
+    font-weight: bold;
+    margin-bottom: 4pt;
+  }
+  .print-subheader {
+    font-size: 10pt;
+    color: #444;
+    margin-bottom: 14pt;
+    border-bottom: 1pt solid #000;
+    padding-bottom: 6pt;
+  }
+  .print-patient {
+    margin-bottom: 10pt;
+    page-break-inside: avoid;
+  }
+  .print-patient-line {
+    font-size: 11pt;
+    font-weight: bold;
+  }
+  .print-meds {
+    font-size: 10pt;
+    margin-left: 16pt;
+    margin-top: 2pt;
+  }
+  .print-meds-line {
+    margin-bottom: 1pt;
+  }
+  .print-no-meds {
+    font-size: 10pt;
+    color: #888;
+    margin-left: 16pt;
+    font-style: italic;
+  }
+  .print-separator {
+    border: none;
+    border-top: 1pt dotted #ccc;
+    margin: 8pt 0;
+  }
+
+  @page {
+    size: A4;
+    margin: 18mm 15mm 18mm 15mm;
+  }
 }
