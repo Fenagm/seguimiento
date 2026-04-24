@@ -326,6 +326,21 @@ function getWeekDates(weekId) {
   return `${fmt(startOfWeek)} – ${fmt(endOfWeek)}`;
 }
 
+function getWeekDayDates(weekId) {
+  const [year, wn] = weekId.replace('W', '').split('-').map(Number);
+  const jan4 = new Date(year, 0, 4);
+  const startOfWeek = new Date(jan4);
+  startOfWeek.setDate(jan4.getDate() - (jan4.getDay() + 6) % 7 + (wn - 1) * 7);
+  const fmt = d => d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
+  const map = {};
+  DAYS.forEach((day, idx) => {
+    const date = new Date(startOfWeek);
+    date.setDate(startOfWeek.getDate() + idx);
+    map[day] = fmt(date);
+  });
+  return map;
+}
+
 // ─── FIREBASE CONFIG ──────────────────────────────────────────────────────────
 // Lee credenciales desde variables de entorno de Vite (definidas en .env.local)
 const ENV_CONFIG = {
@@ -722,8 +737,12 @@ function openPanel(hc, day) {
 
 function renderDaySelector() {
   const el = document.getElementById('day-selector');
+  const dayDates = getWeekDayDates(currentWeek);
   el.innerHTML = DAYS.map(d =>
-    `<button class="day-btn ${d === panelState.day ? 'active' : ''}" data-day="${d}">${DAY_LABELS[d]}</button>`
+    `<button class="day-btn ${d === panelState.day ? 'active' : ''}" data-day="${d}">
+      ${DAY_LABELS[d]}
+      <span class="day-date">${dayDates[d]}</span>
+    </button>`
   ).join('');
   document.querySelectorAll('.day-btn').forEach(btn => {
     btn.addEventListener('click', () => switchPanelDay(btn.dataset.day));
@@ -2086,9 +2105,9 @@ function buildMedLine(entry) {
 
 function doPrint() {
   const patients = getPrintPatients();
-  const dayLabel = { lunes:'Lunes',martes:'Martes',miercoles:'Miércoles',jueves:'Jueves',viernes:'Viernes' }[printDay] || printDay;
-  const dateStr  = new Date().toLocaleDateString('es-AR', { weekday:'long', day:'2-digit', month:'2-digit', year:'numeric' });
-  const weekStr  = `Semana ${currentWeek} · ${getWeekDates(currentWeek)}`;
+  const dayDates = getWeekDayDates(currentWeek);
+  const reportDay = dayDates[printDay] || new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
+  const reportDate = new Date().toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'2-digit' });
 
   const rows = patients.map(p => {
     const entry   = weekData[`${p.hc}_${printDay}`];
@@ -2099,15 +2118,13 @@ function doPrint() {
 
     return `
       <div class="print-patient">
-        <div class="print-patient-line">${p.cama} &nbsp;${p.paciente}</div>
-        <div class="print-meds">${medsHtml}</div>
+        <div class="print-patient-line">${p.cama} ${p.paciente}: ${medsText}</div>
       </div>
       <hr class="print-separator">`;
   }).join('');
 
   document.getElementById('print-content').innerHTML = `
-    <div class="print-header">Reporte de Medicación — ${FLOOR_LABELS[printFloor]} · ${dayLabel}</div>
-    <div class="print-subheader">${weekStr} &nbsp;|&nbsp; ${dateStr} &nbsp;|&nbsp; ${getDisplayName(currentUser)}</div>
+    <div class="print-header">Pase de Guardia - ${FLOOR_LABELS[printFloor]} - Dia ${reportDay} (${reportDate})</div>
     ${rows || '<p style="color:#888;font-style:italic">Sin pacientes en este sector.</p>'}`;
 
   document.getElementById('print-overlay').style.display = 'none';

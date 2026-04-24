@@ -247,6 +247,12 @@ body {
   margin-bottom: 12px;
 }
 
+.section-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
 .section-title {
   font-size: 11px;
   font-weight: 600;
@@ -567,6 +573,19 @@ table.patient-table td {
   color: var(--text2);
   transition: all .15s;
   text-align: center;
+}
+
+.day-btn .day-date {
+  display: block;
+  margin-top: 2px;
+  font-size: 10px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.day-btn:not(.active) .day-date {
+  color: var(--text3);
 }
 
 .day-btn.active {

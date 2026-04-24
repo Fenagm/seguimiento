@@ -40,8 +40,6 @@
 
 <!-- HEADER -->
 <div id="header">
-  <div class="logo">Seg. Clínico</div>
-
   <div class="week-nav">
     <button id="prev-week" title="Semana anterior">‹</button>
     <span id="week-label">—</span>
@@ -55,10 +53,6 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
       <input id="search-input" placeholder="Buscar paciente...">
     </div>
-    <button class="btn" id="btn-csv">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-      Cargar CSV
-    </button>
     <button class="btn" id="btn-history">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       Historial
@@ -169,10 +163,16 @@
     <div class="section-header">
       <span class="section-title" id="floor-title">Piso —</span>
       <span class="patient-count" id="patient-count"></span>
-      <button class="btn primary" id="btn-add-patient">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-        Nuevo Paciente
-      </button>
+      <div class="section-actions">
+        <button class="btn" id="btn-csv">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Cargar CSV
+        </button>
+        <button class="btn primary" id="btn-add-patient">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          Nuevo Paciente
+        </button>
+      </div>
     </div>
     <div class="table-wrap">
       <table class="patient-table">
