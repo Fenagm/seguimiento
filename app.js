@@ -2154,7 +2154,7 @@ function doPrint() {
   // ✅ CORRECCIÓN: Usamos rows.join('') para convertir el array en texto HTML válido
   document.getElementById('print-content').innerHTML = `
     <div class="print-header">Pase de Guardia - ${FLOOR_LABELS[printFloor]} - Dia ${reportDay} (${reportDate})</div>
-    ${rows.length > 0 ? rows.join('') : '<p style="color:#888;font-style:italic">Sin pacientes en este sector.</p>'}`;
+    ${rows.length > 0 ? rows.join('') : '<p style="font-size: 9px;color:#888;font-style:italic">Sin pacientes en este sector.</p>'}`;
 
   document.getElementById('print-overlay').style.display = 'none';
   requestAnimationFrame(() => window.print());
