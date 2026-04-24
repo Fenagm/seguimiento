@@ -102,6 +102,42 @@ let moveSelectedRoom = null;
 let currentUser = null;
 let auditLog = JSON.parse(localStorage.getItem('sc_audit_log') || '[]');
 
+const PATIENT_STATUS = {
+  ACTIVE: 'active',
+  ARCHIVED: 'archived',
+};
+
+function normalizePatientRecord(patient) {
+  if (!patient) return patient;
+  if (!patient.status) {
+    patient.status = PATIENT_STATUS.ACTIVE;
+    return patient;
+  }
+  // Backward compatibility with older "discharged" records.
+  if (patient.status === 'discharged') {
+    patient.status = PATIENT_STATUS.ARCHIVED;
+    patient.archivedReason = patient.archivedReason || 'discharge';
+    patient.archivedAt = patient.archivedAt || patient.dischargeAt || new Date().toISOString();
+  }
+  return patient;
+}
+
+function isPatientActive(patient) {
+  return normalizePatientRecord(patient)?.status === PATIENT_STATUS.ACTIVE;
+}
+
+function normalizeAllPatients() {
+  let changed = false;
+  Object.values(allPatients).forEach(p => {
+    const before = p?.status;
+    normalizePatientRecord(p);
+    if ((p?.status || null) !== (before || null)) changed = true;
+  });
+  if (changed) localStorage.setItem('sc_patients', JSON.stringify(allPatients));
+}
+
+normalizeAllPatients();
+
 // ─── AUDIT ────────────────────────────────────────────────────────────────────
 function saveAudit(action, hc, day, details) {
   const entry = {
@@ -374,7 +410,8 @@ async function loadWeekFromFirestore() {
     const snap = await getDoc(doc(db, 'weeks', currentWeek));
     if (snap.exists()) weekData = snap.data();
     const pSnap = await getDocs(collection(db, 'patients'));
-    pSnap.forEach(d => { allPatients[d.id] = d.data(); });
+    pSnap.forEach(d => { allPatients[d.id] = normalizePatientRecord(d.data()); });
+    normalizeAllPatients();
   } catch (e) {
     console.warn('Firestore load:', e);
   }
@@ -414,7 +451,7 @@ function updateWeekLabel() {
 // ─── FLOOR TABS ───────────────────────────────────────────────────────────────
 function getPatientCountForFloor(f) {
   return Object.values(allPatients).filter(p => {
-    return p.status !== 'discharged' &&
+    return isPatientActive(p) &&
            (p.floor || '').toLowerCase() === f.toLowerCase();
   }).length;
 }
@@ -446,7 +483,7 @@ function getFloorPatients() {
   // Map cama → patient for this floor
   const byBed = {};
   Object.values(allPatients).forEach(p => {
-    if (p.status !== 'discharged' &&
+    if (isPatientActive(p) &&
         (p.floor || '').toLowerCase() === currentFloor.toLowerCase()) {
       byBed[p.cama] = p;
     }
@@ -772,20 +809,46 @@ function renderPanelBody() {
 
 function toggleCat(catId) {
   const body = document.getElementById(`cat-body-${catId}`);
+  if (!body) return;
   const section = body.closest('.cat-section');
   const toggle = section?.querySelector('.cat-toggle');
   const isOpen = body.style.display !== 'none';
+  const panelBody = document.getElementById('panel-body');
 
   if (isOpen) {
     body.style.display = 'none';
     if (toggle) toggle.textContent = '▾';
   } else {
+    // UX: keep only one expanded category to avoid the panel growing too tall.
+    document.querySelectorAll('.cat-body').forEach(otherBody => {
+      if (otherBody.id === body.id) return;
+      otherBody.style.display = 'none';
+      const otherSection = otherBody.closest('.cat-section');
+      const otherToggle = otherSection?.querySelector('.cat-toggle');
+      if (otherToggle) otherToggle.textContent = '▾';
+    });
+
     body.style.display = '';
     if (toggle) toggle.textContent = '▴';
-    // Scroll the section into view after the DOM has expanded
-    setTimeout(() => {
-      section?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }, 60);
+
+    // Controlled scroll inside panel body to avoid abrupt viewport jumps.
+    if (section && panelBody) {
+      requestAnimationFrame(() => {
+        const panelRect = panelBody.getBoundingClientRect();
+        const sectionRect = section.getBoundingClientRect();
+        const topGap = 12;
+        const bottomGap = 18;
+        const isAbove = sectionRect.top < panelRect.top + topGap;
+        const isBelow = sectionRect.bottom > panelRect.bottom - bottomGap;
+
+        if (isAbove || isBelow) {
+          const delta = isAbove
+            ? sectionRect.top - panelRect.top - topGap
+            : sectionRect.bottom - panelRect.bottom + bottomGap;
+          panelBody.scrollBy({ top: delta, behavior: 'smooth' });
+        }
+      });
+    }
   }
 }
 
@@ -1057,7 +1120,7 @@ function showCSVPreview(patients) {
   // Calculate who would be archived (active patients absent from new CSV)
   const incomingHCs = new Set(patients.map(p => String(p.hc)));
   const toArchive = Object.values(allPatients).filter(p =>
-    p.status === 'active' && !incomingHCs.has(String(p.hc))
+    isPatientActive(p) && !incomingHCs.has(String(p.hc))
   );
   showArchiveSummary(toArchive);
 
@@ -1093,10 +1156,10 @@ function importPatients() {
 
   // Archive active patients NOT in the new CSV
   for (const [hc, p] of Object.entries(allPatients)) {
-    if (p.status === 'active' && !incomingHCs.has(String(hc))) {
+    if (isPatientActive(p) && !incomingHCs.has(String(hc))) {
       allPatients[hc] = {
         ...p,
-        status: 'archived',
+        status: PATIENT_STATUS.ARCHIVED,
         archivedAt: new Date().toISOString(),
         archivedReason: 'csv_import',
         archivedBy: getDisplayName(currentUser),
@@ -1108,7 +1171,10 @@ function importPatients() {
   // Upsert incoming patients
   for (const p of pendingCSV) {
     const existing = allPatients[p.hc];
-    p.status = 'active';
+    p.status = PATIENT_STATUS.ACTIVE;
+    delete p.archivedAt;
+    delete p.archivedReason;
+    delete p.archivedBy;
     // Preserve week data link if patient already existed
     if (existing) p.createdAt = existing.createdAt;
     allPatients[p.hc] = p;
@@ -1349,7 +1415,7 @@ window.selectNewSector = function(floorId) {
 
 function renderNewBedGrid(floorId) {
   const beds = BED_STRUCTURE[floorId] || [];
-  const occupied = new Set(Object.values(allPatients).map(p => p.cama));
+  const occupied = new Set(Object.values(allPatients).filter(isPatientActive).map(p => p.cama));
   const selected = document.getElementById('new-cama').value;
   document.getElementById('new-bed-grid').innerHTML = beds.map(cama => {
     const isBusy = occupied.has(cama);
@@ -1358,7 +1424,7 @@ function renderNewBedGrid(floorId) {
       <button type="button"
               class="bed-card ${isBusy ? 'occupied' : ''} ${isSel ? 'selected' : ''}"
               onclick="selectNewBed('${cama}','${floorId}',this)"
-              ${isBusy ? `title="Ocupada por ${allPatients[Object.keys(allPatients).find(k=>allPatients[k].cama===cama)]?.paciente||''}"` : ''}>
+              ${isBusy ? `title="Ocupada por ${Object.values(allPatients).find(p => isPatientActive(p) && p.cama === cama)?.paciente || ''}"` : ''}>
         <div class="bed-card-room">${cama}</div>
         <div class="bed-card-status ${isBusy ? 'busy' : 'free'}">${isBusy ? '● Ocupada' : '○ Libre'}</div>
       </button>`;
@@ -1451,7 +1517,7 @@ function saveNewPatient() {
     return;
   }
 
-  const camaOcupada = Object.values(allPatients).find(p => p.cama === cama && p.status !== 'discharged');
+  const camaOcupada = Object.values(allPatients).find(p => p.cama === cama && isPatientActive(p));
   if (camaOcupada) {
     showToast(`La cama ${cama} ya está ocupada por ${camaOcupada.paciente}`);
     return;
@@ -1467,7 +1533,7 @@ function saveNewPatient() {
   cama, hc, paciente, medico: medico || '—', cobertura: cobertura || '—',
   ingreso: ingreso || '—', dias: dias || '0', servicio: servicio || '—',
   diagnostico: diagnostico || 'SIN DIAGNÓSTICO', floor,
-  status: 'active'   // ✅ nuevo campo
+  status: PATIENT_STATUS.ACTIVE
 };
 
   allPatients[hc] = newPatient;
@@ -1604,10 +1670,13 @@ async function executeDischarge(hc, p) {
 
   // Registrar el alta en el objeto del paciente
   const camaLiberada = p.cama;
-  p.status = 'discharged';
+  p.status = PATIENT_STATUS.ARCHIVED;
   p.dischargeAt = new Date().toISOString();
   p.dischargeWeek = currentWeek;
   p.dischargedBy = getDisplayName(currentUser);
+  p.archivedAt = p.dischargeAt;
+  p.archivedReason = 'discharge';
+  p.archivedBy = p.dischargedBy;
   p.camaAnterior = camaLiberada;
   p.cama = '';          // liberar la cama — ya no figura como ocupada
 
@@ -1620,7 +1689,7 @@ async function executeDischarge(hc, p) {
   discharges.unshift(dischargeRecord);
   localStorage.setItem('sc_discharges', JSON.stringify(discharges));
 
-  // Actualizar allPatients (el paciente permanece, pero con status 'discharged')
+  // Actualizar allPatients (el paciente permanece archivado para historial)
   allPatients[hc] = p;
   localStorage.setItem('sc_patients', JSON.stringify(allPatients));
 
@@ -1632,7 +1701,7 @@ async function executeDischarge(hc, p) {
   // ✅ En su lugar, guardar weekData sin cambios
   localStorage.setItem(`sc_week_${currentWeek}`, JSON.stringify(weekData));
 
-  saveAudit('delete', hc, null, { action: 'discharge', patientName: p.paciente, cama: p.cama });
+  saveAudit('delete', hc, null, { action: 'discharge', patientName: p.paciente, cama: camaLiberada });
 
   // Sync con Firestore si está activo
   if (db) {
@@ -1688,7 +1757,7 @@ function renderMoveGrid() {
   // Build occupied map
   const occupiedBy = {};
   Object.values(allPatients).forEach(p => {
-    if (p.status !== 'discharged' && String(p.hc) !== String(movePatientHc)) {
+    if (isPatientActive(p) && String(p.hc) !== String(movePatientHc)) {
       occupiedBy[p.cama] = p;
     }
   });
@@ -1765,7 +1834,9 @@ function confirmMovePatient() {
   const p = allPatients[movePatientHc];
   if (!p) return;
   const oldRoom = p.cama;
-  const existingPatient = Object.values(allPatients).find(pat => pat.cama === newRoom && String(pat.hc) !== String(movePatientHc));
+  const existingPatient = Object.values(allPatients).find(pat =>
+    isPatientActive(pat) && pat.cama === newRoom && String(pat.hc) !== String(movePatientHc)
+  );
   if (existingPatient) {
     const warn = document.getElementById('move-room-warning');
     warn.textContent = `⚠ La cama ${newRoom} está ocupada por ${existingPatient.paciente}. ¿Querés intercambiar posiciones? (clic para intercambiar)`;
@@ -1984,7 +2055,7 @@ function getPrintPatients() {
   const knownBeds = BED_STRUCTURE[printFloor] || [];
   const byBed = {};
   Object.values(allPatients).forEach(p => {
-    if (p.status === 'active' && (p.floor || '').toLowerCase() === printFloor.toLowerCase()) {
+    if (isPatientActive(p) && (p.floor || '').toLowerCase() === printFloor.toLowerCase()) {
       byBed[p.cama] = p;
     }
   });
@@ -2023,7 +2094,7 @@ function doPrint() {
     const entry   = weekData[`${p.hc}_${printDay}`];
     const medLines = buildMedLine(entry);
     const medsHtml = medLines.length
-      ? medLines.map(l => `<div class="print-meds-line">• ${l}</div>`).join('')
+      ? `<div class="print-meds-line">• ${medLines.join(' · ')}</div>`
       : '<div class="print-no-meds">Sin medicación cargada</div>';
 
     return `
