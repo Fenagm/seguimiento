@@ -213,8 +213,8 @@
   <div id="hist-search-panel" style="display:none; background:var(--surface2); border-radius:12px; padding:16px; margin-bottom:16px;">
     <div style="display:grid; gap:12px; grid-template-columns:1fr 1fr auto; align-items:end;">
       <div>
-        <label style="font-size:11px; color:var(--text3); display:block; margin-bottom:4px;">Paciente</label>
-        <input id="hist-search-patient" type="text" placeholder="Nombre o HC..." style="width:100%;">
+        <label style="font-size:11px; color:var(--text3); display:block; margin-bottom:4px;">Paciente (nombre o HC)</label>
+        <input id="hist-search-patient" type="text" placeholder="Ej: Juan Pérez o 12345" style="width:100%;">
       </div>
       <div>
         <label style="font-size:11px; color:var(--text3); display:block; margin-bottom:4px;">Medicación / Tag</label>
@@ -223,21 +223,29 @@
       <div>
         <label style="font-size:11px; color:var(--text3); display:block; margin-bottom:4px;">Semana</label>
         <div style="display:flex; gap:6px;">
-          <input id="hist-search-week" type="week" style="flex:1;">
+          <input id="hist-search-week" type="week" style="flex:1;" placeholder="YYYY-W##">
           <button id="btn-search-history" class="btn primary" style="padding:8px 16px;">🔍 Buscar</button>
         </div>
       </div>
     </div>
   </div>
   
+  <!-- Indicador de carga -->
+  <div id="history-loading" style="display:none; text-align:center; padding:40px;">
+    <div class="spinner" style="margin:0 auto 12px;"></div>
+    <p>Cargando datos desde Firestore...</p>
+  </div>
+  
   <div id="history-results">
     <div class="no-data" style="text-align:center; padding:40px;">
-      <p>Cargando historial...</p>
+      <p>📭 Usá los filtros y presioná "Buscar" para consultar el historial en Firestore.</p>
     </div>
   </div>
   
-  <div id="history-load-more" style="text-align:center; margin-top:20px; display:none;">
-    <button class="btn" id="btn-load-more">📂 Cargar más semanas anteriores</button>
+  <div id="history-pagination" style="text-align:center; margin-top:20px; display:none; gap:8px; justify-content:center;">
+    <button class="btn" id="btn-prev-page" style="display:none;">← Anterior</button>
+    <span id="page-info" style="font-size:12px; color:var(--text3);"></span>
+    <button class="btn" id="btn-next-page" style="display:none;">Siguiente →</button>
   </div>
 </div>
 
