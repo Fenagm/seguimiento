@@ -1105,8 +1105,6 @@ function parseCSV(text) {
     tokens = tokens.map(t => t.replace(/^"|"$/g, '').trim());
 
     // Buscamos si la línea tiene el patrón de datos 
-    // (el CSV puede tener diferentes longitudes, buscamos por presencia de campos clave)
-    // Buscamos que tenga al menos: Listado de Internaciones + datos de paciente
     const isHeaderRow = tokens[0] === 'Listado de Internaciones';
     if (!isHeaderRow) continue;
     
@@ -1153,15 +1151,6 @@ function parseCSV(text) {
   const result = Object.values(uniquePatients);
   console.log('Pacientes parseados:', result.length, result.map(p => ({cama: p.cama, floor: p.floor, paciente: p.paciente})));
   return result;
-}
-
-  // Filtrar posibles duplicados por número de HC
-  const uniquePatients = {};
-  for (const p of parsedPatients) {
-    uniquePatients[p.hc] = p;
-  }
-
-  return Object.values(uniquePatients);
 }
 
 function showCSVPreview(patients) {
