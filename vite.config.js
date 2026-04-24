@@ -36,6 +36,10 @@ export default defineConfig({
         ],
       },
       workbox: {
+        // Force new SW activation to avoid stale JS bundles after deploy.
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
         // Cache the app shell and all assets
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         // Cache Firebase SDK CDN calls (auth tokens still require network)
