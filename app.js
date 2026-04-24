@@ -653,6 +653,7 @@ function renderDaysRowContent(hc) {
   const container = document.getElementById(`days-content-${hc}`);
   if (!container) return;
   const p = allPatients[hc];
+  const dayDates = getWeekDayDates(currentWeek);
   const dayCards = DAYS.map(day => {
     const entry = weekData[`${hc}_${day}`];
     const hasEntry = entry && CATS.some(c => entry[c.id] && (entry[c.id].text || entry[c.id].tags?.length));
@@ -674,7 +675,7 @@ function renderDaysRowContent(hc) {
     return `
       <button class="days-row-card ${hasEntry ? 'has-data' : ''}" data-hc="${hc}" data-day="${day}">
         <div class="days-row-card-header">
-          <span class="days-row-day">${DAY_LABELS[day]}</span>
+          <span class="days-row-day">${DAY_LABELS[day]} <small style="font-size:10px;color:var(--text3);font-weight:500;">${dayDates[day]}</small></span>
           <div class="day-badges">${renderDayBadges(hc, day)}</div>
         </div>
         <div class="days-row-summary">${summary}</div>
