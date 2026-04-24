@@ -203,24 +203,41 @@
     <button class="btn" id="btn-back-main">← Volver</button>
   </div>
   
-  <!-- NUEVO: Selector de vista -->
+  <!-- Selector de vista -->
   <div class="history-view-selector" style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
     <button id="hist-view-lastweek" class="btn active" style="font-size:12px; padding:4px 12px;">📅 Última semana</button>
-    <button id="hist-view-all" class="btn" style="font-size:12px; padding:4px 12px;">🔍 Buscar en todo</button>
+    <button id="hist-view-search" class="btn" style="font-size:12px; padding:4px 12px;">🔍 Búsqueda avanzada</button>
   </div>
   
-  <!-- Filtros (ocultos por defecto en modo "última semana") -->
-  <div id="hist-filters" style="display:none;">
-    <div class="history-filters">
-      <input class="filter-input" id="hist-search-patient" placeholder="Buscar por paciente...">
-      <input class="filter-input" id="hist-search-drug" placeholder="Buscar por droga/tag...">
-      <input class="filter-input" id="hist-search-week" type="week" placeholder="Semana (YYYY-W##)">
+  <!-- Panel de búsqueda (oculto por defecto) -->
+  <div id="hist-search-panel" style="display:none; background:var(--surface2); border-radius:12px; padding:16px; margin-bottom:16px;">
+    <div style="display:grid; gap:12px; grid-template-columns:1fr 1fr auto; align-items:end;">
+      <div>
+        <label style="font-size:11px; color:var(--text3); display:block; margin-bottom:4px;">Paciente</label>
+        <input id="hist-search-patient" type="text" placeholder="Nombre o HC..." style="width:100%;">
+      </div>
+      <div>
+        <label style="font-size:11px; color:var(--text3); display:block; margin-bottom:4px;">Medicación / Tag</label>
+        <input id="hist-search-drug" type="text" placeholder="Ej: Vancomicina, Midazolam...">
+      </div>
+      <div>
+        <label style="font-size:11px; color:var(--text3); display:block; margin-bottom:4px;">Semana</label>
+        <div style="display:flex; gap:6px;">
+          <input id="hist-search-week" type="week" style="flex:1;">
+          <button id="btn-search-history" class="btn primary" style="padding:8px 16px;">🔍 Buscar</button>
+        </div>
+      </div>
     </div>
   </div>
   
-  <div id="history-results"></div>
-  <div id="history-load-more" style="text-align:center; margin-top:16px; display:none;">
-    <button class="btn" id="btn-load-more">Cargar más semanas anteriores...</button>
+  <div id="history-results">
+    <div class="no-data" style="text-align:center; padding:40px;">
+      <p>Cargando historial...</p>
+    </div>
+  </div>
+  
+  <div id="history-load-more" style="text-align:center; margin-top:20px; display:none;">
+    <button class="btn" id="btn-load-more">📂 Cargar más semanas anteriores</button>
   </div>
 </div>
 
