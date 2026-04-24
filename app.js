@@ -1104,38 +1104,56 @@ function parseCSV(text) {
     // Limpiamos las comillas extra de los tokens
     tokens = tokens.map(t => t.replace(/^"|"$/g, '').trim());
 
-    // Buscamos si la línea tiene el patrón de datos (revisando la cantidad de columnas del formato)
-    if (tokens.length >= 26 && tokens[0] === 'Listado de Internaciones') {
-      
-      const agrupacion = tokens[8]; // Ej: "PISO 3", "U.T.I.Q  PISO2", "TAMO"
-      const cama = tokens[18];
-      const paciente = tokens[19];
-      const hc = tokens[20];
-      const medico = tokens[21];
-      const ingreso = tokens[22];
-      const cobertura = tokens[24];
-      const servicio = tokens[25];
+    // Buscamos si la línea tiene el patrón de datos 
+    // (el CSV puede tener diferentes longitudes, buscamos por presencia de campos clave)
+    // Buscamos que tenga al menos: Listado de Internaciones + datos de paciente
+    const isHeaderRow = tokens[0] === 'Listado de Internaciones';
+    if (!isHeaderRow) continue;
+    
+    // Verificamos que tenga los campos mínimos necesarios
+    if (tokens.length >= 20) {
+      const agrupacion = tokens[8] || '';        // Sector/Agrupación
+      const cama = tokens[18] || '';
+      const paciente = tokens[19] || '';
+      const hc = tokens[20] || '';
+      const medico = tokens[21] || '';
+      const ingreso = tokens[22] || '';
+      const cobertura = tokens[24] || '';
+      const servicio = tokens[25] || '';
       const diagnostico = tokens[26] || '';
 
-      // Usamos nuestra función para detectar a qué piso pertenece
-      const floorId = detectFloor(agrupacion, cama);
+      // CORREGIDO: orden correcto de parámetros: (cama, agrupacionHint)
+      const floorId = detectFloor(cama, agrupacion);
 
-      // Si detectFloor devuelve null, significa que es Piso 1, Piso 2 o un área no deseada
-      if (floorId && hc && paciente && cama && cama !== 'Cama') {
+      // Solo incluimos si es un piso válido y tenemos datos mínimos
+      if (floorId && hc && paciente && cama && cama !== 'Cama' && cama !== 'cama') {
         parsedPatients.push({
-          hc: hc,
-          cama: cama,
-          paciente: paciente,
-          medico: medico,
-          ingreso: ingreso.split(' ')[0], // Solo la fecha
-          cobertura: cobertura,
-          servicio: servicio,
-          diagnostico: diagnostico,
+          hc: String(hc),
+          cama: String(cama),
+          paciente: String(paciente),
+          medico: String(medico || '—'),
+          ingreso: ingreso.split(' ')[0],
+          cobertura: String(cobertura || '—'),
+          servicio: String(servicio || '—'),
+          diagnostico: String(diagnostico || 'SIN DIAGNÓSTICO'),
           floor: floorId
         });
       }
     }
   }
+
+  // Filtrar posibles duplicados por número de HC
+  const uniquePatients = {};
+  for (const p of parsedPatients) {
+    if (!uniquePatients[p.hc] || uniquePatients[p.hc].cama !== p.cama) {
+      uniquePatients[p.hc] = p;
+    }
+  }
+
+  const result = Object.values(uniquePatients);
+  console.log('Pacientes parseados:', result.length, result.map(p => ({cama: p.cama, floor: p.floor, paciente: p.paciente})));
+  return result;
+}
 
   // Filtrar posibles duplicados por número de HC
   const uniquePatients = {};
@@ -1522,18 +1540,40 @@ for (const [floorId, camas] of Object.entries(BED_STRUCTURE)) {
 function detectFloor(cama, agrupacionHint = '') {
   if (!cama) return null;
 
-  // 1. Lookup exacto en la estructura
+  // 1. Lookup exacto en la estructura de camas conocidas
   const key = String(cama).trim().toUpperCase();
   if (CAMA_TO_FLOOR[key]) return CAMA_TO_FLOOR[key];
 
-  // 2. Heurística para CSV (agrupación del listado de internaciones)
+  // 2. Heurística para CSV basada en la agrupación (columna 9 del CSV)
   const agrp = (agrupacionHint || '').toUpperCase();
-  if (agrp.includes('TAMO'))                               return 'tamo';
-  if (agrp.includes('U.T.I.Q') || agrp.includes('UTIQ'))  return 'utiq';
-  if (agrp.includes('U.T.I')   || agrp.includes('UTI'))   return 'uti';
-  if (agrp.includes('PISO 3')  || key.startsWith('3'))    return '3';
-  if (agrp.includes('PISO 4')  || key.startsWith('4'))    return '4';
-  if (agrp.includes('PISO 5')  || key.startsWith('5'))    return '5';
+  
+  // Detectar UTIQ (U.T.I.Q  PISO2, U.T.I.Q, UTIQ, U.T.Q)
+  if (agrp.includes('U.T.I.Q') || agrp.includes('UTIQ') || agrp.includes('U.T.Q')) return 'utiq';
+  
+  // Detectar UTI
+  if (agrp.includes('U.T.I') || agrp.includes('UTI')) return 'uti';
+  
+  // Detectar TAMO
+  if (agrp.includes('TAMO')) return 'tamo';
+  
+  // Detectar Pisos (con o sin espacio)
+  if (agrp.includes('PISO 3') || agrp.includes('PISO3')) return '3';
+  if (agrp.includes('PISO 4') || agrp.includes('PISO4')) return '4';
+  if (agrp.includes('PISO 5') || agrp.includes('PISO5')) return '5';
+  
+  // 3. Fallback: detectar por el número de cama
+  const numMatch = key.match(/^(\d)/);
+  if (numMatch) {
+    const firstDigit = numMatch[1];
+    if (firstDigit === '3') return '3';
+    if (firstDigit === '4') return '4';
+    if (firstDigit === '5') return '5';
+  }
+  
+  // 4. Detectar por texto de cama
+  if (key.includes('UTIQ') || key.includes('U.T.Q')) return 'utiq';
+  if (key.includes('UTI')) return 'uti';
+  if (key.includes('TAMO')) return 'tamo';
 
   return null;
 }
