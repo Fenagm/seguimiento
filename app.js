@@ -2133,7 +2133,8 @@ function doPrint() {
   const reportDay = dayDates[printDay] || new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
   const reportDate = new Date().toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'2-digit' });
 
-  const rows = patients.map(p => {
+  const rows = [];
+  for (const p of patients) {
     const entry   = weekData[`${p.hc}_${printDay}`];
     const medLines = buildMedLine(entry);
     const medsHtml = medLines.length
@@ -2144,8 +2145,8 @@ function doPrint() {
       <div class="print-patient">
         <div class="print-patient-line">${p.cama} ${p.paciente}: ${medsText}</div>
       </div>
-      <hr class="print-separator">`;
-  }).join('');
+      <hr class="print-separator">`);
+  }
 
   document.getElementById('print-content').innerHTML = `
     <div class="print-header">Pase de Guardia - ${FLOOR_LABELS[printFloor]} - Dia ${reportDay} (${reportDate})</div>

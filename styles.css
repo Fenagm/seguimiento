@@ -1765,7 +1765,7 @@ table.patient-table td {
     flex: 1;
   }
 
-  .btn span:not(#btn-copy-prev-label) {
+  #header .btn span:not(#btn-copy-prev-label) {
     display: none;
   }
 
