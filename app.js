@@ -126,10 +126,6 @@ function isPatientActive(patient) {
   return normalizePatientRecord(patient)?.status === PATIENT_STATUS.ACTIVE;
 }
 
-function floorMatches(patientFloor, floor) {
-  return String(patientFloor || '').trim().toLowerCase() === String(floor || '').trim().toLowerCase();
-}
-
 function normalizeAllPatients() {
   let changed = false;
   Object.values(allPatients).forEach(p => {
@@ -471,7 +467,7 @@ function updateWeekLabel() {
 function getPatientCountForFloor(f) {
   return Object.values(allPatients).filter(p => {
     return isPatientActive(p) &&
-           floorMatches(p.floor, f);
+           (p.floor || '').toLowerCase() === f.toLowerCase();
   }).length;
 }
 
@@ -503,7 +499,7 @@ function getFloorPatients() {
   const byBed = {};
   Object.values(allPatients).forEach(p => {
     if (isPatientActive(p) &&
-        floorMatches(p.floor, currentFloor)) {
+        (p.floor || '').toLowerCase() === currentFloor.toLowerCase()) {
       byBed[p.cama] = p;
     }
   });
@@ -2079,7 +2075,7 @@ function getPrintPatients() {
   const knownBeds = BED_STRUCTURE[printFloor] || [];
   const byBed = {};
   Object.values(allPatients).forEach(p => {
-    if (isPatientActive(p) && floorMatches(p.floor, printFloor)) {
+    if (isPatientActive(p) && (p.floor || '').toLowerCase() === printFloor.toLowerCase()) {
       byBed[p.cama] = p;
     }
   });
@@ -2117,12 +2113,13 @@ function doPrint() {
   const rows = patients.map(p => {
     const entry   = weekData[`${p.hc}_${printDay}`];
     const medLines = buildMedLine(entry);
-    const medsSummary = medLines.length ? medLines.join(' · ') : 'Sin medicación cargada';
-    const patientLine = `${p.cama} ${p.paciente}: ${medsSummary}`;
+    const medsHtml = medLines.length
+      ? `<div class="print-meds-line">• ${medLines.join(' · ')}</div>`
+      : '<div class="print-no-meds">Sin medicación cargada</div>';
 
     return `
       <div class="print-patient">
-        <div class="print-patient-line">${patientLine}</div>
+        <div class="print-patient-line">${p.cama} ${p.paciente}: ${medsText}</div>
       </div>
       <hr class="print-separator">`;
   }).join('');
