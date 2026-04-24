@@ -202,12 +202,26 @@
     <span class="section-title">Historial de Seguimientos</span>
     <button class="btn" id="btn-back-main">← Volver</button>
   </div>
-  <div class="history-filters">
-    <input class="filter-input" id="hist-search-patient" placeholder="Buscar por paciente...">
-    <input class="filter-input" id="hist-search-drug" placeholder="Buscar por droga/tag...">
-    <input class="filter-input" id="hist-search-week" type="week">
+  
+  <!-- NUEVO: Selector de vista -->
+  <div class="history-view-selector" style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
+    <button id="hist-view-lastweek" class="btn active" style="font-size:12px; padding:4px 12px;">📅 Última semana</button>
+    <button id="hist-view-all" class="btn" style="font-size:12px; padding:4px 12px;">🔍 Buscar en todo</button>
   </div>
+  
+  <!-- Filtros (ocultos por defecto en modo "última semana") -->
+  <div id="hist-filters" style="display:none;">
+    <div class="history-filters">
+      <input class="filter-input" id="hist-search-patient" placeholder="Buscar por paciente...">
+      <input class="filter-input" id="hist-search-drug" placeholder="Buscar por droga/tag...">
+      <input class="filter-input" id="hist-search-week" type="week" placeholder="Semana (YYYY-W##)">
+    </div>
+  </div>
+  
   <div id="history-results"></div>
+  <div id="history-load-more" style="text-align:center; margin-top:16px; display:none;">
+    <button class="btn" id="btn-load-more">Cargar más semanas anteriores...</button>
+  </div>
 </div>
 
 <!-- ENTRY PANEL OVERLAY -->

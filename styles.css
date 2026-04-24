@@ -2024,3 +2024,23 @@ table.patient-table td {
     margin: 18mm 15mm 18mm 15mm;
   }
 }
+
+.history-view-selector .btn.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.week-badge {
+  background: var(--surface2);
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-family: var(--mono);
+  color: var(--text2);
+}
+
+.hist-card-header.compact {
+  cursor: pointer;
+  padding: 8px 12px;
+}

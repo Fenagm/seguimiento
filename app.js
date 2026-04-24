@@ -1300,39 +1300,135 @@ function handleFileInput(input) {
 }
 
 // ─── HISTORY VIEW ─────────────────────────────────────────────────────────────
+let historyMode = 'lastweek'; // 'lastweek' o 'all'
+let historyWeeksCache = null;   // Cache de todas las semanas disponibles
+let historyCurrentPage = 0;
+const HISTORY_WEEKS_PER_PAGE = 5;
+
 function toggleView(view) {
   document.getElementById('view-main').style.display = view === 'main' ? 'block' : 'none';
   document.getElementById('view-history').style.display = view === 'history' ? 'block' : 'none';
-  if (view === 'history') searchHistory();
+  if (view === 'history') {
+    historyCurrentPage = 0;
+    loadHistory();
+  }
 }
 
-function searchHistory() {
+function loadHistory() {
+  if (historyMode === 'lastweek') {
+    loadLastWeekHistory();
+  } else {
+    loadAllHistory();
+  }
+}
+
+function loadLastWeekHistory() {
+  // Obtener la semana más reciente con datos
+  const allWeeks = getAllWeeksWithData();
+  if (allWeeks.length === 0) {
+    document.getElementById('history-results').innerHTML = '<div class="no-data"><p>No hay datos de seguimiento aún.</p></div>';
+    return;
+  }
+  
+  const lastWeek = allWeeks[0]; // La más reciente
+  const weekDataLoaded = JSON.parse(localStorage.getItem(`sc_week_${lastWeek}`) || '{}');
+  
+  // Obtener todos los pacientes que tienen datos esta semana
+  const results = [];
+  for (const [key, dayData] of Object.entries(weekDataLoaded)) {
+    const parts = key.split('_');
+    const hc = parts[0];
+    const day = parts[1];
+    if (!day || !DAYS.includes(day)) continue;
+    
+    let patient = allPatients[hc];
+    let isDischarged = false;
+    
+    if (!patient) {
+      const discharges = JSON.parse(localStorage.getItem('sc_discharges') || '[]');
+      const dischargedPatient = discharges.find(d => String(d.hc) === String(hc));
+      if (dischargedPatient) {
+        patient = dischargedPatient;
+        isDischarged = true;
+      }
+    }
+    
+    if (!patient) continue;
+    
+    results.push({
+      wid: lastWeek,
+      day, patient, hc, dayData,
+      isDischarged,
+      camaMostrar: patient.cama || patient.camaAnterior || '—'
+    });
+  }
+  
+  renderHistoryResults(results, `📅 Semana actual con datos: ${lastWeek} · ${getWeekDates(lastWeek)}`);
+  document.getElementById('hist-filters').style.display = 'none';
+  document.getElementById('history-load-more').style.display = 'none';
+}
+
+function getAllWeeksWithData() {
+  const weeks = new Set();
+  
+  // Semanas normales
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith('sc_week_')) {
+      const wid = key.replace('sc_week_', '');
+      weeks.add(wid);
+    }
+  }
+  
+  // Semanas de discharges
+  const discharges = JSON.parse(localStorage.getItem('sc_discharges') || '[]');
+  for (const discharge of discharges) {
+    if (discharge.dischargeWeek) weeks.add(discharge.dischargeWeek);
+  }
+  
+  // Ordenar descendente (más reciente primero)
+  return Array.from(weeks).sort().reverse();
+}
+
+function loadAllHistory(reset = true) {
+  if (reset) {
+    historyCurrentPage = 0;
+    document.getElementById('history-results').innerHTML = '<div style="text-align:center;padding:20px;">🔍 Cargando historial...</div>';
+  }
+  
   const patQ = document.getElementById('hist-search-patient').value.toLowerCase().trim();
   const drugQ = document.getElementById('hist-search-drug').value.toLowerCase().trim();
   const weekQ = document.getElementById('hist-search-week').value;
   
-  const weeks = {};
+  const allWeeks = getAllWeeksWithData();
+  const filteredWeeks = weekQ ? allWeeks.filter(w => w === weekQ) : allWeeks;
   
-  // 1. Cargar semanas normales
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (!key.startsWith('sc_week_')) continue;
-    const wid = key.replace('sc_week_', '');
-    if (weekQ && wid !== weekQ) continue;
-    try { weeks[wid] = JSON.parse(localStorage.getItem(key)); } catch (e) { }
+  // Paginación: mostrar solo HISTORY_WEEKS_PER_PAGE semanas por vez
+  const startIdx = historyCurrentPage * HISTORY_WEEKS_PER_PAGE;
+  const weeksToShow = filteredWeeks.slice(startIdx, startIdx + HISTORY_WEEKS_PER_PAGE);
+  
+  if (weeksToShow.length === 0 && historyCurrentPage === 0) {
+    document.getElementById('history-results').innerHTML = '<div class="no-data"><p>No hay semanas con datos.</p></div>';
+    document.getElementById('history-load-more').style.display = 'none';
+    return;
   }
   
-  // 2. Cargar datos de pacientes dados de alta (de sc_discharges)
+  const weeks = {};
+  
+  // Cargar semanas seleccionadas
+  for (const wid of weeksToShow) {
+    const weekDataLoaded = JSON.parse(localStorage.getItem(`sc_week_${wid}`) || '{}');
+    weeks[wid] = weekDataLoaded;
+  }
+  
+  // Cargar discharges
   const discharges = JSON.parse(localStorage.getItem('sc_discharges') || '[]');
   for (const discharge of discharges) {
     const dischargeWeek = discharge.dischargeWeek;
+    if (!weeksToShow.includes(dischargeWeek)) continue;
     if (weekQ && dischargeWeek !== weekQ) continue;
     
-    if (!weeks[dischargeWeek]) {
-      weeks[dischargeWeek] = {};
-    }
-    
-    // Agregar las entradas de la semana del alta
+    if (!weeks[dischargeWeek]) weeks[dischargeWeek] = {};
     if (discharge.weekEntries) {
       Object.assign(weeks[dischargeWeek], discharge.weekEntries);
     }
@@ -1346,9 +1442,18 @@ function searchHistory() {
       const day = parts[1];
       if (!day || !DAYS.includes(day)) continue;
       
-      const patient = allPatients[hc];
-      if (!patient) continue;
+      let patient = allPatients[hc];
+      let isDischarged = false;
       
+      if (!patient) {
+        const dischargedPatient = discharges.find(d => String(d.hc) === String(hc));
+        if (dischargedPatient) {
+          patient = dischargedPatient;
+          isDischarged = true;
+        }
+      }
+      
+      if (!patient) continue;
       if (patQ && !patient.paciente.toLowerCase().includes(patQ)) continue;
       
       let drugMatch = !drugQ;
@@ -1362,33 +1467,48 @@ function searchHistory() {
       }
       if (!drugMatch) continue;
       
-      results.push({ wid, day, patient, hc, dayData });
+      results.push({ wid, day, patient, hc, dayData, isDischarged });
     }
   }
   
-  renderHistoryResults(results);
+  results.sort((a, b) => b.wid.localeCompare(a.wid));
+  
+  const hasMore = startIdx + HISTORY_WEEKS_PER_PAGE < filteredWeeks.length;
+  renderHistoryResults(results, null, hasMore);
 }
 
-function renderHistoryResults(results) {
+function renderHistoryResults(results, title = null, hasMore = false) {
   const el = document.getElementById('history-results');
   if (!results.length) {
     el.innerHTML = '<div class="no-data"><p>Sin resultados para los filtros aplicados.</p></div>';
+    document.getElementById('history-load-more').style.display = 'none';
     return;
   }
 
   const grouped = {};
   for (const r of results) {
     const gkey = `${r.wid}_${r.hc}`;
-    if (!grouped[gkey]) grouped[gkey] = { wid: r.wid, patient: r.patient, hc: r.hc, days: {} };
+    if (!grouped[gkey]) {
+      grouped[gkey] = { 
+        wid: r.wid, 
+        patient: r.patient, 
+        hc: r.hc, 
+        days: {},
+        isDischarged: r.isDischarged
+      };
+    }
     grouped[gkey].days[r.day] = r.dayData;
   }
 
-  el.innerHTML = Object.values(grouped).map(g => `
+  const titleHtml = title ? `<div style="margin-bottom:12px; font-size:12px; color:var(--text3);">${title}</div>` : '';
+  
+  el.innerHTML = titleHtml + Object.values(grouped).map(g => `
     <div class="hist-card">
-      <div class="hist-card-header">
+      <div class="hist-card-header compact">
         <span class="cell-room" style="font-size:12px;min-width:35px">${g.patient.cama || g.patient.camaAnterior || '—'}</span>
         <strong style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${g.patient.paciente}</strong>
-        <span style="font-family:var(--mono);font-size:11px;color:var(--text3);flex-shrink:0">${g.wid} · ${getWeekDates(g.wid)}</span>
+        <span class="week-badge">${g.wid}</span>
+        ${g.isDischarged ? '<span style="background:rgba(239,94,94,0.15);color:#ef5e5e;font-size:9px;padding:2px 6px;border-radius:10px;margin-left:6px;">ALTA</span>' : ''}
         <span style="margin-left:8px;color:var(--text3);flex-shrink:0">▾</span>
       </div>
       <div class="hist-card-body">
@@ -1399,22 +1519,19 @@ function renderHistoryResults(results) {
             ? new Date(dayData._lastModifiedAt).toLocaleString('es-AR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })
             : null;
           const whoLine = who
-            ? `<div style="font-size:10px;color:var(--text3);margin-top:4px;display:flex;align-items:center;gap:4px;">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:10px;height:10px;flex-shrink:0"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                ${who}${when ? ` · ${when}` : ''}
-               </div>`
+            ? `<div style="font-size:10px;color:var(--text3);margin-top:4px;">👤 ${who}${when ? ` · ${when}` : ''}</div>`
             : '';
           const cats = CATS.filter(c => { const e = dayData[c.id]; return e && (e.tags?.length || e.text); });
           return `
-            <div style="border-left:2px solid var(--border2);padding-left:10px;margin-bottom:6px;">
+            <div style="border-left:2px solid var(--border2);padding-left:10px;margin-bottom:8px;">
               <span class="hist-day-label">${DAY_LABELS[d]}</span>
               <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;">
                 ${cats.map(c => {
                   const e = dayData[c.id];
                   const parts = [];
                   if (e.tags?.length) parts.push(e.tags.map(t => `<span class="badge ${c.cls}">${t}</span>`).join(' '));
-                  if (e.text) parts.push(`<span style="color:var(--text2);font-size:11px;font-style:italic">${e.text.substring(0, 80)}${e.text.length > 80 ? '…' : ''}</span>`);
-                  return `<div><span style="color:${c.dot};font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em">${c.label}</span> ${parts.join(' ')}</div>`;
+                  if (e.text) parts.push(`<span style="color:var(--text2);font-size:11px;">✎ ${e.text.substring(0, 60)}${e.text.length > 60 ? '…' : ''}</span>`);
+                  return `<div><span style="color:${c.dot};font-size:10px;font-weight:700;">${c.label}</span> ${parts.join(' ')}</div>`;
                 }).join('')}
               </div>
               ${whoLine}
@@ -1423,11 +1540,26 @@ function renderHistoryResults(results) {
       </div>
     </div>`).join('');
 
+  // Toggle para desplegar/colapsar
   document.querySelectorAll('.hist-card-header').forEach(header => {
-    header.addEventListener('click', function () {
+    header.addEventListener('click', function (e) {
+      e.stopPropagation();
       this.nextElementSibling.classList.toggle('open');
     });
   });
+  
+  // Botón "cargar más"
+  const loadMoreBtn = document.getElementById('history-load-more');
+  if (hasMore && historyMode === 'all') {
+    loadMoreBtn.style.display = 'block';
+  } else {
+    loadMoreBtn.style.display = 'none';
+  }
+}
+
+function loadMoreHistory() {
+  historyCurrentPage++;
+  loadAllHistory(false);
 }
 
 // ─── ADD PATIENT MODAL ────────────────────────────────────────────────────────
@@ -2298,10 +2430,36 @@ dropZone.addEventListener('dragleave', handleDragLeave);
 dropZone.addEventListener('drop', handleDrop);
 document.getElementById('file-input').addEventListener('change', (e) => handleFileInput(e.target));
 
-// History filters
-document.getElementById('hist-search-patient').addEventListener('input', () => searchHistory());
-document.getElementById('hist-search-drug').addEventListener('input', () => searchHistory());
-document.getElementById('hist-search-week').addEventListener('input', () => searchHistory());
+// History view mode toggles
+document.getElementById('hist-view-lastweek').addEventListener('click', () => {
+  historyMode = 'lastweek';
+  document.getElementById('hist-view-lastweek').classList.add('active');
+  document.getElementById('hist-view-all').classList.remove('active');
+  document.getElementById('hist-filters').style.display = 'none';
+  loadLastWeekHistory();
+});
+
+document.getElementById('hist-view-all').addEventListener('click', () => {
+  historyMode = 'all';
+  document.getElementById('hist-view-all').classList.add('active');
+  document.getElementById('hist-view-lastweek').classList.remove('active');
+  document.getElementById('hist-filters').style.display = 'block';
+  historyCurrentPage = 0;
+  loadAllHistory();
+});
+
+document.getElementById('btn-load-more').addEventListener('click', () => loadMoreHistory());
+
+// History filters (solo cuando están visibles)
+document.getElementById('hist-search-patient').addEventListener('input', () => {
+  if (historyMode === 'all') loadAllHistory();
+});
+document.getElementById('hist-search-drug').addEventListener('input', () => {
+  if (historyMode === 'all') loadAllHistory();
+});
+document.getElementById('hist-search-week').addEventListener('change', () => {
+  if (historyMode === 'all') loadAllHistory();
+});
 
 // Escape key
 document.addEventListener('keydown', e => {

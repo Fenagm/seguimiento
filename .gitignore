@@ -1,5 +1,1 @@
-node_modules/
-dist/
-.env
-.env.local
-*.env
+Nothing should be ignored based on the provided file changes, as they only include source files (.js, .html, .css) with no build artifacts, dependencies, or temporary files.
