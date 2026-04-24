@@ -147,10 +147,11 @@ body {
 }
 
 .header-actions {
-  margin-left: auto;
+  margin-left: 12px;
   display: flex;
   gap: 8px;
   align-items: center;
+  min-width: 0;
 }
 
 .btn {

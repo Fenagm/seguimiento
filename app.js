@@ -2094,7 +2094,7 @@ function doPrint() {
     const entry   = weekData[`${p.hc}_${printDay}`];
     const medLines = buildMedLine(entry);
     const medsHtml = medLines.length
-      ? medLines.map(l => `<div class="print-meds-line">• ${l}</div>`).join('')
+      ? `<div class="print-meds-line">• ${medLines.join(' · ')}</div>`
       : '<div class="print-no-meds">Sin medicación cargada</div>';
 
     return `
