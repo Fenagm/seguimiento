@@ -97,6 +97,7 @@ let currentDaysHc = null;
 let movePatientHc = null;
 let moveFilterFloor = 'all';
 let moveSelectedRoom = null;
+let weekAutosaveTimer = null;
 
 // currentUser is set by Firebase Auth — single source of truth
 let currentUser = null;
@@ -445,6 +446,20 @@ async function saveToFirestore() {
   }
 }
 
+function queueWeekAutosave() {
+  if (!db) return;
+  if (weekAutosaveTimer) clearTimeout(weekAutosaveTimer);
+  const weekId = currentWeek;
+  const payload = JSON.parse(JSON.stringify(weekData));
+  weekAutosaveTimer = setTimeout(async () => {
+    try {
+      await setDoc(doc(db, 'weeks', weekId), payload);
+    } catch (e) {
+      console.warn('Autosave week failed:', e);
+    }
+  }, 500);
+}
+
 // ─── WEEK NAV ─────────────────────────────────────────────────────────────────
 async function changeWeek(dir) {
   const [y, wn] = currentWeek.replace('W', '').split('-').map(Number);
@@ -775,6 +790,7 @@ function switchPanelDay(day) {
   const currentKey = `${panelState.hc}_${panelState.day}`;
   weekData[currentKey] = panelState.data;
   localStorage.setItem(`sc_week_${currentWeek}`, JSON.stringify(weekData));
+  queueWeekAutosave();
   panelState.day = day;
   panelState.data = JSON.parse(JSON.stringify(weekData[`${panelState.hc}_${day}`] || {}));
   renderDaySelector();
@@ -936,6 +952,7 @@ function saveEntry() {
 
   weekData[key] = panelState.data;
   localStorage.setItem(`sc_week_${currentWeek}`, JSON.stringify(weekData));
+  queueWeekAutosave();
 
   const details = {};
   CATS.forEach(cat => {
@@ -983,6 +1000,7 @@ function copyToPrevDay() {
     const currentKey = `${panelState.hc}_${panelState.day}`;
     weekData[currentKey] = panelState.data;
     localStorage.setItem(`sc_week_${currentWeek}`, JSON.stringify(weekData));
+    queueWeekAutosave();
     renderPanelBody();
     updateCatSummariesFromData();
     showToast(`Datos copiados desde ${DAY_LABELS[prevDay]} → ${DAY_LABELS[panelState.day]}`);
@@ -1933,6 +1951,7 @@ function copiarSemanaAnterior(hc) {
     return;
   }
   localStorage.setItem(`sc_week_${currentWeek}`, JSON.stringify(weekData));
+  queueWeekAutosave();
   if (window.innerWidth <= 640 && document.getElementById('patient-days-overlay').classList.contains('open')) {
     renderPatientDaysList();
   } else {
@@ -1943,6 +1962,10 @@ function copiarSemanaAnterior(hc) {
 
 // ─── SAVE WEEK ────────────────────────────────────────────────────────────────
 async function saveWeek() {
+  if (weekAutosaveTimer) {
+    clearTimeout(weekAutosaveTimer);
+    weekAutosaveTimer = null;
+  }
   localStorage.setItem(`sc_week_${currentWeek}`, JSON.stringify(weekData));
   if (db) {
     const btn = document.getElementById('btn-save-week');
