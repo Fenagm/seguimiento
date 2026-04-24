@@ -147,10 +147,11 @@ body {
 }
 
 .header-actions {
-  margin-left: auto;
+  margin-left: 12px;
   display: flex;
   gap: 8px;
   align-items: center;
+  min-width: 0;
 }
 
 .btn {
@@ -244,6 +245,12 @@ body {
   flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 12px;
+}
+
+.section-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 
 .section-title {
@@ -466,16 +473,19 @@ table.patient-table td {
   background: rgba(0, 0, 0, 0.6);
   z-index: 200;
   backdrop-filter: blur(2px);
+  overscroll-behavior: contain;
 }
 
 #entry-overlay.open {
-  display: block;
+  display: flex;
+  justify-content: flex-end;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 
 #entry-panel {
-  position: fixed;
-  top: 0;
-  right: -520px;
+  position: relative;
   width: 520px;
   height: 100dvh;
   /* iOS Safari fallback */
@@ -485,12 +495,14 @@ table.patient-table td {
   z-index: 201;
   display: flex;
   flex-direction: column;
-  transition: right .25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform .25s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
+  margin-left: auto;
+  transform: translateX(100%);
 }
 
 #entry-panel.open {
-  right: 0;
+  transform: translateX(0);
 }
 
 .panel-header {
@@ -563,6 +575,19 @@ table.patient-table td {
   text-align: center;
 }
 
+.day-btn .day-date {
+  display: block;
+  margin-top: 2px;
+  font-size: 10px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.day-btn:not(.active) .day-date {
+  color: var(--text3);
+}
+
 .day-btn.active {
   background: var(--accent);
   border-color: var(--accent);
@@ -583,6 +608,8 @@ table.patient-table td {
   gap: 12px;
   padding-bottom: 20px;
   scroll-behavior: smooth;
+  overscroll-behavior: contain;
+  scroll-padding-top: 14px;
   scroll-padding-bottom: 80px;
 }
 
@@ -667,6 +694,13 @@ table.patient-table td {
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
+  max-height: min(20dvh, 130px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
+  scroll-padding-top: 6px;
+  scroll-padding-bottom: 6px;
+  padding-right: 2px;
 }
 
 .tag-chip {
@@ -1742,12 +1776,11 @@ table.patient-table td {
 
   #entry-panel {
     width: 100%;
-    right: -100%;
     height: 100dvh;
   }
 
-  #entry-panel.open {
-    right: 0;
+  #entry-overlay.open {
+    justify-content: stretch;
   }
 
   #patient-days-panel {

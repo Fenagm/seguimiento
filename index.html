@@ -40,8 +40,6 @@
 
 <!-- HEADER -->
 <div id="header">
-  <div class="logo">Seg. Clínico</div>
-
   <div class="week-nav">
     <button id="prev-week" title="Semana anterior">‹</button>
     <span id="week-label">—</span>
@@ -55,15 +53,11 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
       <input id="search-input" placeholder="Buscar paciente...">
     </div>
-    <button class="btn" id="btn-csv">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-      Cargar CSV
-    </button>
     <button class="btn" id="btn-history">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       Historial
     </button>
-    <button class="btn" id="btn-save-week">
+    <button class="btn" id="btn-save-week" style="display:none" aria-hidden="true">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
       Guardar semana
     </button>
@@ -169,10 +163,16 @@
     <div class="section-header">
       <span class="section-title" id="floor-title">Piso —</span>
       <span class="patient-count" id="patient-count"></span>
-      <button class="btn primary" id="btn-add-patient">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-        Nuevo Paciente
-      </button>
+      <div class="section-actions">
+        <button class="btn" id="btn-csv">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Cargar CSV
+        </button>
+        <button class="btn primary" id="btn-add-patient">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          Nuevo Paciente
+        </button>
+      </div>
     </div>
     <div class="table-wrap">
       <table class="patient-table">
@@ -211,29 +211,29 @@
 </div>
 
 <!-- ENTRY PANEL OVERLAY -->
-<div id="entry-overlay"></div>
-
-<!-- ENTRY PANEL -->
-<div id="entry-panel">
-  <div class="panel-header">
-    <div class="panel-title">
-      <div class="panel-patient-name" id="panel-patient-name">—</div>
-      <div class="panel-meta" id="panel-meta">—</div>
+<div id="entry-overlay">
+  <!-- ENTRY PANEL -->
+  <div id="entry-panel">
+    <div class="panel-header">
+      <div class="panel-title">
+        <div class="panel-patient-name" id="panel-patient-name">—</div>
+        <div class="panel-meta" id="panel-meta">—</div>
+      </div>
+      <button class="panel-close" id="panel-close">✕</button>
     </div>
-    <button class="panel-close" id="panel-close">✕</button>
-  </div>
-  <div class="day-selector" id="day-selector"></div>
-  <div class="panel-body" id="panel-body"></div>
-  <div class="panel-footer">
-    <button class="btn" id="panel-cancel">Cancelar</button>
-    <button class="btn" id="btn-copy-prev">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/><line x1="9" y1="12" x2="21" y2="12"/></svg>
-      <span id="btn-copy-prev-label">Copiar desde día anterior</span>
-    </button>
-    <button class="btn primary" id="panel-save">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-      Guardar
-    </button>
+    <div class="day-selector" id="day-selector"></div>
+    <div class="panel-body" id="panel-body"></div>
+    <div class="panel-footer">
+      <button class="btn" id="panel-cancel">Cancelar</button>
+      <button class="btn" id="btn-copy-prev">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/><line x1="9" y1="12" x2="21" y2="12"/></svg>
+        <span id="btn-copy-prev-label">Copiar desde día anterior</span>
+      </button>
+      <button class="btn primary" id="panel-save">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        Guardar
+      </button>
+    </div>
   </div>
 </div>
 
