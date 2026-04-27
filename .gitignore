@@ -7,7 +7,7 @@
 # Environment
 .env
 .env.local
-.env.
+*.env.*
 
 # Editors
 .vscode/
@@ -20,24 +20,21 @@ venv/
 __pycache__/
 .mypy_cache/
 .pytest_cache/
-
-# Build artifacts
 dist/
 build/
 target/
-
-# Python
-*.pyc
-*.pyo
-*.pyd
+.gradle/
 
 # Compiled files
+*.pyc
+*.class
 *.o
-*.obj
+*.exe
+*.dll
 *.so
 *.a
-*.dll
-*.exe
+*.obj
+*.out
 
 # System files
 .DS_Store
