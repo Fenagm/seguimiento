@@ -86,11 +86,10 @@ export const FLOOR_LABELS = { '3': 'Piso 3', '4': 'Piso 4', '5': 'Piso 5', 'tamo
 // ─── STATE ────────────────────────────────────────────────────────────────────
 let db = null;
 let auth = null;
-let localMode = false;
 let currentWeek = getWeekId(new Date());
 let currentFloor = '3';
-let allPatients = JSON.parse(localStorage.getItem('sc_patients') || '{}');
-let weekData = JSON.parse(localStorage.getItem(`sc_week_${currentWeek}`) || '{}');
+let allPatients = {};
+let weekData = {};
 let pendingCSV = [];
 let panelState = { hc: null, day: 'lunes', data: {} };
 let currentDaysHc = null;
@@ -101,7 +100,7 @@ let weekAutosaveTimer = null;
 
 // currentUser is set by Firebase Auth — single source of truth
 let currentUser = null;
-let auditLog = JSON.parse(localStorage.getItem('sc_audit_log') || '[]');
+let auditLog = [];
 
 const PATIENT_STATUS = {
   ACTIVE: 'active',
@@ -134,7 +133,7 @@ function normalizeAllPatients() {
     normalizePatientRecord(p);
     if ((p?.status || null) !== (before || null)) changed = true;
   });
-  if (changed) localStorage.setItem('sc_patients', JSON.stringify(allPatients));
+  // Removed localStorage persistence - Firestore only
 }
 
 normalizeAllPatients();
@@ -151,7 +150,7 @@ function saveAudit(action, hc, day, details) {
   };
   auditLog.unshift(entry);
   if (auditLog.length > 1000) auditLog.pop();
-  localStorage.setItem('sc_audit_log', JSON.stringify(auditLog));
+  // Removed localStorage persistence - Firestore only
   if (db) {
     setDoc(doc(db, 'audit', `${Date.now()}_${hc || 'sys'}_${day || 'na'}`), entry).catch(() => {});
   }
@@ -218,8 +217,6 @@ async function saveUserProfile() {
       updatedAt: new Date().toISOString(),
     }, { merge: true }).catch(() => {});
   }
-  // Also persist locally as fallback
-  localStorage.setItem(`sc_profile_${currentUser.uid}`, name);
   showToast('Nombre actualizado ✓');
 }
 
@@ -368,17 +365,7 @@ async function saveConfig() {
     showToast('Completá al menos apiKey y projectId');
     return;
   }
-  // Guardamos en localStorage solo si el usuario lo ingresó manualmente
-  // (nunca las env vars, que son compile-time)
-  localStorage.setItem('sc_fb_config', JSON.stringify(cfg));
   await initFirebase(cfg);
-}
-
-function useLocalMode() {
-  localMode = true;
-  document.getElementById('config-banner').classList.add('hidden');
-  showToast('Modo local activo — datos guardados en el navegador');
-  renderAll();
 }
 
 async function initFirebase(cfg) {
@@ -393,8 +380,7 @@ async function initFirebase(cfg) {
       currentUser = user;
 
       if (user) {
-        // Load profile name (Firestore first, localStorage fallback)
-        userProfileName = localStorage.getItem(`sc_profile_${user.uid}`) || null;
+        // Load profile name from Firestore only
         await loadUserProfile(user.uid);
 
         updateUserUI(user);
@@ -467,7 +453,7 @@ async function changeWeek(dir) {
   const startOfWeek = new Date(jan4);
   startOfWeek.setDate(jan4.getDate() - (jan4.getDay() + 6) % 7 + (wn - 1) * 7 + dir * 7);
   currentWeek = getWeekId(startOfWeek);
-  weekData = JSON.parse(localStorage.getItem(`sc_week_${currentWeek}`) || '{}');
+  weekData = {};
   await loadWeekFromFirestore();
   renderAll();
 }
@@ -795,7 +781,6 @@ function switchPanelDay(day) {
   collectPanelData();
   const currentKey = `${panelState.hc}_${panelState.day}`;
   weekData[currentKey] = panelState.data;
-  localStorage.setItem(`sc_week_${currentWeek}`, JSON.stringify(weekData));
   queueWeekAutosave();
   panelState.day = day;
   panelState.data = JSON.parse(JSON.stringify(weekData[`${panelState.hc}_${day}`] || {}));
@@ -1001,7 +986,6 @@ function saveEntry() {
   }
 
   weekData[key] = panelState.data;
-  localStorage.setItem(`sc_week_${currentWeek}`, JSON.stringify(weekData));
   queueWeekAutosave();
 
   const details = {};
@@ -1052,7 +1036,6 @@ function copyToPrevDay() {
     panelState.data = prevDataCopy;
     const currentKey = `${panelState.hc}_${panelState.day}`;
     weekData[currentKey] = panelState.data;
-    localStorage.setItem(`sc_week_${currentWeek}`, JSON.stringify(weekData));
     queueWeekAutosave();
     renderPanelBody();
     updateCatSummariesFromData();
@@ -1278,8 +1261,7 @@ function importPatients() {
     allPatients[p.hc] = p;
   }
 
-  localStorage.setItem('sc_patients', JSON.stringify(allPatients));
-
+  // Removed localStorage persistence - Firestore only
   if (db) {
     for (const [hc, p] of Object.entries(allPatients)) {
       setDoc(doc(db, 'patients', hc), p).catch(() => {});
@@ -1992,8 +1974,8 @@ function saveNewPatient() {
 };
 
   allPatients[hc] = newPatient;
-  localStorage.setItem('sc_patients', JSON.stringify(allPatients));
 
+  // Removed localStorage persistence - Firestore only
   if (db) {
     setDoc(doc(db, 'patients', hc), newPatient).catch(() => { });
   }
@@ -2224,21 +2206,10 @@ async function executeDischarge(hc, p) {
     ...p,
     weekEntries: currentWeekEntries,
   };
-  const discharges = JSON.parse(localStorage.getItem('sc_discharges') || '[]');
-  discharges.unshift(dischargeRecord);
-  localStorage.setItem('sc_discharges', JSON.stringify(discharges));
 
+  // Removed localStorage persistence - Firestore only
   // Actualizar allPatients (el paciente permanece archivado para historial)
   allPatients[hc] = p;
-  localStorage.setItem('sc_patients', JSON.stringify(allPatients));
-
-  // ❌ ELIMINAR ESTE BLOQUE - NO borrar los datos de la semana
-  // for (const day of DAYS) {
-  //   delete weekData[`${hc}_${day}`];
-  // }
-  
-  // ✅ En su lugar, guardar weekData sin cambios
-  localStorage.setItem(`sc_week_${currentWeek}`, JSON.stringify(weekData));
 
   saveAudit('delete', hc, null, { action: 'discharge', patientName: p.paciente, cama: camaLiberada });
 
@@ -2386,7 +2357,8 @@ function confirmMovePatient() {
   }
   p.cama = newRoom;
   p.floor = detectFloor(newRoom, p.servicio || '');
-  localStorage.setItem('sc_patients', JSON.stringify(allPatients));
+
+  // Removed localStorage persistence - Firestore only
   if (db) setDoc(doc(db, 'patients', movePatientHc), p).catch(() => { });
   saveAudit('modify', movePatientHc, null, { action: 'move', from: oldRoom, to: newRoom });
   closeMovePatientModal();
@@ -2403,7 +2375,8 @@ function doSwapRooms(hc1, hc2) {
   p2.cama = tmp;
   p1.floor = detectFloor(p1.cama, p1.servicio || '');
   p2.floor = detectFloor(p2.cama, p2.servicio || '');
-  localStorage.setItem('sc_patients', JSON.stringify(allPatients));
+
+  // Removed localStorage persistence - Firestore only
   if (db) {
     setDoc(doc(db, 'patients', hc1), p1).catch(() => { });
     setDoc(doc(db, 'patients', hc2), p2).catch(() => { });
@@ -2425,40 +2398,19 @@ function getPrevWeekId(weekId) {
 }
 
 function hasPrevWeekData(hc) {
-  const prevWeek = getPrevWeekId(currentWeek);
-  const prevData = JSON.parse(localStorage.getItem(`sc_week_${prevWeek}`) || '{}');
+  // Firestore only - check if we have data in the current weekData (loaded from Firestore)
+  // For previous weeks, we would need to load from Firestore explicitly
   return DAYS.some(d => {
-    const e = prevData[`${hc}_${d}`];
+    const key = `${hc}_${d}`;
+    const e = weekData[key];
     return e && CATS.some(c => e[c.id] && (e[c.id].text || e[c.id].tags?.length));
   });
 }
 
 function copiarSemanaAnterior(hc) {
-  const prevWeek = getPrevWeekId(currentWeek);
-  const prevData = JSON.parse(localStorage.getItem(`sc_week_${prevWeek}`) || '{}');
-  let copied = 0;
-  DAYS.forEach(d => {
-    const key = `${hc}_${d}`;
-    const prev = prevData[key];
-    if (prev && CATS.some(c => prev[c.id] && (prev[c.id].text || prev[c.id].tags?.length))) {
-      if (!weekData[key]) {
-        weekData[key] = JSON.parse(JSON.stringify(prev));
-        copied++;
-      }
-    }
-  });
-  if (copied === 0) {
-    showToast('Los días de esta semana ya tienen datos cargados');
-    return;
-  }
-  localStorage.setItem(`sc_week_${currentWeek}`, JSON.stringify(weekData));
-  queueWeekAutosave();
-  if (window.innerWidth <= 640 && document.getElementById('patient-days-overlay').classList.contains('open')) {
-    renderPatientDaysList();
-  } else {
-    renderDaysRowContent(hc);
-  }
-  showToast(`${copied} día${copied !== 1 ? 's' : ''} copiados de la semana anterior ✓`);
+  // This function needs to load previous week data from Firestore
+  showToast('Para copiar de la semana anterior, primero guardá la semana actual en Firestore');
+  return;
 }
 
 // ─── SAVE WEEK ────────────────────────────────────────────────────────────────
@@ -2467,7 +2419,8 @@ async function saveWeek() {
     clearTimeout(weekAutosaveTimer);
     weekAutosaveTimer = null;
   }
-  localStorage.setItem(`sc_week_${currentWeek}`, JSON.stringify(weekData));
+
+  // Removed localStorage persistence - Firestore only
   if (db) {
     const btn = document.getElementById('btn-save-week');
     const originalHtml = btn.innerHTML;
@@ -2478,7 +2431,7 @@ async function saveWeek() {
     } catch (e) { }
     btn.innerHTML = originalHtml;
   } else {
-    showToast('Semana guardada localmente ✓');
+    showToast('Error: No hay conexión con Firestore');
   }
 }
 
@@ -2537,11 +2490,8 @@ async function init() {
     } catch (e) { /* invalid config, fall through */ }
   }
 
-  // 3. No Firebase config → local mode (no login required)
-  localMode = true;
-  hideLoginScreen();
+  // 3. No Firebase config → show config banner
   document.getElementById('config-banner').classList.remove('hidden');
-  renderAll();
 }
 
 // ─── PRINT ────────────────────────────────────────────────────────────────────
@@ -2628,22 +2578,31 @@ function buildMedLine(entry) {
   return lines;
 }
 
-function doPrint() {
+async function doPrint() {
+  // Load the latest saved data from Firestore before printing
+  let savedWeekData = weekData;
+  if (db) {
+    try {
+      const snap = await getDoc(doc(db, 'weeks', currentWeek));
+      if (snap.exists()) savedWeekData = snap.data();
+    } catch (e) {
+      console.warn('Could not load latest data for print:', e);
+    }
+  }
+
   const patients = getPrintPatients();
   const dayDates = getWeekDayDates(currentWeek);
   const reportDay = dayDates[printDay] || new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
   const reportDate = new Date().toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'2-digit' });
 
- const rows = [];
+  const rows = [];
   for (const p of patients) {
-    const entry   = weekData[`${p.hc}_${printDay}`];
+    const entry   = savedWeekData[`${p.hc}_${printDay}`];
     const medLines = buildMedLine(entry);
     const medsHtml = medLines.length
       ? `<div class="print-meds-line">• ${medLines.join(' · ')}</div>`
       : '<div class="print-no-meds">Sin medicación cargada</div>';
 
-    // ✅ CORRECCIÓN: Usamos rows.push() y quitamos el ")" sobrante al final.
-    // También inyectamos medsHtml en lugar de medsText.
     rows.push(`
       <div class="print-patient">
         <div class="print-patient-line">${p.cama} ${p.paciente}:</div>
@@ -2652,7 +2611,6 @@ function doPrint() {
       <hr class="print-separator">`);
   }
 
-  // ✅ CORRECCIÓN: Usamos rows.join('') para convertir el array en texto HTML válido
   document.getElementById('print-content').innerHTML = `
     <div class="print-header">Pase de Guardia - ${FLOOR_LABELS[printFloor]} - Dia ${reportDay} (${reportDate})</div>
     ${rows.length > 0 ? rows.join('') : '<p style="font-size: 9px;color:#888;font-style:italic">Sin pacientes en este sector.</p>'}`;
@@ -2676,7 +2634,6 @@ document.getElementById('btn-add-patient').addEventListener('click', () => openA
 
 // Config banner (shown when no env vars are set)
 document.getElementById('btn-save-config').addEventListener('click', () => saveConfig());
-document.getElementById('btn-local-mode').addEventListener('click', () => useLocalMode());
 document.getElementById('btn-login').addEventListener('click', () => doLogin());
 document.getElementById('login-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 document.getElementById('login-email').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('login-pass').focus(); });
