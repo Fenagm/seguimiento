@@ -734,7 +734,26 @@ function openPanel(hc, day) {
   }
   panelState.hc = hc;
   panelState.day = day;
-  panelState.data = JSON.parse(JSON.stringify(weekData[`${hc}_${day}`] || {}));
+  // Ensure data is properly initialized with arrays for tags
+  const rawData = weekData[`${hc}_${day}`] || {};
+  panelState.data = {};
+  CATS.forEach(cat => {
+    const entry = rawData[cat.id];
+    if (entry) {
+      panelState.data[cat.id] = {
+        tags: Array.isArray(entry.tags) ? entry.tags : [],
+        text: entry.text || ''
+      };
+    } else {
+      panelState.data[cat.id] = { tags: [], text: '' };
+    }
+  });
+  // Copy metadata fields
+  Object.keys(rawData).forEach(key => {
+    if (!CATS.find(c => c.id === key)) {
+      panelState.data[key] = rawData[key];
+    }
+  });
   document.getElementById('panel-patient-name').textContent = p.paciente;
   document.getElementById('panel-meta').textContent = `Cama ${p.cama} · HC ${p.hc} · ${p.medico || ''}`;
   renderDaySelector();
@@ -783,7 +802,26 @@ function switchPanelDay(day) {
   weekData[currentKey] = panelState.data;
   queueWeekAutosave();
   panelState.day = day;
-  panelState.data = JSON.parse(JSON.stringify(weekData[`${panelState.hc}_${day}`] || {}));
+  // Ensure data is properly initialized with arrays for tags
+  const rawData = weekData[`${panelState.hc}_${day}`] || {};
+  panelState.data = {};
+  CATS.forEach(cat => {
+    const entry = rawData[cat.id];
+    if (entry) {
+      panelState.data[cat.id] = {
+        tags: Array.isArray(entry.tags) ? entry.tags : [],
+        text: entry.text || ''
+      };
+    } else {
+      panelState.data[cat.id] = { tags: [], text: '' };
+    }
+  });
+  // Copy metadata fields
+  Object.keys(rawData).forEach(key => {
+    if (!CATS.find(c => c.id === key)) {
+      panelState.data[key] = rawData[key];
+    }
+  });
   renderDaySelector();
   renderPanelBody();
   showToast(`Cambiado a ${DAY_LABELS[day]} – cambios guardados`);
@@ -793,7 +831,7 @@ function renderPanelBody() {
   const el = document.getElementById('panel-body');
   el.innerHTML = CATS.map(cat => {
     const entry = panelState.data[cat.id] || {};
-    const activeTags = entry.tags || [];
+    const activeTags = Array.isArray(entry.tags) ? entry.tags : [];
     const text = entry.text || '';
     const tags = TAGS[cat.id] || [];
     const summary = activeTags.length ? activeTags.join(', ') : (text ? text.substring(0, 40) : '');
@@ -892,7 +930,12 @@ function toggleCat(catId) {
 function toggleTag(catId, tag, btn) {
   if (!panelState.data[catId]) panelState.data[catId] = { tags: [], text: '' };
 
-  const tags = panelState.data[catId].tags || [];
+  // Ensure tags is always an array
+  if (!Array.isArray(panelState.data[catId].tags)) {
+    panelState.data[catId].tags = [];
+  }
+  
+  const tags = panelState.data[catId].tags;
   const textarea = document.getElementById(`ta-${catId}`);
   let currentText = textarea ? textarea.value : panelState.data[catId].text || '';
 
@@ -941,6 +984,10 @@ function collectPanelData() {
     const ta = document.getElementById(`ta-${cat.id}`);
     if (!ta) return;
     if (!panelState.data[cat.id]) panelState.data[cat.id] = { tags: [], text: '' };
+    // Ensure tags is an array
+    if (!Array.isArray(panelState.data[cat.id].tags)) {
+      panelState.data[cat.id].tags = [];
+    }
     panelState.data[cat.id].text = ta.value;
   });
 }
@@ -1034,9 +1081,25 @@ function copyToPrevDay() {
     return;
   }
   const doCopy = () => {
-    // Copiar datos sin el historial
-    const prevDataCopy = JSON.parse(JSON.stringify(prevData));
-    delete prevDataCopy._history; // No arrastramos el historial de la versión anterior
+    // Copiar datos sin el historial, asegurando que tags sea array
+    const prevDataCopy = {};
+    CATS.forEach(cat => {
+      const entry = prevData[cat.id];
+      if (entry) {
+        prevDataCopy[cat.id] = {
+          tags: Array.isArray(entry.tags) ? entry.tags : [],
+          text: entry.text || ''
+        };
+      } else {
+        prevDataCopy[cat.id] = { tags: [], text: '' };
+      }
+    });
+    // Copy metadata fields
+    Object.keys(prevData).forEach(key => {
+      if (!CATS.find(c => c.id === key)) {
+        prevDataCopy[key] = prevData[key];
+      }
+    });
     panelState.data = prevDataCopy;
     const currentKey = `${panelState.hc}_${panelState.day}`;
     weekData[currentKey] = panelState.data;
@@ -1261,7 +1324,7 @@ function importPatients() {
     delete p.archivedReason;
     delete p.archivedBy;
     // Preserve week data link if patient already existed
-    if (existing) p.createdAt = existing.createdAt;
+    if (existing && existing.createdAt) p.createdAt = existing.createdAt;
     allPatients[p.hc] = p;
   }
 
