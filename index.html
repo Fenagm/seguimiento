@@ -11,23 +11,6 @@
 </head>
 <body>
 
-<!-- FIREBASE CONFIG BANNER (obligatorio) -->
-<div id="config-banner">
-  <div class="config-banner-icon">🔥</div>
-  <div class="config-banner-text">
-    <h3>Configuración de Firebase (obligatoria)</h3>
-    <p>Ingresá las credenciales de tu proyecto Firebase. <strong>Es necesario habilitar Authentication (Email/Password) y Firestore Database.</strong></p>
-    <div class="config-form">
-      <input id="cfg-apiKey" placeholder="apiKey" class="full">
-      <input id="cfg-authDomain" placeholder="authDomain (proyecto.firebaseapp.com)">
-      <input id="cfg-projectId" placeholder="projectId">
-      <input id="cfg-appId" placeholder="appId" class="full">
-    </div>
-    <div style="margin-top:10px; display:flex; gap:8px;">
-      <button class="btn primary" id="btn-save-config">Conectar a Firebase</button>
-    </div>
-  </div>
-</div>
 
 <!-- LOADING OVERLAY -->
 <div id="loading-overlay" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 500; align-items: center; justify-content: center; flex-direction: column; gap: 16px;">
@@ -61,60 +44,6 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
       Guardar semana
     </button>
-    <button class="btn" id="btn-admin-users" style="display: none;">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/></svg>
-      Usuarios
-    </button>
-  </div>
-  <div class="user-panel" id="user-panel" style="display: none;">
-    <span class="user-name" id="user-name-display"></span>
-    <button class="user-logout-btn" id="btn-logout" title="Cerrar sesión">✕</button>
-  </div>
-</div>
-
-<!-- LOGIN MODAL -->
-<div id="login-modal" class="login-modal">
-  <div class="login-card">
-    <h3>🔐 Acceso al sistema</h3>
-    <input type="email" id="login-email" placeholder="Email" autocomplete="off">
-    <input type="password" id="login-pass" placeholder="Contraseña">
-    <button class="btn primary" id="btn-login">Ingresar</button>
-    <button class="btn" id="btn-cancel-login" style="margin-top: 8px;">Cancelar</button>
-    <hr style="margin: 16px 0; border-color: var(--border);">
-    <p style="font-size: 11px; text-align: center; color: var(--text3);">¿No tenés cuenta? <a href="#" id="btn-show-register" style="color: var(--accent);">Registrate</a></p>
-  </div>
-  <div class="login-card" id="register-card" style="display: none;">
-    <h3>📝 Registro de usuario</h3>
-    <input type="email" id="reg-email" placeholder="Email">
-    <input type="text" id="reg-name" placeholder="Nombre completo">
-    <input type="password" id="reg-pass" placeholder="Contraseña">
-    <input type="password" id="reg-pass-confirm" placeholder="Confirmar contraseña">
-    <button class="btn primary" id="btn-register">Registrarse</button>
-    <button class="btn" id="btn-back-login" style="margin-top: 8px;">Volver al login</button>
-  </div>
-</div>
-
-<!-- ADMIN USER MANAGEMENT MODAL -->
-<div id="admin-users-overlay" class="login-modal">
-  <div class="admin-users-card" style="width: 500px; max-width: 95vw; background: var(--surface); border-radius: 12px; padding: 20px;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-      <h3 style="color: var(--accent);">👥 Administrar Usuarios</h3>
-      <button class="panel-close" id="close-admin-users">✕</button>
-    </div>
-    <div style="margin-bottom: 20px;">
-      <h4 style="font-size: 13px; margin-bottom: 8px;">Agregar nuevo usuario</h4>
-      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-        <input type="email" id="new-user-email" placeholder="Email" style="flex:2; padding: 8px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 6px;">
-        <input type="text" id="new-user-name" placeholder="Nombre completo" style="flex:2; padding: 8px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 6px;">
-        <input type="password" id="new-user-pass" placeholder="Contraseña" style="flex:1; padding: 8px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 6px;">
-        <button class="btn primary" id="btn-add-user" style="padding: 8px 16px;">Agregar</button>
-      </div>
-    </div>
-    <div>
-      <h4 style="font-size: 13px; margin-bottom: 8px;">Usuarios existentes</h4>
-      <div id="users-list" style="max-height: 300px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px;"></div>
-    </div>
-  </div>
 </div>
 
 <!-- MAIN VIEW -->
@@ -276,15 +205,6 @@
 <!-- TOAST -->
 <div id="toast"></div>
 
-<script type="importmap">
-  {
-    "imports": {
-      "firebase/app": "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js",
-      "firebase/auth": "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js",
-      "firebase/firestore": "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"
-    }
-  }
-</script>
 <script type="module" src="app.js"></script>
 </body>
 </html>

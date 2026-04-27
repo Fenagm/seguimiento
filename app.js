@@ -1,7 +1,5 @@
 // ─── IMPORTS ──────────────────────────────────────────────────────────────────
-import { initializeApp } from 'firebase/app';
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, where, orderBy, writeBatch } from 'firebase/firestore';
+// No Firebase imports - using backend API instead
 
 // ─── CATEGORIES & TAGS ───────────────────────────────────────────────────────
 const CATS = [
@@ -26,10 +24,7 @@ const FLOORS = ['3', '4', '5', 'tamo', 'uti', 'utiq'];
 const FLOOR_LABELS = { '3': 'Piso 3', '4': 'Piso 4', '5': 'Piso 5', 'tamo': 'TAMO', 'uti': 'UTI', 'utiq': 'UTI-Q' };
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
-let app = null;
-let auth = null;
-let db = null;
-let currentUser = null;
+let currentUser = { email: 'admin@seguimiento.com', displayName: 'Administrador', uid: 'admin' };
 let currentWeek = getWeekId(new Date());
 let currentFloor = '3';
 let allPatients = {};
@@ -40,7 +35,10 @@ let currentDaysHc = null;
 let movePatientHc = null;
 let moveFilterFloor = 'all';
 let moveSelectedRoom = null;
-let isAdmin = false;
+let isAdmin = true;
+
+// Backend API configuration
+const API_BASE_URL = '/api';
 
 // ─── UTILITIES ────────────────────────────────────────────────────────────────
 function showLoading(show) {
@@ -77,316 +75,108 @@ function showToast(msg) {
   t._tid = setTimeout(() => t.classList.remove('show'), 2800);
 }
 
-// ─── FIREBASE CONFIG ──────────────────────────────────────────────────────────
-async function saveConfig() {
-  const cfg = {
-    apiKey: document.getElementById('cfg-apiKey').value.trim(),
-    authDomain: document.getElementById('cfg-authDomain').value.trim(),
-    projectId: document.getElementById('cfg-projectId').value.trim(),
-    appId: document.getElementById('cfg-appId').value.trim(),
-  };
-  if (!cfg.apiKey || !cfg.projectId || !cfg.authDomain) {
-    showToast('Completá todos los campos');
-    return;
-  }
-  localStorage.setItem('sc_fb_config', JSON.stringify(cfg));
-  await initFirebase(cfg);
-}
+// ─── BACKEND API FUNCTIONS ────────────────────────────────────────────────────
 
-async function initFirebase(cfg) {
-  showLoading(true);
-  try {
-    app = initializeApp(cfg);
-    auth = getAuth(app);
-    db = getFirestore(app);
-    
-    // Verificar si hay usuarios en Firestore, si no, crear admin por defecto
-    await ensureAdminUser();
-    
-    document.getElementById('config-banner').classList.add('hidden');
-    showToast('Firebase conectado ✓');
-    
-    // Escuchar cambios de autenticación
-    onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        currentUser = user;
-        isAdmin = user.email === 'admin@seguimiento.com';
-        updateUserUI();
-        await loadAllData();
-        renderAll();
-      } else {
-        currentUser = null;
-        isAdmin = false;
-        updateUserUI();
-        allPatients = {};
-        weekData = {};
-        renderAll();
-        openLoginModal();
-      }
-      showLoading(false);
-    });
-  } catch (e) {
-    showLoading(false);
-    showToast('Error conectando Firebase: ' + e.message);
-  }
-}
-
-async function ensureAdminUser() {
-  try {
-    const usersRef = collection(db, 'users');
-    const q = query(usersRef, where('email', '==', 'admin@seguimiento.com'));
-    const snapshot = await getDocs(q);
-    if (snapshot.empty) {
-      // Crear usuario admin en Auth
-      try {
-        const userCred = await createUserWithEmailAndPassword(auth, 'admin@seguimiento.com', 'admin123');
-        await updateProfile(userCred.user, { displayName: 'Administrador' });
-        await setDoc(doc(db, 'users', userCred.user.uid), {
-          email: 'admin@seguimiento.com',
-          name: 'Administrador',
-          role: 'admin',
-          createdAt: new Date().toISOString()
-        });
-        showToast('Usuario admin creado por defecto');
-      } catch (e) {
-        console.warn('Admin user may already exist:', e.message);
-      }
-    }
-  } catch (e) {
-    console.warn('Error ensuring admin user:', e);
-  }
-}
-
-// ─── DATA LOADING ─────────────────────────────────────────────────────────────
+// Cargar datos desde el backend
 async function loadAllData() {
-  if (!db || !currentUser) return;
   showLoading(true);
   try {
-    // Cargar pacientes
-    const patientsSnap = await getDocs(collection(db, 'patients'));
-    allPatients = {};
-    patientsSnap.forEach(doc => {
-      allPatients[doc.id] = doc.data();
-    });
+    // Cargar pacientes desde API
+    const res = await fetch(`${API_BASE_URL}/patients`);
+    if (res.ok) {
+      const patients = await res.json();
+      allPatients = {};
+      patients.forEach(p => {
+        allPatients[p.hc] = p;
+      });
+    }
     
-    // Cargar semana actual
-    const weekDoc = await getDoc(doc(db, 'weeks', currentWeek));
-    if (weekDoc.exists()) {
-      weekData = weekDoc.data();
+    // Cargar semana actual desde API
+    const weekRes = await fetch(`${API_BASE_URL}/weeks/${currentWeek}`);
+    if (weekRes.ok) {
+      weekData = await weekRes.json();
     } else {
       weekData = {};
     }
   } catch (e) {
-    showToast('Error cargando datos: ' + e.message);
+    console.warn('Error cargando datos del backend:', e);
+    // Si falla el backend, usar datos locales vacíos
+    allPatients = {};
+    weekData = {};
   }
   showLoading(false);
 }
 
-async function saveWeekToFirestore() {
-  if (!db || !currentUser) return;
+// Guardar semana en backend
+async function saveWeekToBackend() {
   try {
-    await setDoc(doc(db, 'weeks', currentWeek), weekData);
-    showToast('Semana guardada ✓');
+    const res = await fetch(`${API_BASE_URL}/weeks/${currentWeek}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(weekData)
+    });
+    if (res.ok) {
+      showToast('Semana guardada ✓');
+    } else {
+      showToast('Error guardando semana');
+    }
   } catch (e) {
     showToast('Error guardando semana: ' + e.message);
   }
 }
 
-async function savePatientToFirestore(hc, data) {
-  if (!db || !currentUser) return;
+// Guardar paciente en backend
+async function savePatientToBackend(hc, data) {
   try {
-    await setDoc(doc(db, 'patients', hc), data);
+    await fetch(`${API_BASE_URL}/patients/${hc}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
   } catch (e) {
     showToast('Error guardando paciente: ' + e.message);
   }
 }
 
-async function deletePatientFromFirestore(hc) {
-  if (!db || !currentUser) return;
+// Eliminar paciente del backend
+async function deletePatientFromBackend(hc) {
   try {
-    await deleteDoc(doc(db, 'patients', hc));
+    await fetch(`${API_BASE_URL}/patients/${hc}`, {
+      method: 'DELETE'
+    });
   } catch (e) {
     showToast('Error eliminando paciente: ' + e.message);
   }
 }
 
+// Guardar auditoría en backend
 async function saveAudit(action, hc, day, details) {
-  if (!db || !currentUser) return;
   try {
-    await setDoc(doc(db, 'audit', `${Date.now()}_${currentUser.uid}`), {
-      timestamp: new Date().toISOString(),
-      userId: currentUser.uid,
-      userEmail: currentUser.email,
-      userName: currentUser.displayName,
-      action,
-      hc,
-      day,
-      week: currentWeek,
-      details
+    await fetch(`${API_BASE_URL}/audit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        timestamp: new Date().toISOString(),
+        userId: currentUser.uid,
+        userEmail: currentUser.email,
+        userName: currentUser.displayName,
+        action,
+        hc,
+        day,
+        week: currentWeek,
+        details
+      })
     });
   } catch (e) {
     console.warn('Audit log error:', e);
   }
 }
 
-// ─── AUTH ─────────────────────────────────────────────────────────────────────
-function openLoginModal() {
-  document.getElementById('login-modal').classList.add('open');
-  document.getElementById('login-email').focus();
-}
-
-function closeLoginModal() {
-  document.getElementById('login-modal').classList.remove('open');
-  document.getElementById('login-email').value = '';
-  document.getElementById('login-pass').value = '';
-  document.getElementById('register-card').style.display = 'none';
-  document.querySelector('#login-modal .login-card').style.display = 'block';
-}
-
-async function doLogin() {
-  const email = document.getElementById('login-email').value.trim();
-  const pass = document.getElementById('login-pass').value;
-  if (!email || !pass) {
-    showToast('Complete email y contraseña');
-    return;
-  }
-  showLoading(true);
-  try {
-    await signInWithEmailAndPassword(auth, email, pass);
-    closeLoginModal();
-    showToast('Bienvenido');
-  } catch (e) {
-    showLoading(false);
-    showToast('Error: ' + (e.message === 'Firebase: Error (auth/invalid-credential).' ? 'Credenciales incorrectas' : e.message));
-  }
-}
-
-async function doRegister() {
-  const email = document.getElementById('reg-email').value.trim();
-  const name = document.getElementById('reg-name').value.trim();
-  const pass = document.getElementById('reg-pass').value;
-  const confirm = document.getElementById('reg-pass-confirm').value;
-  
-  if (!email || !name || !pass) {
-    showToast('Complete todos los campos');
-    return;
-  }
-  if (pass !== confirm) {
-    showToast('Las contraseñas no coinciden');
-    return;
-  }
-  showLoading(true);
-  try {
-    const userCred = await createUserWithEmailAndPassword(auth, email, pass);
-    await updateProfile(userCred.user, { displayName: name });
-    await setDoc(doc(db, 'users', userCred.user.uid), {
-      email: email,
-      name: name,
-      role: 'user',
-      createdAt: new Date().toISOString()
-    });
-    closeLoginModal();
-    showToast('Usuario registrado correctamente');
-  } catch (e) {
-    showLoading(false);
-    showToast('Error: ' + e.message);
-  }
-}
-
-async function logout() {
-  await signOut(auth);
-  showToast('Sesión cerrada');
-}
+// ─── AUTH (NO-OP - Backend Mode) ──────────────────────────────────────────────
+// Auth functions removed - using backend API with session-based auth
 
 function updateUserUI() {
-  const panel = document.getElementById('user-panel');
-  const nameSpan = document.getElementById('user-name-display');
-  const adminBtn = document.getElementById('btn-admin-users');
-  
-  if (currentUser) {
-    panel.style.display = 'flex';
-    nameSpan.textContent = currentUser.displayName || currentUser.email;
-    adminBtn.style.display = isAdmin ? 'flex' : 'none';
-  } else {
-    panel.style.display = 'none';
-    adminBtn.style.display = 'none';
-  }
-}
-
-// ─── USER MANAGEMENT (ADMIN ONLY) ────────────────────────────────────────────
-async function loadUsersList() {
-  if (!db || !isAdmin) return [];
-  const usersSnap = await getDocs(collection(db, 'users'));
-  return usersSnap.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
-}
-
-async function renderUsersList() {
-  const container = document.getElementById('users-list');
-  if (!container) return;
-  const users = await loadUsersList();
-  container.innerHTML = users.map(u => `
-    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--border);">
-      <div>
-        <strong>${u.email}</strong><br>
-        <span style="font-size: 11px; color: var(--text3);">${u.name || '—'} ${u.role === 'admin' ? '(Admin)' : ''}</span>
-      </div>
-      ${u.role !== 'admin' ? `<button class="btn delete-user-btn" data-uid="${u.uid}" style="padding: 4px 8px; background: var(--cat-qmt); color: white; border: none;">Eliminar</button>` : '<span style="font-size:11px;color:var(--text3);">Admin</span>'}
-    </div>
-  `).join('');
-  
-  document.querySelectorAll('.delete-user-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const uid = btn.dataset.uid;
-      if (confirm('¿Eliminar este usuario?')) {
-        await deleteDoc(doc(db, 'users', uid));
-        renderUsersList();
-        showToast('Usuario eliminado');
-      }
-    });
-  });
-}
-
-async function addNewUser() {
-  const email = document.getElementById('new-user-email').value.trim();
-  const name = document.getElementById('new-user-name').value.trim();
-  const pass = document.getElementById('new-user-pass').value;
-  
-  if (!email || !name || !pass) {
-    showToast('Complete todos los campos');
-    return;
-  }
-  showLoading(true);
-  try {
-    const userCred = await createUserWithEmailAndPassword(auth, email, pass);
-    await updateProfile(userCred.user, { displayName: name });
-    await setDoc(doc(db, 'users', userCred.user.uid), {
-      email: email,
-      name: name,
-      role: 'user',
-      createdAt: new Date().toISOString()
-    });
-    await renderUsersList();
-    document.getElementById('new-user-email').value = '';
-    document.getElementById('new-user-name').value = '';
-    document.getElementById('new-user-pass').value = '';
-    showToast(`Usuario ${email} agregado`);
-  } catch (e) {
-    showToast('Error: ' + e.message);
-  }
-  showLoading(false);
-}
-
-function openAdminUsersModal() {
-  if (!isAdmin) {
-    showToast('Solo administradores');
-    return;
-  }
-  renderUsersList();
-  document.getElementById('admin-users-overlay').classList.add('open');
-}
-
-function closeAdminUsersModal() {
-  document.getElementById('admin-users-overlay').classList.remove('open');
+  // No user panel in backend mode
 }
 
 // ─── WEEK NAVIGATION ─────────────────────────────────────────────────────────
@@ -557,7 +347,10 @@ function renderDaysRowContent(hc) {
       }
       summary = parts.join('<br>');
     }
-    return `<button class="days-row-card ${hasEntry ? 'has-data' : ''}" data-hc="${hc}" data-day="${day}"><div class="days-row-card-header"><span class="days-row-day">${DAY_LABELS[day]}</span><div class="day-badges">${renderDayBadges(hc, day)}</div></div><div class="days-row-summary">${summary}</div></button>`;
+    const historyIcon = hasEntry ? `<button class="history-icon" data-hc="${hc}" data-day="${day}" style="background:none; border:none; cursor:pointer; margin-left:8px;" title="Ver historial">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px; color:var(--text3);"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        </button>` : '';
+    return `<button class="days-row-card ${hasEntry ? 'has-data' : ''}" data-hc="${hc}" data-day="${day}"><div class="days-row-card-header"><span class="days-row-day">${DAY_LABELS[day]}</span><div class="day-badges">${renderDayBadges(hc, day)}</div></div><div class="days-row-summary">${summary}${historyIcon}</div></button>`;
   }).join('');
   container.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px 4px;border-bottom:1px solid var(--border);background:var(--surface);"><span style="font-size:11px;color:var(--text3);">Semana ${currentWeek}</span><button class="btn move-patient-btn" data-hc="${hc}" style="padding:3px 10px;font-size:11px;">Mover cama</button></div><div class="days-row-cards-grid">${dayCards}</div>`;
   
@@ -568,6 +361,12 @@ function renderDaysRowContent(hc) {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       openMovePatient(btn.dataset.hc);
+    });
+  });
+  container.querySelectorAll('.history-icon').forEach(icon => {
+    icon.addEventListener('click', (e) => {
+      e.stopPropagation();
+      showEntryHistory(icon.dataset.hc, icon.dataset.day);
     });
   });
 }
@@ -640,6 +439,15 @@ function renderPanelBody() {
       </div>`;
   }).join('');
   
+  // Agregar botón de historial
+  const historyBtn = document.createElement('div');
+  historyBtn.innerHTML = `<button id="show-history-btn" class="btn" style="margin-top:12px; width:100%; gap:6px; display:flex; align-items:center; justify-content:center;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            Historial de cambios
+                          </button>`;
+  el.appendChild(historyBtn);
+  document.getElementById('show-history-btn').addEventListener('click', () => showEntryHistory(panelState.hc, panelState.day));
+  
   document.querySelectorAll('.cat-header').forEach(header => {
     header.addEventListener('click', () => toggleCat(header.dataset.cat));
   });
@@ -703,10 +511,46 @@ async function saveEntry() {
   collectPanelData();
   const key = `${panelState.hc}_${panelState.day}`;
   const wasExisting = !!weekData[key];
+  const now = new Date().toISOString();
+
+  // Si ya existía, guardamos la versión actual en el historial
+  if (wasExisting) {
+    const currentVersion = weekData[key];
+    // Copiar solo los datos relevantes (evitar guardar _history recursivo)
+    const versionData = {};
+    CATS.forEach(cat => {
+      const d = currentVersion[cat.id];
+      if (d && (d.tags?.length || d.text)) {
+        versionData[cat.id] = {
+          tags: d.tags ? [...d.tags] : [],
+          text: d.text || ''
+        };
+      }
+    });
+    // Si hay datos, guardamos versión
+    if (Object.keys(versionData).length > 0) {
+      if (!currentVersion._history) currentVersion._history = [];
+      currentVersion._history.unshift({   // más reciente al principio
+        timestamp: currentVersion._lastModifiedAt || now,
+        user: currentVersion._lastModifiedBy || 'anónimo',
+        data: versionData,
+        version: (currentVersion._history.length || 0) + 1
+      });
+      // Limitar a 10 versiones
+      if (currentVersion._history.length > 10) currentVersion._history.pop();
+    }
+  }
+
+  // Actualizar datos actuales
   panelState.data._lastModifiedBy = currentUser.displayName || currentUser.email;
-  panelState.data._lastModifiedAt = new Date().toISOString();
+  panelState.data._lastModifiedAt = now;
+  // Conservar historial existente si lo hubiera
+  if (wasExisting && weekData[key]?._history) {
+    panelState.data._history = weekData[key]._history;
+  }
+
   weekData[key] = panelState.data;
-  await saveWeekToFirestore();
+  await saveWeekToBackend();
   await saveAudit(wasExisting ? 'modify' : 'create', panelState.hc, panelState.day, {});
   const savedHc = panelState.hc;
   closePanel();
@@ -739,10 +583,13 @@ async function copyToPrevDay() {
     showToast(`El ${DAY_LABELS[prevDay]} no tiene datos`);
     return;
   }
-  panelState.data = JSON.parse(JSON.stringify(prevData));
+  // Copiar datos sin el historial
+  const prevDataCopy = JSON.parse(JSON.stringify(prevData));
+  delete prevDataCopy._history; // No arrastramos el historial de la versión anterior
+  panelState.data = prevDataCopy;
   const currentKey = `${panelState.hc}_${panelState.day}`;
   weekData[currentKey] = panelState.data;
-  await saveWeekToFirestore();
+  await saveWeekToBackend();
   renderPanelBody();
   showToast(`Datos copiados desde ${DAY_LABELS[prevDay]}`);
 }
@@ -945,7 +792,7 @@ async function importPatients() {
   showLoading(true);
   for (const p of pendingCSV) {
     allPatients[p.hc] = p;
-    await savePatientToFirestore(p.hc, p);
+    await savePatientToBackend(p.hc, p);
   }
   await saveAudit('import', null, null, { count: pendingCSV.length });
   closeCSV();
@@ -996,7 +843,7 @@ async function saveNewPatient() {
   const floor = detectFloor(cama, servicio);
   const newPatient = { cama, hc, paciente, medico: medico || '—', cobertura: cobertura || '—', ingreso: ingreso || '—', dias: dias || '0', servicio: servicio || '—', diagnostico: diagnostico || 'SIN DIAGNÓSTICO', floor };
   allPatients[hc] = newPatient;
-  await savePatientToFirestore(hc, newPatient);
+  await savePatientToBackend(hc, newPatient);
   await saveAudit('create', hc, null, { paciente, cama });
   closeAddPatientModal();
   renderTable();
@@ -1031,10 +878,19 @@ function renderPatientDaysList() {
     const summaries = [];
     CATS.forEach(c => { const d = entry[c.id]; if (d) { if (d.tags?.length) summaries.push(`${c.label}: ${d.tags.join(', ')}`); else if (d.text) summaries.push(`${c.label}: ${d.text.substring(0, 30)}...`); } });
     if (entry._lastModifiedBy) summaries.push(`👤 ${entry._lastModifiedBy}`);
-    return `<div class="day-list-item" data-day="${day}"><div class="day-list-header"><span class="day-list-day">${DAY_LABELS[day]}</span><div class="day-list-badges">${badges}</div></div><div class="day-list-summary">${summaries.join('<br>')}</div></div>`;
+    const historyIcon = `<button class="history-icon-mobile" data-hc="${currentDaysHc}" data-day="${day}" style="background:none; border:none; cursor:pointer; margin-left:8px;" title="Ver historial">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px; color:var(--text3);"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        </button>`;
+    return `<div class="day-list-item" data-day="${day}"><div class="day-list-header"><span class="day-list-day">${DAY_LABELS[day]}</span><div class="day-list-badges">${badges}</div>${historyIcon}</div><div class="day-list-summary">${summaries.join('<br>')}</div></div>`;
   }).join('');
   document.querySelectorAll('#patient-days-list .day-list-item').forEach(item => {
     item.addEventListener('click', () => openPanel(currentDaysHc, item.dataset.day));
+  });
+  document.querySelectorAll('#patient-days-list .history-icon-mobile').forEach(icon => {
+    icon.addEventListener('click', (e) => {
+      e.stopPropagation();
+      showEntryHistory(icon.dataset.hc, icon.dataset.day);
+    });
   });
 }
 
@@ -1049,12 +905,10 @@ async function dischargePatient(hc) {
   const p = allPatients[hc];
   if (!p || !confirm(`¿Dar de alta a ${p.paciente}?`)) return;
   showLoading(true);
-  const dischargeRecord = { ...p, dischargedAt: new Date().toISOString(), dischargedBy: currentUser.email, dischargeWeek: currentWeek };
-  await setDoc(doc(db, 'discharges', `${hc}_${Date.now()}`), dischargeRecord);
-  await deletePatientFromFirestore(hc);
+  await deletePatientFromBackend(hc);
   delete allPatients[hc];
   for (const day of DAYS) delete weekData[`${hc}_${day}`];
-  await saveWeekToFirestore();
+  await saveWeekToBackend();
   await saveAudit('delete', hc, null, { action: 'discharge' });
   await loadAllData();
   renderTable();
@@ -1132,11 +986,11 @@ async function confirmMovePatient() {
     if (!confirm(`La cama ${newRoom} está ocupada por ${existing.paciente}. ¿Intercambiar?`)) return;
     existing.cama = oldRoom;
     existing.floor = detectFloor(oldRoom, existing.servicio);
-    await savePatientToFirestore(existing.hc, existing);
+    await savePatientToBackend(existing.hc, existing);
   }
   p.cama = newRoom;
   p.floor = detectFloor(newRoom, p.servicio);
-  await savePatientToFirestore(movePatientHc, p);
+  await savePatientToBackend(movePatientHc, p);
   await saveAudit('modify', movePatientHc, null, { action: 'move', from: oldRoom, to: newRoom });
   await loadAllData();
   closeMovePatientModal();
@@ -1199,7 +1053,7 @@ function handlePatientRowClick(hc) {
 function filterPatients(q) { renderTable(q); }
 
 // ─── SAVE WEEK ───────────────────────────────────────────────────────────────
-async function saveWeek() { await saveWeekToFirestore(); }
+async function saveWeek() { await saveWeekToBackend(); }
 
 // ─── RENDER ALL ──────────────────────────────────────────────────────────────
 function renderAll() {
@@ -1213,11 +1067,8 @@ async function init() {
   updateWeekLabel();
   renderFloorTabs();
   updateUserUI();
-  
-  const saved = localStorage.getItem('sc_fb_config');
-  if (saved) {
-    try { await initFirebase(JSON.parse(saved)); } catch(e) { showToast('Error cargando configuración'); }
-  }
+  await loadAllData();
+  renderAll();
 }
 
 // ─── EVENT LISTENERS ─────────────────────────────────────────────────────────
@@ -1228,13 +1079,6 @@ document.getElementById('btn-history').addEventListener('click', () => toggleVie
 document.getElementById('btn-back-main').addEventListener('click', () => toggleView('main'));
 document.getElementById('btn-save-week').addEventListener('click', () => saveWeek());
 document.getElementById('btn-add-patient').addEventListener('click', () => openAddPatientModal());
-document.getElementById('btn-save-config').addEventListener('click', () => saveConfig());
-document.getElementById('btn-login').addEventListener('click', () => doLogin());
-document.getElementById('btn-cancel-login').addEventListener('click', () => closeLoginModal());
-document.getElementById('btn-logout').addEventListener('click', () => logout());
-document.getElementById('btn-admin-users').addEventListener('click', () => openAdminUsersModal());
-document.getElementById('close-admin-users').addEventListener('click', () => closeAdminUsersModal());
-document.getElementById('btn-add-user').addEventListener('click', () => addNewUser());
 document.getElementById('search-input').addEventListener('input', (e) => filterPatients(e.target.value));
 document.getElementById('entry-overlay').addEventListener('click', (e) => { if (e.target === document.getElementById('entry-overlay')) closePanel(); });
 document.getElementById('panel-close').addEventListener('click', () => closePanel());
@@ -1266,18 +1110,6 @@ dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-ove
 dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('drag-over'); readCSVFile(e.dataTransfer.files[0]); });
 document.getElementById('file-input').addEventListener('change', (e) => { if (e.target.files[0]) readCSVFile(e.target.files[0]); });
 
-// Register/login toggle
-document.getElementById('btn-show-register').addEventListener('click', (e) => {
-  e.preventDefault();
-  document.querySelector('#login-modal .login-card').style.display = 'none';
-  document.getElementById('register-card').style.display = 'block';
-});
-document.getElementById('btn-back-login').addEventListener('click', () => {
-  document.getElementById('register-card').style.display = 'none';
-  document.querySelector('#login-modal .login-card').style.display = 'block';
-});
-document.getElementById('btn-register').addEventListener('click', () => doRegister());
-
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
   if (document.getElementById('entry-panel').classList.contains('open')) closePanel();
@@ -1287,5 +1119,76 @@ document.addEventListener('keydown', e => {
   else if (document.getElementById('patient-days-overlay').classList.contains('open')) closePatientDays();
   else if (currentDaysHc) { document.getElementById(`days-row-${currentDaysHc}`).style.display = 'none'; currentDaysHc = null; }
 });
+
+// ─── ENTRY HISTORY MODAL ──────────────────────────────────────────────────────
+function showEntryHistory(hc, day) {
+  const key = `${hc}_${day}`;
+  const entry = weekData[key];
+  if (!entry || !entry._history || entry._history.length === 0) {
+    showToast('No hay versiones anteriores de este registro.');
+    return;
+  }
+
+  // Crear overlay y modal
+  const overlay = document.createElement('div');
+  overlay.id = 'history-versions-overlay';
+  overlay.style.cssText = `
+    position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 400;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(4px);
+  `;
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    background: var(--surface); border-radius: 16px; width: 90vw; max-width: 600px;
+    max-height: 80vh; display: flex; flex-direction: column;
+    border: 1px solid var(--border);
+  `;
+  modal.innerHTML = `
+    <div style="padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+      <span style="font-weight: 600;">Historial de cambios</span>
+      <button id="close-history-modal" style="background: none; border: none; color: var(--text2); font-size: 20px; cursor: pointer;">✕</button>
+    </div>
+    <div id="history-versions-list" style="padding: 16px; overflow-y: auto; flex:1;"></div>
+  `;
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  const listDiv = document.getElementById('history-versions-list');
+  // Mostrar versiones (más reciente primero)
+  const versions = entry._history;
+  if (versions.length === 0) {
+    listDiv.innerHTML = '<div style="color: var(--text3); text-align: center;">Sin versiones previas</div>';
+  } else {
+    listDiv.innerHTML = versions.map((v, idx) => {
+      const date = new Date(v.timestamp).toLocaleString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+      // Resumen de cambios
+      let changesHtml = '';
+      for (const catId of Object.keys(v.data)) {
+        const cat = CATS.find(c => c.id === catId);
+        const catLabel = cat ? cat.label : catId;
+        const d = v.data[catId];
+        const tags = d.tags?.join(', ') || '';
+        const text = d.text ? ` 📝 ${d.text.substring(0, 60)}` : '';
+        if (tags || text) {
+          changesHtml += `<div><span style="color:${cat?.dot || '#ccc'}">● ${catLabel}</span>: ${tags}${text}</div>`;
+        }
+      }
+      if (!changesHtml) changesHtml = '<div style="color:var(--text3);">Sin datos registrados</div>';
+      return `
+        <div style="margin-bottom: 16px; padding: 12px; background: var(--surface2); border-radius: 12px;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+            <span style="font-weight: 500;">Versión ${versions.length - idx}</span>
+            <span style="font-size: 11px; color: var(--text3);">${date}</span>
+          </div>
+          <div style="font-size: 12px; margin-bottom: 6px;">👤 ${v.user}</div>
+          <div style="font-size: 11px;">${changesHtml}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  document.getElementById('close-history-modal').addEventListener('click', () => overlay.remove());
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+}
 
 init();
