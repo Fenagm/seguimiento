@@ -899,13 +899,22 @@ function toggleTag(catId, tag, btn) {
   const idx = tags.indexOf(tag);
 
   if (idx >= 0) {
-    // Remover tag del array
+    // Remover tag del array y del texto
     tags.splice(idx, 1);
     btn.classList.remove('active');
+    // Remover el tag del texto si existe
+    const tagRegex = tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const tagPattern = new RegExp('\\b' + tagRegex + '\\b', 'g');
+    currentText = currentText.replace(tagPattern, '');
+    currentText = currentText.replace(/,\s*,/g, ',').replace(/^,\s*|,\s*$/g, '').trim();
   } else {
-    // Agregar tag al array
+    // Agregar tag al array y al texto
     tags.push(tag);
     btn.classList.add('active');
+    // Agregar el tag al texto si no esta ya
+    if (!currentText.includes(tag)) {
+      currentText = currentText ? currentText + ', ' + tag : tag;
+    }
   }
 
   panelState.data[catId].tags = tags;
@@ -2565,10 +2574,10 @@ function buildMedLine(entry) {
   CATS.forEach(cat => {
     const d = entry?.[cat.id];
     if (!d) return;
-    const parts = [];
-    if (d.tags?.length) parts.push(d.tags.join(', '));
-    if (d.text?.trim()) parts.push(d.text.trim());
-    if (parts.length) lines.push(`[${cat.label}] ${parts.join(' — ')}`);
+    // Use only the text field for printing (which may include copied tags + manual edits)
+    // Do NOT duplicate tags separately
+    const text = d.text?.trim();
+    if (text) lines.push(`[${cat.label}] ${text}`);
   });
   return lines;
 }
