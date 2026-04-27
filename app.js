@@ -729,6 +729,12 @@ function renderDaysRowContent(hc) {
       openMovePatient(hc);
     });
   });
+  container.querySelectorAll('.history-icon').forEach(icon => {
+    icon.addEventListener('click', (e) => {
+      e.stopPropagation();
+      showEntryHistory(icon.dataset.hc, icon.dataset.day);
+    });
+  });
 }
 
 // ─── ENTRY PANEL ──────────────────────────────────────────────────────────────
@@ -841,6 +847,16 @@ function renderPanelBody() {
     const catId = ta.dataset.cat;
     ta.addEventListener('input', () => updateCatSummary(catId));
   });
+
+  // Agregar botón de historial al final del panel
+  const historyBtnDiv = document.createElement('div');
+  historyBtnDiv.style.cssText = 'margin-top: 12px;';
+  historyBtnDiv.innerHTML = `<button id="show-history-btn" class="btn" style="width:100%; gap:6px; display:flex; align-items:center; justify-content:center;">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    Historial de cambios
+  </button>`;
+  el.appendChild(historyBtnDiv);
+  document.getElementById('show-history-btn').addEventListener('click', () => showEntryHistory(panelState.hc, panelState.day));
 }
 
 function toggleCat(catId) {
@@ -945,10 +961,44 @@ function saveEntry() {
   collectPanelData();
   const key = `${panelState.hc}_${panelState.day}`;
   const wasExisting = !!weekData[key];
+  const now = new Date().toISOString();
 
+  // Si ya existía, guardamos la versión actual en el historial
+  if (wasExisting) {
+    const currentVersion = weekData[key];
+    // Copiar solo los datos relevantes (evitar guardar _history recursivo)
+    const versionData = {};
+    CATS.forEach(cat => {
+      const d = currentVersion[cat.id];
+      if (d && (d.tags?.length || d.text)) {
+        versionData[cat.id] = {
+          tags: d.tags ? [...d.tags] : [],
+          text: d.text || ''
+        };
+      }
+    });
+    // Si hay datos, guardamos versión
+    if (Object.keys(versionData).length > 0) {
+      if (!currentVersion._history) currentVersion._history = [];
+      currentVersion._history.unshift({   // más reciente al principio
+        timestamp: currentVersion._lastModifiedAt || now,
+        user: currentVersion._lastModifiedBy || 'anónimo',
+        data: versionData,
+        version: (currentVersion._history.length || 0) + 1
+      });
+      // Limitar a 10 versiones
+      if (currentVersion._history.length > 10) currentVersion._history.pop();
+    }
+  }
+
+  // Actualizar datos actuales
   panelState.data._lastModifiedBy = getDisplayName(currentUser);
-  panelState.data._lastModifiedAt = new Date().toISOString();
+  panelState.data._lastModifiedAt = now;
   panelState.data._lastWeek = currentWeek;
+  // Conservar historial existente si lo hubiera
+  if (wasExisting && weekData[key]?._history) {
+    panelState.data._history = weekData[key]._history;
+  }
 
   weekData[key] = panelState.data;
   localStorage.setItem(`sc_week_${currentWeek}`, JSON.stringify(weekData));
@@ -996,7 +1046,10 @@ function copyToPrevDay() {
     return;
   }
   const doCopy = () => {
-    panelState.data = JSON.parse(JSON.stringify(prevData));
+    // Copiar datos sin el historial
+    const prevDataCopy = JSON.parse(JSON.stringify(prevData));
+    delete prevDataCopy._history; // No arrastramos el historial de la versión anterior
+    panelState.data = prevDataCopy;
     const currentKey = `${panelState.hc}_${panelState.day}`;
     weekData[currentKey] = panelState.data;
     localStorage.setItem(`sc_week_${currentWeek}`, JSON.stringify(weekData));
@@ -1973,6 +2026,77 @@ function closePatientDays() {
   }, 250);
 }
 
+// ─── ENTRY HISTORY MODAL ──────────────────────────────────────────────────────
+function showEntryHistory(hc, day) {
+  const key = `${hc}_${day}`;
+  const entry = weekData[key];
+  if (!entry || !entry._history || entry._history.length === 0) {
+    showToast('No hay versiones anteriores de este registro.');
+    return;
+  }
+
+  // Crear overlay y modal
+  const overlay = document.createElement('div');
+  overlay.id = 'history-versions-overlay';
+  overlay.style.cssText = `
+    position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 400;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(4px);
+  `;
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    background: var(--surface); border-radius: 16px; width: 90vw; max-width: 600px;
+    max-height: 80vh; display: flex; flex-direction: column;
+    border: 1px solid var(--border);
+  `;
+  modal.innerHTML = `
+    <div style="padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+      <span style="font-weight: 600;">Historial de cambios</span>
+      <button id="close-history-modal" style="background: none; border: none; color: var(--text2); font-size: 20px; cursor: pointer;">✕</button>
+    </div>
+    <div id="history-versions-list" style="padding: 16px; overflow-y: auto; flex:1;"></div>
+  `;
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  const listDiv = document.getElementById('history-versions-list');
+  // Mostrar versiones (más reciente primero)
+  const versions = entry._history;
+  if (versions.length === 0) {
+    listDiv.innerHTML = '<div style="color: var(--text3); text-align: center;">Sin versiones previas</div>';
+  } else {
+    listDiv.innerHTML = versions.map((v, idx) => {
+      const date = new Date(v.timestamp).toLocaleString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+      // Resumen de cambios
+      let changesHtml = '';
+      for (const catId of Object.keys(v.data)) {
+        const cat = CATS.find(c => c.id === catId);
+        const catLabel = cat ? cat.label : catId;
+        const d = v.data[catId];
+        const tags = d.tags?.join(', ') || '';
+        const text = d.text ? ` 📝 ${d.text.substring(0, 60)}` : '';
+        if (tags || text) {
+          changesHtml += `<div><span style="color:${cat?.dot || '#ccc'}">● ${catLabel}</span>: ${tags}${text}</div>`;
+        }
+      }
+      if (!changesHtml) changesHtml = '<div style="color:var(--text3);">Sin datos registrados</div>';
+      return `
+        <div style="margin-bottom: 16px; padding: 12px; background: var(--surface2); border-radius: 12px;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+            <span style="font-weight: 500;">Versión ${versions.length - idx}</span>
+            <span style="font-size: 11px; color: var(--text3);">${date}</span>
+          </div>
+          <div style="font-size: 12px; margin-bottom: 6px;">👤 ${v.user}</div>
+          <div style="font-size: 11px;">${changesHtml}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  document.getElementById('close-history-modal').addEventListener('click', () => overlay.remove());
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+}
+
 function renderPatientDaysList() {
   const el = document.getElementById('patient-days-list');
   const daysHtml = DAYS.map(day => {
@@ -1991,6 +2115,13 @@ function renderPatientDaysList() {
       const d = entry[c.id];
       return d && (d.text || d.tags?.length);
     }).map(c => `<span class="badge ${c.cls}">${c.label.substring(0, 3).toUpperCase()}</span>`).join('');
+    
+    // Verificar si hay historial para este día
+    const hasHistory = entry._history && entry._history.length > 0;
+    const historyIcon = hasHistory ? `<button class="history-icon-mobile" data-hc="${currentDaysHc}" data-day="${day}" title="Ver historial" style="background:none;border:none;cursor:pointer;margin-left:6px;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;color:var(--text3);"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    </button>` : '';
+    
     const summaries = [];
     CATS.forEach(c => {
       const d = entry[c.id];
@@ -2006,7 +2137,7 @@ function renderPatientDaysList() {
       <div class="day-list-item" data-day="${day}">
         <div class="day-list-header">
           <span class="day-list-day">${DAY_LABELS[day]}</span>
-          <div class="day-list-badges">${badges}</div>
+          <div class="day-list-badges">${badges}${historyIcon}</div>
         </div>
         <div class="day-list-summary">${summaries.join('<br>')}</div>
       </div>`;
@@ -2016,6 +2147,12 @@ function renderPatientDaysList() {
   document.querySelectorAll('#patient-days-list .day-list-item').forEach(item => {
     const day = item.dataset.day;
     item.addEventListener('click', () => openPanel(currentDaysHc, day));
+  });
+  document.querySelectorAll('#patient-days-list .history-icon-mobile').forEach(icon => {
+    icon.addEventListener('click', (e) => {
+      e.stopPropagation();
+      showEntryHistory(icon.dataset.hc, icon.dataset.day);
+    });
   });
 }
 
