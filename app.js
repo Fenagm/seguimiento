@@ -899,18 +899,13 @@ function toggleTag(catId, tag, btn) {
   const idx = tags.indexOf(tag);
 
   if (idx >= 0) {
+    // Remover tag del array
     tags.splice(idx, 1);
     btn.classList.remove('active');
-    const tagLines = currentText.split('\n').filter(line => line.trim() !== tag);
-    currentText = tagLines.join('\n');
   } else {
+    // Agregar tag al array
     tags.push(tag);
     btn.classList.add('active');
-    if (currentText.trim()) {
-      currentText = currentText + '\n' + tag;
-    } else {
-      currentText = tag;
-    }
   }
 
   panelState.data[catId].tags = tags;
@@ -2578,45 +2573,54 @@ function buildMedLine(entry) {
   return lines;
 }
 
+let isPrinting = false;
+
 async function doPrint() {
-  // Load the latest saved data from Firestore before printing
-  let savedWeekData = weekData;
-  if (db) {
-    try {
-      const snap = await getDoc(doc(db, 'weeks', currentWeek));
-      if (snap.exists()) savedWeekData = snap.data();
-    } catch (e) {
-      console.warn('Could not load latest data for print:', e);
+  if (isPrinting) return;
+  isPrinting = true;
+  
+  try {
+    // Load the latest saved data from Firestore before printing
+    let savedWeekData = weekData;
+    if (db) {
+      try {
+        const snap = await getDoc(doc(db, 'weeks', currentWeek));
+        if (snap.exists()) savedWeekData = snap.data();
+      } catch (e) {
+        console.warn('Could not load latest data for print:', e);
+      }
     }
+  
+    const patients = getPrintPatients();
+    const dayDates = getWeekDayDates(currentWeek);
+    const reportDay = dayDates[printDay] || new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
+    const reportDate = new Date().toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'2-digit' });
+  
+    const rows = [];
+    for (const p of patients) {
+      const entry   = savedWeekData[`${p.hc}_${printDay}`];
+      const medLines = buildMedLine(entry);
+      const medsHtml = medLines.length
+        ? `<div class="print-meds-line">• ${medLines.join(' · ')}</div>`
+        : '<div class="print-no-meds">Sin medicación cargada</div>';
+  
+      rows.push(`
+        <div class="print-patient">
+          <div class="print-patient-line">${p.cama} ${p.paciente}:</div>
+          ${medsHtml}
+        </div>
+        <hr class="print-separator">`);
+    }
+  
+    document.getElementById('print-content').innerHTML = `
+      <div class="print-header">Pase de Guardia - ${FLOOR_LABELS[printFloor]} - Dia ${reportDay} (${reportDate})</div>
+      ${rows.length > 0 ? rows.join('') : '<p style="font-size: 9px;color:#888;font-style:italic">Sin pacientes en este sector.</p>'}`;
+  
+    document.getElementById('print-overlay').style.display = 'none';
+    requestAnimationFrame(() => window.print());
+  } finally {
+    setTimeout(() => { isPrinting = false; }, 1000);
   }
-
-  const patients = getPrintPatients();
-  const dayDates = getWeekDayDates(currentWeek);
-  const reportDay = dayDates[printDay] || new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
-  const reportDate = new Date().toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'2-digit' });
-
-  const rows = [];
-  for (const p of patients) {
-    const entry   = savedWeekData[`${p.hc}_${printDay}`];
-    const medLines = buildMedLine(entry);
-    const medsHtml = medLines.length
-      ? `<div class="print-meds-line">• ${medLines.join(' · ')}</div>`
-      : '<div class="print-no-meds">Sin medicación cargada</div>';
-
-    rows.push(`
-      <div class="print-patient">
-        <div class="print-patient-line">${p.cama} ${p.paciente}:</div>
-        ${medsHtml}
-      </div>
-      <hr class="print-separator">`);
-  }
-
-  document.getElementById('print-content').innerHTML = `
-    <div class="print-header">Pase de Guardia - ${FLOOR_LABELS[printFloor]} - Dia ${reportDay} (${reportDate})</div>
-    ${rows.length > 0 ? rows.join('') : '<p style="font-size: 9px;color:#888;font-style:italic">Sin pacientes en este sector.</p>'}`;
-
-  document.getElementById('print-overlay').style.display = 'none';
-  requestAnimationFrame(() => window.print());
 }
 
 function closePrintModal() {
