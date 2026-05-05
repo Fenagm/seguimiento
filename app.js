@@ -68,6 +68,7 @@ export const CATS = [
   { id: 'antibioticos', label: 'Antibióticos', cls: 'atb', dot: '#f5a623' },
   { id: 'qmt', label: 'QMT', cls: 'qmt', dot: '#ef5e5e' },
   { id: 'otros', label: 'Otros', cls: 'oth', dot: '#4ab3c7' },
+  { id: 'laboratorio', label: 'Laboratorio', cls: 'lab', dot: '#3b82f6' },
 ];
 
 export const TAGS = {
@@ -76,12 +77,26 @@ export const TAGS = {
   antibioticos: ['Vancomicina', 'Meropenem', 'Pip/Tazo 4,5g c/6h', 'Aciclovir 400mg c/12h', 'Caspofungina', 'Daptomicina', 'Ampicilina-Sulbactam', 'Colistin'],
   qmt: ['Rituximab + EPOCH', 'Ciclo 2', 'Carbo/Etopósido + Atezolizumab', 'FOLFIRI', 'FOLFOX', 'Cisplatino', 'Ciclofosfamida', 'Paclitaxel'],
   otros: ['Filgrastim', 'Bactrim forte', 'Isavuconazol', 'Ceftolozano + Tazobactam', 'Heparina', 'HBPM', 'Omeprazol', 'Dexametasona'],
+  laboratorio: ['Glob. blancos', 'Glob. rojos', 'Hemoglobina', 'Hematocrito', 'Neutrófilos', 'Linfocitos', 'Rec. plaquetas', 'Potasio', 'Glucemia', 'Uremia', 'Creatinina'],
 };
 
 export const DAYS = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes'];
 export const DAY_LABELS = { lunes: 'Lun', martes: 'Mar', miercoles: 'Mié', jueves: 'Jue', viernes: 'Vie' };
 export const FLOORS = ['3', '4', '5', 'tamo', 'uti', 'utiq'];
 export const FLOOR_LABELS = { '3': 'Piso 3', '4': 'Piso 4', '5': 'Piso 5', 'tamo': 'TAMO', 'uti': 'UTI', 'utiq': 'UTI-Q' };
+
+
+function getTodayWeekDayId() {
+  const todayMap = { 1: 'lunes', 2: 'martes', 3: 'miercoles', 4: 'jueves', 5: 'viernes' };
+  return todayMap[new Date().getDay()] || null;
+}
+
+function warnIfNotCurrentDay(selectedDay) {
+  const todayDay = getTodayWeekDayId();
+  if (!todayDay || selectedDay === todayDay) return;
+  alert(`⚠ Estás cargando datos en ${DAY_LABELS[selectedDay]} y hoy es ${DAY_LABELS[todayDay]}.`);
+}
+
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
 let db = null;
@@ -664,8 +679,10 @@ function renderDaysRowContent(hc) {
       CATS.forEach(c => {
         const d = entry[c.id];
         if (!d) return;
-        if (d.tags?.length) parts.push(`<span style="color:${c.dot};font-size:9px;font-weight:600">${c.label}:</span> ${d.tags.join(', ')}`);
-        else if (d.text) parts.push(`<span style="color:${c.dot};font-size:9px;font-weight:600">${c.label}:</span> ${d.text.substring(0, 60)}`);
+        const pieces = [];
+        if (d.tags?.length) pieces.push(d.tags.join(', '));
+        if (d.text) pieces.push(d.text);
+        if (pieces.length) parts.push(`<span style="color:${c.dot};font-size:9px;font-weight:600">${c.label}:</span> ${pieces.join(' · ')}`);
       });
       if (entry._lastModifiedBy) {
         const modifiedDate = entry._lastModifiedAt ? new Date(entry._lastModifiedAt).toLocaleDateString() : '';
@@ -686,7 +703,7 @@ function renderDaysRowContent(hc) {
     <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px 4px;border-bottom:1px solid var(--border);background:var(--surface);">
       <span style="font-size:11px;color:var(--text3);">
         Semana <strong style="color:var(--text2)">${currentWeek}</strong>
-        ${hasPrevWeekData(hc) ? `<button class="btn copy-prev-week-btn" data-hc="${hc}" style="margin-left:10px;padding:2px 8px;font-size:10px;">↩ Copiar semana anterior</button>` : ''}
+        <button class="btn copy-prev-week-btn" data-hc="${hc}" style="margin-left:10px;padding:2px 8px;font-size:10px;">↩ Copiar semana anterior</button>
       </span>
       <button class="btn move-patient-btn" data-hc="${hc}" style="padding:3px 10px;font-size:11px;gap:4px;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><path d="M5 9l7-7 7 7M5 15l7 7 7-7"/></svg>
@@ -734,6 +751,7 @@ function openPanel(hc, day) {
   }
   panelState.hc = hc;
   panelState.day = day;
+  warnIfNotCurrentDay(day);
   // Ensure data is properly initialized with arrays for tags
   const rawData = weekData[`${hc}_${day}`] || {};
   panelState.data = {};
@@ -802,6 +820,7 @@ function switchPanelDay(day) {
   weekData[currentKey] = panelState.data;
   queueWeekAutosave();
   panelState.day = day;
+  warnIfNotCurrentDay(day);
   // Ensure data is properly initialized with arrays for tags
   const rawData = weekData[`${panelState.hc}_${day}`] || {};
   panelState.data = {};
@@ -2062,7 +2081,7 @@ function openPatientDays(hc) {
   document.getElementById('days-patient-name').textContent = p.paciente;
   document.getElementById('days-patient-meta').textContent = `Cama ${p.cama} · HC ${p.hc} · ${p.medico || ''}`;
   const copyBtn = document.getElementById('days-panel-copy-prev');
-  if (copyBtn) copyBtn.style.display = hasPrevWeekData(hc) ? 'flex' : 'none';
+  if (copyBtn) copyBtn.style.display = 'flex';
   renderPatientDaysList();
   document.getElementById('patient-days-overlay').classList.add('open');
   setTimeout(() => document.getElementById('patient-days-panel').classList.add('open'), 10);
@@ -2464,20 +2483,64 @@ function getPrevWeekId(weekId) {
   return getWeekId(startOfWeek);
 }
 
-function hasPrevWeekData(hc) {
-  // Firestore only - check if we have data in the current weekData (loaded from Firestore)
-  // For previous weeks, we would need to load from Firestore explicitly
-  return DAYS.some(d => {
-    const key = `${hc}_${d}`;
-    const e = weekData[key];
-    return e && CATS.some(c => e[c.id] && (e[c.id].text || e[c.id].tags?.length));
-  });
-}
+async function copiarSemanaAnterior(hc) {
+  if (!db) {
+    showToast('Sin conexión a Firestore');
+    return;
+  }
 
-function copiarSemanaAnterior(hc) {
-  // This function needs to load previous week data from Firestore
-  showToast('Para copiar de la semana anterior, primero guardá la semana actual en Firestore');
-  return;
+  const prevWeek = getPrevWeekId(currentWeek);
+  try {
+    const prevSnap = await getDoc(doc(db, 'weeks', prevWeek));
+    if (!prevSnap.exists()) {
+      showToast(`No hay datos de ${prevWeek} para HC ${hc}`);
+      return;
+    }
+
+    const prevWeekData = prevSnap.data();
+    const copiedDays = [];
+
+    DAYS.forEach(day => {
+      const prevKey = `${hc}_${day}`;
+      const prevEntry = prevWeekData[prevKey];
+      const hasPrevData = prevEntry && CATS.some(c => prevEntry[c.id] && (prevEntry[c.id].text || prevEntry[c.id].tags?.length));
+      if (!hasPrevData) return;
+
+      const nextEntry = {};
+      CATS.forEach(cat => {
+        const entry = prevEntry[cat.id];
+        nextEntry[cat.id] = {
+          tags: Array.isArray(entry?.tags) ? [...entry.tags] : [],
+          text: entry?.text || ''
+        };
+      });
+
+      Object.keys(prevEntry).forEach(key => {
+        if (!CATS.find(c => c.id === key)) {
+          nextEntry[key] = prevEntry[key];
+        }
+      });
+
+      nextEntry._lastModifiedBy = getDisplayName(currentUser);
+      nextEntry._lastModifiedAt = new Date().toISOString();
+      nextEntry._copiedFromWeek = prevWeek;
+
+      weekData[`${hc}_${day}`] = nextEntry;
+      copiedDays.push(DAY_LABELS[day]);
+    });
+
+    if (!copiedDays.length) {
+      showToast(`No hay entradas para copiar en ${prevWeek}`);
+      return;
+    }
+
+    queueWeekAutosave();
+    renderTable(document.getElementById('search-input').value);
+    if (currentDaysHc === hc) renderDaysRowContent(hc);
+    showToast(`Copiado desde ${prevWeek}: ${copiedDays.join(', ')} ✓`);
+  } catch (e) {
+    showToast('Error copiando semana anterior');
+  }
 }
 
 // ─── SAVE WEEK ────────────────────────────────────────────────────────────────
@@ -2678,7 +2741,7 @@ async function doPrint() {
   
       rows.push(`
         <div class="print-patient">
-          <div class="print-patient-line">${p.cama} ${p.paciente}:</div>
+          <div class="print-patient-line">${p.cama}, ${p.paciente} (HC: ${p.hc}):</div>
           ${medsHtml}
         </div>
         <hr class="print-separator">`);
