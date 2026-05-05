@@ -21,6 +21,8 @@
   --cat-qmt-bg: rgba(239, 94, 94, 0.12);
   --cat-oth: #4ab3c7;
   --cat-oth-bg: rgba(74, 179, 199, 0.12);
+  --cat-lab: #3b82f6;
+  --cat-lab-bg: rgba(59, 130, 246, 0.12);
 
   --mono: 'IBM Plex Mono', monospace;
   --sans: 'IBM Plex Sans', sans-serif;
@@ -404,6 +406,11 @@ table.patient-table td {
   color: var(--cat-oth);
 }
 
+.badge.lab {
+  background: var(--cat-lab-bg);
+  color: var(--cat-lab);
+}
+
 .cell-empty {
   color: var(--text3);
   font-size: 11px;
@@ -765,6 +772,16 @@ table.patient-table td {
 
 .tag-chip.oth.active {
   background: var(--cat-oth);
+  color: #fff;
+}
+
+.tag-chip.lab {
+  color: var(--cat-lab);
+  border-color: var(--cat-lab);
+}
+
+.tag-chip.lab.active {
+  background: var(--cat-lab);
   color: #fff;
 }
 
