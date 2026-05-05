@@ -85,6 +85,19 @@ export const DAY_LABELS = { lunes: 'Lun', martes: 'Mar', miercoles: 'Mié', juev
 export const FLOORS = ['3', '4', '5', 'tamo', 'uti', 'utiq'];
 export const FLOOR_LABELS = { '3': 'Piso 3', '4': 'Piso 4', '5': 'Piso 5', 'tamo': 'TAMO', 'uti': 'UTI', 'utiq': 'UTI-Q' };
 
+
+function getTodayWeekDayId() {
+  const todayMap = { 1: 'lunes', 2: 'martes', 3: 'miercoles', 4: 'jueves', 5: 'viernes' };
+  return todayMap[new Date().getDay()] || null;
+}
+
+function warnIfNotCurrentDay(selectedDay) {
+  const todayDay = getTodayWeekDayId();
+  if (!todayDay || selectedDay === todayDay) return;
+  alert(`⚠ Estás cargando datos en ${DAY_LABELS[selectedDay]} y hoy es ${DAY_LABELS[todayDay]}.`);
+}
+
+
 // ─── STATE ────────────────────────────────────────────────────────────────────
 let db = null;
 let auth = null;
@@ -738,6 +751,7 @@ function openPanel(hc, day) {
   }
   panelState.hc = hc;
   panelState.day = day;
+  warnIfNotCurrentDay(day);
   // Ensure data is properly initialized with arrays for tags
   const rawData = weekData[`${hc}_${day}`] || {};
   panelState.data = {};
@@ -806,6 +820,7 @@ function switchPanelDay(day) {
   weekData[currentKey] = panelState.data;
   queueWeekAutosave();
   panelState.day = day;
+  warnIfNotCurrentDay(day);
   // Ensure data is properly initialized with arrays for tags
   const rawData = weekData[`${panelState.hc}_${day}`] || {};
   panelState.data = {};
@@ -2726,7 +2741,7 @@ async function doPrint() {
   
       rows.push(`
         <div class="print-patient">
-          <div class="print-patient-line">${p.cama} ${p.paciente}:</div>
+          <div class="print-patient-line">${p.cama}, ${p.paciente} (HC: ${p.hc}):</div>
           ${medsHtml}
         </div>
         <hr class="print-separator">`);
