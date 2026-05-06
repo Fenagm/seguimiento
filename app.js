@@ -2710,6 +2710,10 @@ function buildMedLine(entry) {
 
 let isPrinting = false;
 
+function formatCoberturaForPrint(cobertura) {
+  return String(cobertura || '').replace(/SWISS MEDICAL S\.A\./gi, 'SMG').trim();
+}
+
 async function doPrint() {
   if (isPrinting) return;
   isPrinting = true;
@@ -2744,7 +2748,7 @@ async function doPrint() {
   
       rows.push(`
         <div class="print-patient">
-          <div class="print-patient-line">${p.cama}, ${p.paciente} (HC: ${p.hc} || OS: ${p.os || p.cobertura|| 'cargar OS'}):</div>
+          <div class="print-patient-line">${p.cama}, ${p.paciente} (HC: ${p.hc} || OS: ${p.os || formatCoberturaForPrint(p.cobertura) || 'cargar OS'}):</div>
           ${medsHtml}
         </div>
         <hr class="print-separator">`);
