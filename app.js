@@ -2735,13 +2735,17 @@ async function doPrint() {
     for (const p of patients) {
       const entry   = savedWeekData[`${p.hc}_${printDay}`];
       const medLines = buildMedLine(entry);
+      const patientOS = p.cobertura || p.os || 'cargar OS';
+      const medLinesHtml = medLines.map(line =>
+        line.replace(/^\[([^\]]+)\]\s*/, (_, cat) => `<strong>${String(cat).toUpperCase()}:</strong> `)
+      );
       const medsHtml = medLines.length
-        ? `<div class="print-meds-line">• ${medLines.join(' · ')}</div>`
+        ? `<div class="print-meds-line">• ${medLinesHtml.join(' · ')}</div>`
         : '<div class="print-no-meds">Sin medicación cargada</div>';
   
       rows.push(`
         <div class="print-patient">
-          <div class="print-patient-line">${p.cama}, ${p.paciente} (HC: ${p.hc}):</div>
+          <div class="print-patient-line">${p.cama}, ${p.paciente} (HC: ${p.hc} || OS: ${patientOS}):</div>
           ${medsHtml}
         </div>
         <hr class="print-separator">`);
