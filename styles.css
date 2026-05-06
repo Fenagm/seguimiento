@@ -2023,6 +2023,7 @@ table.patient-table td {
   }
   .print-meds-line {
     margin-bottom: 1pt;
+    font-weight: bold;
   }
   .print-no-meds {
     font-size: 10pt;
