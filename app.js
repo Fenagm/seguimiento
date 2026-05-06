@@ -2744,7 +2744,7 @@ async function doPrint() {
   
       rows.push(`
         <div class="print-patient">
-          <div class="print-patient-line">${p.cama}, ${p.paciente} (HC: ${p.hc} || OS: ${p.os || 'cargar OS'}):</div>
+          <div class="print-patient-line">${p.cama}, ${p.paciente} (HC: ${p.hc} || OS: ${p.os || p.cobertura|| 'cargar OS'}):</div>
           ${medsHtml}
         </div>
         <hr class="print-separator">`);
