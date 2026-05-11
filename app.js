@@ -1586,9 +1586,17 @@ async function loadLastWeekFromFirestore() {
       weeks.push({ id: doc.id, data: doc.data() });
     });
     weeks.sort((a, b) => b.id.localeCompare(a.id));
-    
-    const lastWeekId = weeks[0].id;
-    const lastWeekData = weeks[0].data;
+
+    // "Última semana" = última semana cerrada con datos (excluye la semana actual)
+    const lastClosedWeek = weeks.find(w => w.id !== currentWeek);
+    if (!lastClosedWeek) {
+      loading.style.display = 'none';
+      resultsDiv.innerHTML = '<div class="no-data"><p>📭 No hay una semana previa con datos.</p><p style="font-size:12px; margin-top:8px;">La única semana con registros es la actual.</p></div>';
+      return;
+    }
+
+    const lastWeekId = lastClosedWeek.id;
+    const lastWeekData = lastClosedWeek.data;
     
     loading.style.display = 'none';
     
