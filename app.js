@@ -52,7 +52,7 @@ function hideInstallBanner() {
 
 // ─── IMPORTS ──────────────────────────────────────────────────────────────────
 import { initializeApp } from 'firebase/app';
-import { getFirestore, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc, deleteDoc, collection, getDocs, onSnapshot, updateDoc } from 'firebase/firestore';
 import {
   getAuth,
   signInWithEmailAndPassword,
@@ -383,12 +383,22 @@ async function saveConfig() {
   await initFirebase(cfg);
 }
 
+// Variables globales para listeners en tiempo real
+let weekUnsubscribe = null;
+let patientsUnsubscribe = null;
+
 async function initFirebase(cfg) {
   try {
     const app = initializeApp(cfg);
     db   = getFirestore(app);
     auth = getAuth(app);
     document.getElementById('config-banner').classList.add('hidden');
+
+    // Suscribirse a cambios en tiempo real de la semana actual
+    subscribeToWeekData();
+    
+    // Suscribirse a cambios en tiempo real de pacientes
+    subscribeToPatientsData();
 
     // onAuthStateChanged is the single source of truth for auth state
     onAuthStateChanged(auth, async (user) => {
@@ -401,7 +411,6 @@ async function initFirebase(cfg) {
         updateUserUI(user);
         hideLoginScreen();
         saveAudit('login', null, null, 'Sesión iniciada');
-        await loadWeekFromFirestore();
         renderAll();
         showToast(`Bienvenido, ${getDisplayName(user)} ✓`);
 
@@ -414,11 +423,51 @@ async function initFirebase(cfg) {
         updateUserUI(null);
         showLoginScreen();
         setLoginLoading(false);
+        // Limpiar suscripciones al cerrar sesión
+        if (weekUnsubscribe) weekUnsubscribe();
+        if (patientsUnsubscribe) patientsUnsubscribe();
       }
     });
   } catch (e) {
     showToast('Error inicializando Firebase: ' + e.message);
   }
+}
+
+function subscribeToWeekData() {
+  if (!db || !currentWeek) return;
+  
+  if (weekUnsubscribe) weekUnsubscribe();
+  
+  const weekRef = doc(db, 'weeks', currentWeek);
+  weekUnsubscribe = onSnapshot(weekRef, (snap) => {
+    if (snap.exists()) {
+      weekData = snap.data();
+    } else {
+      // Si no existe el documento de la semana, inicializar vacío
+      weekData = {};
+    }
+    renderAll();
+  }, (error) => {
+    console.warn('Error escuchando cambios en week:', error);
+  });
+}
+
+function subscribeToPatientsData() {
+  if (!db) return;
+  
+  if (patientsUnsubscribe) patientsUnsubscribe();
+  
+  const patientsRef = collection(db, 'patients');
+  patientsUnsubscribe = onSnapshot(patientsRef, (snapshot) => {
+    allPatients = {};
+    snapshot.forEach(d => { 
+      allPatients[d.id] = normalizePatientRecord(d.data()); 
+    });
+    normalizeAllPatients();
+    renderAll();
+  }, (error) => {
+    console.warn('Error escuchando cambios en patients:', error);
+  });
 }
 
 async function loadWeekFromFirestore() {
@@ -437,9 +486,10 @@ async function loadWeekFromFirestore() {
 async function saveToFirestore() {
   if (!db) return;
   try {
-    await setDoc(doc(db, 'weeks', currentWeek), weekData);
+    // Usar updateDoc con merge para evitar sobrescribir datos de otras sesiones
+    await updateDoc(doc(db, 'weeks', currentWeek), weekData);
     for (const [hc, p] of Object.entries(allPatients)) {
-      await setDoc(doc(db, 'patients', hc), p);
+      await updateDoc(doc(db, 'patients', hc), p);
     }
   } catch (e) {
     showToast('Error guardando en Firestore: ' + e.message);
@@ -454,7 +504,7 @@ function queueWeekAutosave() {
   const payload = JSON.parse(JSON.stringify(weekData));
   weekAutosaveTimer = setTimeout(async () => {
     try {
-      await setDoc(doc(db, 'weeks', weekId), payload);
+      await updateDoc(doc(db, 'weeks', weekId), payload);
     } catch (e) {
       console.warn('Autosave week failed:', e);
     }
@@ -469,7 +519,11 @@ async function changeWeek(dir) {
   startOfWeek.setDate(jan4.getDate() - (jan4.getDay() + 6) % 7 + (wn - 1) * 7 + dir * 7);
   currentWeek = getWeekId(startOfWeek);
   weekData = {};
-  await loadWeekFromFirestore();
+  
+  // Re-suscribirse a la nueva semana
+  if (weekUnsubscribe) weekUnsubscribe();
+  subscribeToWeekData();
+  
   renderAll();
 }
 
@@ -654,6 +708,8 @@ function renderDayBadges(hc, day) {
 }
 
 function toggleDaysRow(hc) {
+  const p = allPatients[hc];
+  if (!p) return;
   const row = document.getElementById(`days-row-${hc}`);
   if (!row) return;
   const isOpen = row.style.display !== 'none';
@@ -1350,7 +1406,7 @@ function importPatients() {
   // Removed localStorage persistence - Firestore only
   if (db) {
     for (const [hc, p] of Object.entries(allPatients)) {
-      setDoc(doc(db, 'patients', hc), p).catch(() => {});
+      updateDoc(doc(db, 'patients', hc), p).catch(() => {});
     }
   }
 
@@ -1528,6 +1584,9 @@ async function processWeekData(weekId, weekData) {
     
     if (!patientInfo) continue;
     
+    // Solo incluir pacientes dados de alta (archived) en el historial
+    if (!isDischarged) continue;
+    
     results.push({
       wid: weekId,
       day,
@@ -1629,6 +1688,9 @@ async function filterWeekData(weekId, weekData, patientQuery, drugQuery) {
     }
     
     if (!patientInfo) continue;
+    
+    // Solo incluir pacientes dados de alta (archived) en el historial
+    if (!isDischarged) continue;
     
     // Filtrar por paciente
     if (patientQuery) {
@@ -2063,7 +2125,7 @@ function saveNewPatient() {
 
   // Removed localStorage persistence - Firestore only
   if (db) {
-    setDoc(doc(db, 'patients', hc), newPatient).catch(() => { });
+    updateDoc(doc(db, 'patients', hc), newPatient).catch(() => { });
   }
 
   saveAudit('create', hc, null, { paciente, cama, medico });
@@ -2303,7 +2365,7 @@ async function executeDischarge(hc, p) {
   if (db) {
     try {
       await setDoc(doc(db, 'discharges', `${hc}_${Date.now()}`), dischargeRecord);
-      await setDoc(doc(db, 'patients', String(hc)), p);
+      await updateDoc(doc(db, 'patients', String(hc)), p);
     } catch (e) {
       showToast('Alta guardada localmente, pero falló sync en Firestore');
     }
@@ -2445,7 +2507,7 @@ function confirmMovePatient() {
   p.floor = detectFloor(newRoom, p.servicio || '');
 
   // Removed localStorage persistence - Firestore only
-  if (db) setDoc(doc(db, 'patients', movePatientHc), p).catch(() => { });
+  if (db) updateDoc(doc(db, 'patients', movePatientHc), p).catch(() => { });
   saveAudit('modify', movePatientHc, null, { action: 'move', from: oldRoom, to: newRoom });
   closeMovePatientModal();
   renderTable();
@@ -2464,8 +2526,8 @@ function doSwapRooms(hc1, hc2) {
 
   // Removed localStorage persistence - Firestore only
   if (db) {
-    setDoc(doc(db, 'patients', hc1), p1).catch(() => { });
-    setDoc(doc(db, 'patients', hc2), p2).catch(() => { });
+    updateDoc(doc(db, 'patients', hc1), p1).catch(() => { });
+    updateDoc(doc(db, 'patients', hc2), p2).catch(() => { });
   }
   saveAudit('modify', hc1, null, { action: 'swap', with: hc2 });
   saveAudit('modify', hc2, null, { action: 'swap', with: hc1 });
