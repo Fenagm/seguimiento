@@ -339,6 +339,33 @@ function getWeekDates(weekId) {
   return `${fmt(startOfWeek)} – ${fmt(endOfWeek)}`;
 }
 
+
+function getWeekDateRange(weekId) {
+  const [year, wn] = weekId.replace('W', '').split('-').map(Number);
+  const jan4 = new Date(year, 0, 4);
+  const startOfWeek = new Date(jan4);
+  startOfWeek.setDate(jan4.getDate() - (jan4.getDay() + 6) % 7 + (wn - 1) * 7);
+  startOfWeek.setHours(0, 0, 0, 0);
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 4);
+  endOfWeek.setHours(23, 59, 59, 999);
+  return { startOfWeek, endOfWeek };
+}
+
+function isDischargeInWeek(patientInfo, weekId) {
+  if (!patientInfo || patientInfo.archivedReason !== 'discharge') return false;
+
+  if (patientInfo.dischargeWeek) {
+    return patientInfo.dischargeWeek === weekId;
+  }
+
+  if (!patientInfo.dischargeAt) return false;
+  const dischargeDate = new Date(patientInfo.dischargeAt);
+  if (Number.isNaN(dischargeDate.getTime())) return false;
+
+  const { startOfWeek, endOfWeek } = getWeekDateRange(weekId);
+  return dischargeDate >= startOfWeek && dischargeDate <= endOfWeek;
+}
 function getWeekDayDates(weekId) {
   const [year, wn] = weekId.replace('W', '').split('-').map(Number);
   const jan4 = new Date(year, 0, 4);
@@ -1584,8 +1611,8 @@ async function processWeekData(weekId, weekData) {
     
     if (!patientInfo) continue;
     
-    // Solo incluir pacientes dados de alta (archived) en el historial
-    if (!isDischarged) continue;
+    // Incluir activos siempre y altas solo si corresponden a la semana consultada
+    if (isDischarged && !isDischargeInWeek(patientInfo, weekId)) continue;
     
     results.push({
       wid: weekId,
@@ -1594,6 +1621,7 @@ async function processWeekData(weekId, weekData) {
       hc,
       dayData,
       isDischarged,
+      isDischargeInCurrentWeek: isDischarged && isDischargeInWeek(patientInfo, weekId),
       cama: patientInfo.cama || patientInfo.camaAnterior || '—'
     });
   }
@@ -1689,8 +1717,8 @@ async function filterWeekData(weekId, weekData, patientQuery, drugQuery) {
     
     if (!patientInfo) continue;
     
-    // Solo incluir pacientes dados de alta (archived) en el historial
-    if (!isDischarged) continue;
+    // Incluir activos siempre y altas solo si corresponden a la semana consultada
+    if (isDischarged && !isDischargeInWeek(patientInfo, weekId)) continue;
     
     // Filtrar por paciente
     if (patientQuery) {
@@ -1718,6 +1746,7 @@ async function filterWeekData(weekId, weekData, patientQuery, drugQuery) {
       hc,
       dayData,
       isDischarged,
+      isDischargeInCurrentWeek: isDischarged && isDischargeInWeek(patientInfo, weekId),
       cama: patientInfo.cama || patientInfo.camaAnterior || '—'
     });
   }
@@ -1831,6 +1860,7 @@ function renderHistoryResults(results, title = null) {
         hc: r.hc,
         days: {},
         isDischarged: r.isDischarged,
+        isDischargeInCurrentWeek: r.isDischargeInCurrentWeek,
         cama: r.cama
       };
     }
@@ -1845,7 +1875,7 @@ function renderHistoryResults(results, title = null) {
         <span class="cell-room" style="background:var(--surface3); padding:2px 10px; border-radius:15px; font-family:var(--mono); font-size:12px; font-weight:600;">${g.cama}</span>
         <strong style="flex:1; font-size:14px;">${g.patient.paciente}</strong>
         <span style="font-family:var(--mono); font-size:11px; color:var(--text3); background:var(--surface); padding:2px 8px; border-radius:12px;">📅 ${g.wid}</span>
-        ${g.isDischarged ? '<span style="background:#ef5e5e20; color:#ef5e5e; font-size:10px; padding:2px 8px; border-radius:12px;">🚪 ALTA</span>' : '<span style="background:#2da44e20; color:#2da44e; font-size:10px; padding:2px 8px; border-radius:12px;">🟢 ACTIVO</span>'}
+        ${g.isDischarged ? '<span style="background:#ef5e5e20; color:#ef5e5e; font-size:10px; padding:2px 8px; border-radius:12px;">🚪 ALTA en semana</span>' : '<span style="background:#2da44e20; color:#2da44e; font-size:10px; padding:2px 8px; border-radius:12px;">🟢 ACTIVO</span>'}
         <span style="color:var(--text3); font-size:16px;">▾</span>
       </div>
       <div class="hist-card-body" style="display:none; padding:16px; background:var(--surface);">
