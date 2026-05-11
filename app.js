@@ -52,7 +52,7 @@ function hideInstallBanner() {
 
 // ─── IMPORTS ──────────────────────────────────────────────────────────────────
 import { initializeApp } from 'firebase/app';
-import { getFirestore, doc, setDoc, getDoc, deleteDoc, collection, getDocs, onSnapshot, updateDoc } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc, deleteDoc, collection, getDocs, onSnapshot, updateDoc, runTransaction, serverTimestamp } from 'firebase/firestore';
 import {
   getAuth,
   signInWithEmailAndPassword,
@@ -112,6 +112,7 @@ let movePatientHc = null;
 let moveFilterFloor = 'all';
 let moveSelectedRoom = null;
 let weekAutosaveTimer = null;
+let weekDirtyMap = {};
 
 // currentUser is set by Firebase Auth — single source of truth
 let currentUser = null;
@@ -473,6 +474,7 @@ function subscribeToWeekData() {
       // Si no existe el documento de la semana, inicializar vacío
       weekData = {};
     }
+    weekDirtyMap = {};
     renderAll();
   }, (error) => {
     console.warn('Error escuchando cambios en week:', error);
@@ -513,8 +515,17 @@ async function loadWeekFromFirestore() {
 async function saveToFirestore() {
   if (!db) return;
   try {
-    // Usar updateDoc con merge para evitar sobrescribir datos de otras sesiones
-    await updateDoc(doc(db, 'weeks', currentWeek), weekData);
+    const dirtyEntries = Object.entries(weekDirtyMap);
+    if (dirtyEntries.length) {
+      const payload = {};
+      dirtyEntries.forEach(([key, value]) => {
+        payload[key] = value;
+      });
+      payload._updatedAt = serverTimestamp();
+      payload._updatedBy = currentUser?.uid || 'anonymous';
+      await updateDoc(doc(db, 'weeks', currentWeek), payload);
+      weekDirtyMap = {};
+    }
     for (const [hc, p] of Object.entries(allPatients)) {
       await updateDoc(doc(db, 'patients', hc), p);
     }
@@ -528,14 +539,29 @@ function queueWeekAutosave() {
   if (!db) return;
   if (weekAutosaveTimer) clearTimeout(weekAutosaveTimer);
   const weekId = currentWeek;
-  const payload = JSON.parse(JSON.stringify(weekData));
+  const dirtyEntries = { ...weekDirtyMap };
   weekAutosaveTimer = setTimeout(async () => {
+    if (!Object.keys(dirtyEntries).length) return;
     try {
+      const payload = {};
+      Object.entries(dirtyEntries).forEach(([key, value]) => {
+        payload[key] = value;
+      });
+      payload._updatedAt = serverTimestamp();
+      payload._updatedBy = currentUser?.uid || 'anonymous';
       await updateDoc(doc(db, 'weeks', weekId), payload);
+      Object.keys(dirtyEntries).forEach((key) => {
+        if (weekDirtyMap[key] === dirtyEntries[key]) delete weekDirtyMap[key];
+      });
     } catch (e) {
       console.warn('Autosave week failed:', e);
     }
   }, 500);
+}
+
+function markWeekEntryDirty(key, entryData) {
+  weekData[key] = entryData;
+  weekDirtyMap[key] = entryData;
 }
 
 // ─── WEEK NAV ─────────────────────────────────────────────────────────────────
@@ -546,6 +572,7 @@ async function changeWeek(dir) {
   startOfWeek.setDate(jan4.getDate() - (jan4.getDay() + 6) % 7 + (wn - 1) * 7 + dir * 7);
   currentWeek = getWeekId(startOfWeek);
   weekData = {};
+  weekDirtyMap = {};
   
   // Re-suscribirse a la nueva semana
   if (weekUnsubscribe) weekUnsubscribe();
@@ -900,7 +927,9 @@ function updateCopyPrevBtn() {
 function switchPanelDay(day) {
   collectPanelData();
   const currentKey = `${panelState.hc}_${panelState.day}`;
-  weekData[currentKey] = panelState.data;
+  panelState.data._lastWriter = currentUser?.uid || 'anonymous';
+  panelState.data._updatedAt = new Date().toISOString();
+  markWeekEntryDirty(currentKey, panelState.data);
   queueWeekAutosave();
   panelState.day = day;
   warnIfNotCurrentDay(day);
@@ -1138,7 +1167,9 @@ function saveEntry() {
     panelState.data._history = weekData[key]._history;
   }
 
-  weekData[key] = panelState.data;
+  panelState.data._lastWriter = currentUser?.uid || 'anonymous';
+  panelState.data._updatedAt = new Date().toISOString();
+  markWeekEntryDirty(key, panelState.data);
   queueWeekAutosave();
 
   const details = {};
@@ -1204,7 +1235,9 @@ function copyToPrevDay() {
     });
     panelState.data = prevDataCopy;
     const currentKey = `${panelState.hc}_${panelState.day}`;
-    weekData[currentKey] = panelState.data;
+    panelState.data._lastWriter = currentUser?.uid || 'anonymous';
+    panelState.data._updatedAt = new Date().toISOString();
+    markWeekEntryDirty(currentKey, panelState.data);
     queueWeekAutosave();
     renderPanelBody();
     updateCatSummariesFromData();
@@ -1611,8 +1644,8 @@ async function processWeekData(weekId, weekData) {
     
     if (!patientInfo) continue;
     
-    // Solo incluir altas y únicamente si corresponden a la semana consultada
-    if (!isDischarged || !isDischargeInWeek(patientInfo, weekId)) continue;
+    // Incluir activos siempre y altas solo si corresponden a la semana consultada
+    if (isDischarged && !isDischargeInWeek(patientInfo, weekId)) continue;
     
     results.push({
       wid: weekId,
@@ -1717,8 +1750,8 @@ async function filterWeekData(weekId, weekData, patientQuery, drugQuery) {
     
     if (!patientInfo) continue;
     
-    // Solo incluir altas y únicamente si corresponden a la semana consultada
-    if (!isDischarged || !isDischargeInWeek(patientInfo, weekId)) continue;
+    // Incluir activos siempre y altas solo si corresponden a la semana consultada
+    if (isDischarged && !isDischargeInWeek(patientInfo, weekId)) continue;
     
     // Filtrar por paciente
     if (patientQuery) {
@@ -1875,7 +1908,7 @@ function renderHistoryResults(results, title = null) {
         <span class="cell-room" style="background:var(--surface3); padding:2px 10px; border-radius:15px; font-family:var(--mono); font-size:12px; font-weight:600;">${g.cama}</span>
         <strong style="flex:1; font-size:14px;">${g.patient.paciente}</strong>
         <span style="font-family:var(--mono); font-size:11px; color:var(--text3); background:var(--surface); padding:2px 8px; border-radius:12px;">📅 ${g.wid}</span>
-<span style="background:#ef5e5e20; color:#ef5e5e; font-size:10px; padding:2px 8px; border-radius:12px;">🚪 ALTA en semana</span>
+        ${g.isDischarged ? '<span style="background:#ef5e5e20; color:#ef5e5e; font-size:10px; padding:2px 8px; border-radius:12px;">🚪 ALTA en semana</span>' : '<span style="background:#2da44e20; color:#2da44e; font-size:10px; padding:2px 8px; border-radius:12px;">🟢 ACTIVO</span>'}
         <span style="color:var(--text3); font-size:16px;">▾</span>
       </div>
       <div class="hist-card-body" style="display:none; padding:16px; background:var(--surface);">
@@ -2360,42 +2393,44 @@ function showDischargeConfirm(hc, p) {
 }
 
 async function executeDischarge(hc, p) {
-  // Guardar entradas de la semana actual para historial
   const currentWeekEntries = {};
-  for (const day of DAYS) {
+  DAYS.forEach(day => {
     const key = `${hc}_${day}`;
     if (weekData[key]) currentWeekEntries[key] = weekData[key];
-  }
-
-  // Registrar el alta en el objeto del paciente
+  });
   const camaLiberada = p.cama;
-  p.status = PATIENT_STATUS.ARCHIVED;
-  p.dischargeAt = new Date().toISOString();
-  p.dischargeWeek = currentWeek;
-  p.dischargedBy = getDisplayName(currentUser);
-  p.archivedAt = p.dischargeAt;
-  p.archivedReason = 'discharge';
-  p.archivedBy = p.dischargedBy;
-  p.camaAnterior = camaLiberada;
-  p.cama = '';          // liberar la cama — ya no figura como ocupada
-
-  // Guardar el registro completo de alta
-  const dischargeRecord = {
+  const dischargeAt = new Date().toISOString();
+  const dischargedBy = getDisplayName(currentUser);
+  const updatedPatient = {
     ...p,
-    weekEntries: currentWeekEntries,
+    status: PATIENT_STATUS.ARCHIVED,
+    dischargeAt,
+    dischargeWeek: currentWeek,
+    dischargedBy,
+    archivedAt: dischargeAt,
+    archivedReason: 'discharge',
+    archivedBy: dischargedBy,
+    camaAnterior: camaLiberada,
+    cama: '',
   };
+  const dischargeRecord = { ...updatedPatient, weekEntries: currentWeekEntries };
 
   // Removed localStorage persistence - Firestore only
   // Actualizar allPatients (el paciente permanece archivado para historial)
-  allPatients[hc] = p;
+  allPatients[hc] = updatedPatient;
 
   saveAudit('delete', hc, null, { action: 'discharge', patientName: p.paciente, cama: camaLiberada });
 
   // Sync con Firestore si está activo
   if (db) {
     try {
+      await runTransaction(db, async (tx) => {
+        const weekRef = doc(db, 'weeks', currentWeek);
+        const patientRef = doc(db, 'patients', String(hc));
+        tx.update(weekRef, { _updatedAt: serverTimestamp(), _updatedBy: currentUser?.uid || 'anonymous' });
+        tx.update(patientRef, updatedPatient);
+      });
       await setDoc(doc(db, 'discharges', `${hc}_${Date.now()}`), dischargeRecord);
-      await updateDoc(doc(db, 'patients', String(hc)), p);
     } catch (e) {
       showToast('Alta guardada localmente, pero falló sync en Firestore');
     }
@@ -2403,7 +2438,7 @@ async function executeDischarge(hc, p) {
 
   renderTable(document.getElementById('search-input').value);
   renderFloorTabs();
-  showToast(`${p.paciente.split(',')[0]} dado/a de alta ✓`);
+  showToast(`${updatedPatient.paciente.split(',')[0]} dado/a de alta ✓`);
 }
 
 // ─── MOVE PATIENT ─────────────────────────────────────────────────────────────
@@ -2615,9 +2650,11 @@ async function copiarSemanaAnterior(hc) {
 
       nextEntry._lastModifiedBy = getDisplayName(currentUser);
       nextEntry._lastModifiedAt = new Date().toISOString();
+      nextEntry._lastWriter = currentUser?.uid || 'anonymous';
+      nextEntry._updatedAt = new Date().toISOString();
       nextEntry._copiedFromWeek = prevWeek;
 
-      weekData[`${hc}_${day}`] = nextEntry;
+      markWeekEntryDirty(`${hc}_${day}`, nextEntry);
       copiedDays.push(DAY_LABELS[day]);
     });
 
@@ -2626,6 +2663,21 @@ async function copiarSemanaAnterior(hc) {
       return;
     }
 
+    await runTransaction(db, async (tx) => {
+      const weekRef = doc(db, 'weeks', currentWeek);
+      const patientRef = doc(db, 'patients', String(hc));
+      const txPayload = {};
+      DAYS.forEach(day => {
+        const key = `${hc}_${day}`;
+        if (weekDirtyMap[key]) txPayload[key] = weekDirtyMap[key];
+      });
+      txPayload._updatedAt = serverTimestamp();
+      txPayload._updatedBy = currentUser?.uid || 'anonymous';
+      tx.update(weekRef, txPayload);
+      const existingPatient = allPatients[String(hc)];
+      if (existingPatient) tx.update(patientRef, existingPatient);
+    });
+    DAYS.forEach(day => { delete weekDirtyMap[`${hc}_${day}`]; });
     queueWeekAutosave();
     renderTable(document.getElementById('search-input').value);
     if (currentDaysHc === hc) renderDaysRowContent(hc);
