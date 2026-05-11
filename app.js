@@ -654,6 +654,8 @@ function renderDayBadges(hc, day) {
 }
 
 function toggleDaysRow(hc) {
+  const p = allPatients[hc];
+  if (!p) return;
   const row = document.getElementById(`days-row-${hc}`);
   if (!row) return;
   const isOpen = row.style.display !== 'none';
@@ -1528,6 +1530,9 @@ async function processWeekData(weekId, weekData) {
     
     if (!patientInfo) continue;
     
+    // Solo incluir pacientes dados de alta (archived) en el historial
+    if (!isDischarged) continue;
+    
     results.push({
       wid: weekId,
       day,
@@ -1629,6 +1634,9 @@ async function filterWeekData(weekId, weekData, patientQuery, drugQuery) {
     }
     
     if (!patientInfo) continue;
+    
+    // Solo incluir pacientes dados de alta (archived) en el historial
+    if (!isDischarged) continue;
     
     // Filtrar por paciente
     if (patientQuery) {
