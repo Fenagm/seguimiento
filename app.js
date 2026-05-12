@@ -994,9 +994,9 @@ function renderPanelBody() {
           <div class="cat-dot" style="background:${cat.dot}"></div>
           <span class="cat-label" style="color:${cat.dot}">${cat.label}</span>
           <span class="cat-summary" id="cat-sum-${cat.id}">${summary}</span>
-          <span class="cat-toggle">${(activeTags.length || text) ? '▴' : '▾'}</span>
+          <span class="cat-toggle">▾</span>
         </div>
-        <div class="cat-body" id="cat-body-${cat.id}" style="${activeTags.length || text ? '' : 'display:none'}">
+        <div class="cat-body" id="cat-body-${cat.id}" style="display:none">
           <div class="tags-row">
             ${tags.map(t => `
               <button class="tag-chip ${cat.cls} ${activeTags.includes(t) ? 'active' : ''}" data-cat="${cat.id}" data-tag="${t.replace(/'/g, "\\'")}">
