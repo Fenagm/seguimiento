@@ -239,12 +239,16 @@ async function saveUserProfile() {
 
 // ─── AUTH ─────────────────────────────────────────────────────────────────────
 function showLoginScreen() {
-  document.getElementById('login-screen').classList.add('visible');
-  document.getElementById('login-email').focus();
+  const loginScreen = document.getElementById('login-screen');
+  if (!loginScreen) return;
+  loginScreen.classList.add('visible');
+  document.getElementById('login-email')?.focus();
 }
 
 function hideLoginScreen() {
-  document.getElementById('login-screen').classList.remove('visible');
+  const loginScreen = document.getElementById('login-screen');
+  if (!loginScreen) return;
+  loginScreen.classList.remove('visible');
   clearLoginError();
 }
 
@@ -2802,6 +2806,10 @@ function filterPatients(q) {
 // ─── TOAST ────────────────────────────────────────────────────────────────────
 function showToast(msg) {
   const t = document.getElementById('toast');
+  if (!t) {
+    console.warn('Toast container not found:', msg);
+    return;
+  }
   t.textContent = msg;
   t.classList.add('show');
   clearTimeout(t._tid);
