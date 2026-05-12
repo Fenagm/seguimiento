@@ -168,7 +168,8 @@ function saveAudit(action, hc, day, details) {
   if (auditLog.length > 1000) auditLog.pop();
   // Removed localStorage persistence - Firestore only
   if (db) {
-    setDoc(doc(db, 'audit', `${Date.now()}_${hc || 'sys'}_${day || 'na'}`), entry).catch(() => {});
+    const auditId = `${Date.now()}_${hc || 'sys'}_${day || 'na'}_${Math.random().toString(36).slice(2, 8)}`;
+    setDoc(doc(db, 'audit', auditId), entry).catch(() => {});
   }
 }
 
@@ -414,6 +415,7 @@ async function saveConfig() {
 // Variables globales para listeners en tiempo real
 let weekUnsubscribe = null;
 let patientsUnsubscribe = null;
+let csvMetaUnsubscribe = null;
 
 async function initFirebase(cfg) {
   try {
@@ -427,6 +429,7 @@ async function initFirebase(cfg) {
     
     // Suscribirse a cambios en tiempo real de pacientes
     subscribeToPatientsData();
+    subscribeToCSVMeta();
 
     // onAuthStateChanged is the single source of truth for auth state
     onAuthStateChanged(auth, async (user) => {
@@ -454,6 +457,7 @@ async function initFirebase(cfg) {
         // Limpiar suscripciones al cerrar sesión
         if (weekUnsubscribe) weekUnsubscribe();
         if (patientsUnsubscribe) patientsUnsubscribe();
+        if (csvMetaUnsubscribe) csvMetaUnsubscribe();
       }
     });
   } catch (e) {
@@ -478,6 +482,27 @@ function subscribeToWeekData() {
     renderAll();
   }, (error) => {
     console.warn('Error escuchando cambios en week:', error);
+  });
+}
+
+
+function subscribeToCSVMeta() {
+  if (!db) return;
+
+  if (csvMetaUnsubscribe) csvMetaUnsubscribe();
+
+  const csvMetaRef = doc(db, 'meta', 'csv_import');
+  csvMetaUnsubscribe = onSnapshot(csvMetaRef, (snap) => {
+    if (!snap.exists()) {
+      updateCSVLastUploadLegend(null);
+      return;
+    }
+    const data = snap.data();
+    const ts = data?.lastUploadAt;
+    const dateValue = ts?.toDate ? ts.toDate() : ts;
+    updateCSVLastUploadLegend(dateValue || null);
+  }, (err) => {
+    console.warn('Error escuchando meta de CSV', err);
   });
 }
 
@@ -1315,6 +1340,31 @@ function closePanel() {
 }
 
 // ─── CSV IMPORT ───────────────────────────────────────────────────────────────
+
+function formatCSVUploadTimestamp(value) {
+  const dt = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(dt.getTime())) return null;
+  return dt.toLocaleString('es-AR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+function updateCSVLastUploadLegend(isoString) {
+  const el = document.getElementById('csv-last-upload');
+  if (!el) return;
+  const formatted = formatCSVUploadTimestamp(isoString);
+  if (!formatted) {
+    el.style.display = 'none';
+    return;
+  }
+  el.textContent = `Última carga CSV: ${formatted}`;
+  el.style.display = 'block';
+}
+
 function openCSV() {
   document.getElementById('csv-overlay').classList.add('open');
 }
@@ -1463,11 +1513,47 @@ function importPatients() {
     allPatients[p.hc] = p;
   }
 
-  // Removed localStorage persistence - Firestore only
+  // Persistencia multiusuario: actualizar solo campos controlados por CSV para evitar pisar cambios concurrentes
   if (db) {
+    const csvPatientMap = new Map(pendingCSV.map(p => [String(p.hc), p]));
+
     for (const [hc, p] of Object.entries(allPatients)) {
-      updateDoc(doc(db, 'patients', hc), p).catch(() => {});
+      if (csvPatientMap.has(String(hc))) {
+        const csvPatient = csvPatientMap.get(String(hc));
+        setDoc(doc(db, 'patients', hc), {
+          hc: String(hc),
+          cama: csvPatient.cama,
+          paciente: csvPatient.paciente,
+          medico: csvPatient.medico || '—',
+          ingreso: csvPatient.ingreso || '—',
+          cobertura: csvPatient.cobertura || '—',
+          servicio: csvPatient.servicio || '—',
+          diagnostico: csvPatient.diagnostico || 'SIN DIAGNÓSTICO',
+          floor: csvPatient.floor,
+          status: PATIENT_STATUS.ACTIVE,
+          archivedAt: null,
+          archivedReason: null,
+          archivedBy: null,
+        }, { merge: true }).catch(() => {});
+      } else {
+        setDoc(doc(db, 'patients', hc), {
+          status: PATIENT_STATUS.ARCHIVED,
+          archivedAt: p.archivedAt || new Date().toISOString(),
+          archivedReason: p.archivedReason || 'csv_import',
+          archivedBy: p.archivedBy || getDisplayName(currentUser),
+        }, { merge: true }).catch(() => {});
+      }
     }
+  }
+
+  const csvImportedAt = new Date();
+  updateCSVLastUploadLegend(csvImportedAt);
+  if (db) {
+    setDoc(doc(db, 'meta', 'csv_import'), {
+      lastUploadAt: serverTimestamp(),
+      lastUploadBy: getDisplayName(currentUser),
+      lastUploadByUid: currentUser?.uid || null,
+    }, { merge: true }).catch(() => {});
   }
 
   saveAudit('csv_import', null, null, {
@@ -1652,8 +1738,8 @@ async function processWeekData(weekId, weekData) {
     
     if (!patientInfo) continue;
     
-    // Incluir activos siempre y altas solo si corresponden a la semana consultada
-    if (isDischarged && !isDischargeInWeek(patientInfo, weekId)) continue;
+    // Mostrar únicamente altas de la semana consultada
+    if (!isDischarged || !isDischargeInWeek(patientInfo, weekId)) continue;
     
     results.push({
       wid: weekId,
@@ -1758,8 +1844,8 @@ async function filterWeekData(weekId, weekData, patientQuery, drugQuery) {
     
     if (!patientInfo) continue;
     
-    // Incluir activos siempre y altas solo si corresponden a la semana consultada
-    if (isDischarged && !isDischargeInWeek(patientInfo, weekId)) continue;
+    // Mostrar únicamente altas de la semana consultada
+    if (!isDischarged || !isDischargeInWeek(patientInfo, weekId)) continue;
     
     // Filtrar por paciente
     if (patientQuery) {
@@ -2196,7 +2282,7 @@ function saveNewPatient() {
 
   // Removed localStorage persistence - Firestore only
   if (db) {
-    updateDoc(doc(db, 'patients', hc), newPatient).catch(() => { });
+    setDoc(doc(db, 'patients', hc), newPatient, { merge: true }).catch(() => { });
   }
 
   saveAudit('create', hc, null, { paciente, cama, medico });
@@ -2580,7 +2666,7 @@ function confirmMovePatient() {
   p.floor = detectFloor(newRoom, p.servicio || '');
 
   // Removed localStorage persistence - Firestore only
-  if (db) updateDoc(doc(db, 'patients', movePatientHc), p).catch(() => { });
+  if (db) setDoc(doc(db, 'patients', movePatientHc), { cama: p.cama, floor: p.floor }, { merge: true }).catch(() => { });
   saveAudit('modify', movePatientHc, null, { action: 'move', from: oldRoom, to: newRoom });
   closeMovePatientModal();
   renderTable();
@@ -2599,8 +2685,8 @@ function doSwapRooms(hc1, hc2) {
 
   // Removed localStorage persistence - Firestore only
   if (db) {
-    updateDoc(doc(db, 'patients', hc1), p1).catch(() => { });
-    updateDoc(doc(db, 'patients', hc2), p2).catch(() => { });
+    setDoc(doc(db, 'patients', hc1), { cama: p1.cama, floor: p1.floor }, { merge: true }).catch(() => { });
+    setDoc(doc(db, 'patients', hc2), { cama: p2.cama, floor: p2.floor }, { merge: true }).catch(() => { });
   }
   saveAudit('modify', hc1, null, { action: 'swap', with: hc2 });
   saveAudit('modify', hc2, null, { action: 'swap', with: hc1 });
