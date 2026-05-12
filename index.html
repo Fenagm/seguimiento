@@ -19,24 +19,6 @@
 </head>
 <body>
 
-<!-- FIREBASE CONFIG BANNER -->
-<div id="config-banner">
-  <div class="config-banner-icon">🔥</div>
-  <div class="config-banner-text">
-    <h3>Configuración de Firebase</h3>
-    <p>Ingresá las credenciales de tu proyecto Firebase para activar el almacenamiento en Firestore. Creá un proyecto en <strong>console.firebase.google.com</strong> y habilitá Firestore Database.</p>
-    <div class="config-form">
-      <input id="cfg-apiKey" placeholder="apiKey" class="full">
-      <input id="cfg-authDomain" placeholder="authDomain (proyecto.firebaseapp.com)">
-      <input id="cfg-projectId" placeholder="projectId">
-      <input id="cfg-appId" placeholder="appId" class="full">
-    </div>
-    <div style="margin-top:10px; display:flex; gap:8px;">
-      <button class="btn primary" id="btn-save-config">Guardar y conectar</button>
-    </div>
-  </div>
-</div>
-
 <!-- HEADER -->
 <div id="header">
   <div class="week-nav">
@@ -163,10 +145,13 @@
       <span class="section-title" id="floor-title">Piso —</span>
       <span class="patient-count" id="patient-count"></span>
       <div class="section-actions">
-        <button class="btn" id="btn-csv">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          Cargar CSV
-        </button>
+        <div style="display:flex;flex-direction:column;align-items:flex-start;">
+          <button class="btn" id="btn-csv">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Cargar CSV
+          </button>
+          <div id="csv-last-upload" style="font-size:11px;color:var(--text3);margin-top:6px;display:none;">Última carga CSV: —</div>
+        </div>
         <button class="btn primary" id="btn-add-patient">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
           Nuevo Paciente
