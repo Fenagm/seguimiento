@@ -393,25 +393,6 @@ const ENV_CONFIG = {
 };
 const HAS_ENV_CONFIG = !!(ENV_CONFIG.apiKey && ENV_CONFIG.projectId);
 
-async function saveConfig() {
-  // Si hay env vars, no hace falta el formulario manual
-  if (HAS_ENV_CONFIG) {
-    await initFirebase(ENV_CONFIG);
-    return;
-  }
-  const cfg = {
-    apiKey:     document.getElementById('cfg-apiKey').value.trim(),
-    authDomain: document.getElementById('cfg-authDomain').value.trim(),
-    projectId:  document.getElementById('cfg-projectId').value.trim(),
-    appId:      document.getElementById('cfg-appId').value.trim(),
-  };
-  if (!cfg.apiKey || !cfg.projectId) {
-    showToast('Completá al menos apiKey y projectId');
-    return;
-  }
-  await initFirebase(cfg);
-}
-
 // Variables globales para listeners en tiempo real
 let weekUnsubscribe = null;
 let patientsUnsubscribe = null;
@@ -2415,7 +2396,7 @@ function renderPatientDaysList() {
       const d = entry[c.id];
       if (d) {
         if (d.tags?.length) summaries.push(`${c.label}: ${d.tags.join(', ')}`);
-        else if (d.text) summaries.push(`${c.label}: ${d.text.substring(0, 30)}...`);
+        else if (d.text) summaries.push(`${c.label}: ${d.text}`);
       }
     });
     if (entry._lastModifiedBy) {
@@ -2849,18 +2830,8 @@ async function init() {
     return;
   }
 
-  // 2. Fallback: manually saved config in localStorage
-  const saved = localStorage.getItem('sc_fb_config');
-  if (saved) {
-    try {
-      const cfg = JSON.parse(saved);
-      await initFirebase(cfg);
-      return;
-    } catch (e) { /* invalid config, fall through */ }
-  }
-
-  // 3. No Firebase config → show config banner
-  document.getElementById('config-banner').classList.remove('hidden');
+  // 2. Sin variables de entorno no se puede iniciar Firebase en esta versión
+  showToast('Falta configuración de Firebase en variables de entorno (.env).');
 }
 
 // ─── PRINT ────────────────────────────────────────────────────────────────────
@@ -3018,8 +2989,6 @@ document.getElementById('btn-back-main').addEventListener('click', () => toggleV
 document.getElementById('btn-save-week').addEventListener('click', () => saveWeek());
 document.getElementById('btn-add-patient').addEventListener('click', () => openAddPatientModal());
 
-// Config banner (shown when no env vars are set)
-document.getElementById('btn-save-config').addEventListener('click', () => saveConfig());
 document.getElementById('btn-login').addEventListener('click', () => doLogin());
 document.getElementById('login-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 document.getElementById('login-email').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('login-pass').focus(); });
