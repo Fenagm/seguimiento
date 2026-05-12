@@ -1551,6 +1551,15 @@ function importPatients() {
   const csvImportedAt = new Date().toISOString();
   localStorage.setItem('csvLastUploadAt', csvImportedAt);
   updateCSVLastUploadLegend(csvImportedAt);
+  if (db) {
+    setDoc(doc(db, 'meta', 'csv_import'), {
+      lastUploadAt: serverTimestamp(),
+      lastUploadBy: getDisplayName(currentUser),
+      lastUploadByUid: currentUser?.uid || 'anonymous',
+      importedCount: pendingCSV.length,
+      archivedCount: archivedPatients.length,
+    }, { merge: true }).catch(() => {});
+  }
 
   saveAudit('csv_import', null, null, {
     imported: pendingCSV.length,
