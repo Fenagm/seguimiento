@@ -411,11 +411,15 @@ async function initFirebase(cfg) {
 
     // onAuthStateChanged is the single source of truth for auth state
     onAuthStateChanged(auth, async (user) => {
-      currentUser = user;
+      try {
+        currentUser = user;
 
-      if (user) {
-        // Load profile name from Firestore only
-        await loadUserProfile(user.uid);
+        if (user) {
+          // Load profile name from Firestore only
+          await loadUserProfile(user.uid);
+
+          updateUserUI(user);
+          hideLoginScreen();
 
         updateUserUI(user);
         hideLoginScreen();
@@ -429,9 +433,26 @@ async function initFirebase(cfg) {
         renderAll();
         showToast(`Bienvenido, ${getDisplayName(user)} ✓`);
 
-        // First login with no name set → prompt to set one
-        if (!getDisplayName(user).includes('@') === false && !userProfileName && !user.displayName) {
-          setTimeout(() => openProfileModal(), 800);
+          saveAudit('login', null, null, 'Sesión iniciada');
+          renderAll();
+          showToast(`Bienvenido, ${getDisplayName(user)} ✓`);
+
+          // First login with no name set → prompt to set one
+          if (!getDisplayName(user).includes('@') === false && !userProfileName && !user.displayName) {
+            setTimeout(() => openProfileModal(), 800);
+          }
+        } else {
+          userProfileName = null;
+          updateUserUI(null);
+          showLoginScreen();
+          setLoginLoading(false);
+          // Limpiar suscripciones al cerrar sesión
+          if (weekUnsubscribe) { weekUnsubscribe(); weekUnsubscribe = null; }
+          if (patientsUnsubscribe) { patientsUnsubscribe(); patientsUnsubscribe = null; }
+          if (csvMetaUnsubscribe) { csvMetaUnsubscribe(); csvMetaUnsubscribe = null; }
+          allPatients = {};
+          weekData = {};
+          renderAll();
         }
       } else {
         userProfileName = null;
