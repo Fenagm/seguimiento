@@ -1343,8 +1343,8 @@ function closePanel() {
 
 // ─── CSV IMPORT ───────────────────────────────────────────────────────────────
 
-function formatCSVUploadTimestamp(value) {
-  const dt = value instanceof Date ? value : new Date(value);
+function formatCSVUploadTimestamp(isoString) {
+  const dt = new Date(isoString);
   if (Number.isNaN(dt.getTime())) return null;
   return dt.toLocaleString('es-AR', {
     day: '2-digit',
@@ -1367,6 +1367,11 @@ function updateCSVLastUploadLegend(isoString) {
   el.style.display = 'block';
 }
 
+function loadCSVLastUploadLegend() {
+  const lastUploadAt = localStorage.getItem('csvLastUploadAt');
+  if (!lastUploadAt) return;
+  updateCSVLastUploadLegend(lastUploadAt);
+}
 function openCSV() {
   document.getElementById('csv-overlay').classList.add('open');
 }
@@ -1548,15 +1553,9 @@ function importPatients() {
     }
   }
 
-  const csvImportedAt = new Date();
+  const csvImportedAt = new Date().toISOString();
+  localStorage.setItem('csvLastUploadAt', csvImportedAt);
   updateCSVLastUploadLegend(csvImportedAt);
-  if (db) {
-    setDoc(doc(db, 'meta', 'csv_import'), {
-      lastUploadAt: serverTimestamp(),
-      lastUploadBy: getDisplayName(currentUser),
-      lastUploadByUid: currentUser?.uid || null,
-    }, { merge: true }).catch(() => {});
-  }
 
   saveAudit('csv_import', null, null, {
     imported: pendingCSV.length,
@@ -3013,6 +3012,7 @@ function closePrintModal() {
 document.getElementById('prev-week').addEventListener('click', () => changeWeek(-1));
 document.getElementById('next-week').addEventListener('click', () => changeWeek(1));
 document.getElementById('btn-csv').addEventListener('click', () => openCSV());
+loadCSVLastUploadLegend();
 document.getElementById('btn-history').addEventListener('click', () => toggleView('history'));
 document.getElementById('btn-back-main').addEventListener('click', () => toggleView('main'));
 document.getElementById('btn-save-week').addEventListener('click', () => saveWeek());
