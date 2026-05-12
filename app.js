@@ -421,17 +421,10 @@ async function initFirebase(cfg) {
           updateUserUI(user);
           hideLoginScreen();
 
-        updateUserUI(user);
-        hideLoginScreen();
-
-        // Suscripciones en tiempo real: se inician al autenticar para evitar listeners sin permisos
-        subscribeToWeekData();
-        subscribeToPatientsData();
-        subscribeToCSVMeta();
-
-        saveAudit('login', null, null, 'Sesión iniciada');
-        renderAll();
-        showToast(`Bienvenido, ${getDisplayName(user)} ✓`);
+          // Suscripciones en tiempo real: se inician al autenticar para evitar listeners sin permisos
+          subscribeToWeekData();
+          subscribeToPatientsData();
+          subscribeToCSVMeta();
 
           saveAudit('login', null, null, 'Sesión iniciada');
           renderAll();
@@ -454,18 +447,10 @@ async function initFirebase(cfg) {
           weekData = {};
           renderAll();
         }
-      } else {
-        userProfileName = null;
-        updateUserUI(null);
-        showLoginScreen();
+      } catch (err) {
+        console.error('Error en onAuthStateChanged:', err);
+        showToast('Error manejando sesión: ' + err.message);
         setLoginLoading(false);
-        // Limpiar suscripciones al cerrar sesión
-        if (weekUnsubscribe) { weekUnsubscribe(); weekUnsubscribe = null; }
-        if (patientsUnsubscribe) { patientsUnsubscribe(); patientsUnsubscribe = null; }
-        if (csvMetaUnsubscribe) { csvMetaUnsubscribe(); csvMetaUnsubscribe = null; }
-        allPatients = {};
-        weekData = {};
-        renderAll();
       }
     });
   } catch (e) {
