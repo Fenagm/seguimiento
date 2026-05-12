@@ -1315,6 +1315,36 @@ function closePanel() {
 }
 
 // ─── CSV IMPORT ───────────────────────────────────────────────────────────────
+
+function formatCSVUploadTimestamp(isoString) {
+  const dt = new Date(isoString);
+  if (Number.isNaN(dt.getTime())) return null;
+  return dt.toLocaleString('es-AR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+function updateCSVLastUploadLegend(isoString) {
+  const el = document.getElementById('csv-last-upload');
+  if (!el) return;
+  const formatted = formatCSVUploadTimestamp(isoString);
+  if (!formatted) {
+    el.style.display = 'none';
+    return;
+  }
+  el.textContent = `Última carga CSV: ${formatted}`;
+  el.style.display = 'block';
+}
+
+function loadCSVLastUploadLegend() {
+  const lastUploadAt = localStorage.getItem('csvLastUploadAt');
+  if (!lastUploadAt) return;
+  updateCSVLastUploadLegend(lastUploadAt);
+}
 function openCSV() {
   document.getElementById('csv-overlay').classList.add('open');
 }
@@ -1469,6 +1499,10 @@ function importPatients() {
       updateDoc(doc(db, 'patients', hc), p).catch(() => {});
     }
   }
+
+  const csvImportedAt = new Date().toISOString();
+  localStorage.setItem('csvLastUploadAt', csvImportedAt);
+  updateCSVLastUploadLegend(csvImportedAt);
 
   saveAudit('csv_import', null, null, {
     imported: pendingCSV.length,
@@ -1652,8 +1686,8 @@ async function processWeekData(weekId, weekData) {
     
     if (!patientInfo) continue;
     
-    // Incluir activos siempre y altas solo si corresponden a la semana consultada
-    if (isDischarged && !isDischargeInWeek(patientInfo, weekId)) continue;
+    // Mostrar únicamente altas de la semana consultada
+    if (!isDischarged || !isDischargeInWeek(patientInfo, weekId)) continue;
     
     results.push({
       wid: weekId,
@@ -1758,8 +1792,8 @@ async function filterWeekData(weekId, weekData, patientQuery, drugQuery) {
     
     if (!patientInfo) continue;
     
-    // Incluir activos siempre y altas solo si corresponden a la semana consultada
-    if (isDischarged && !isDischargeInWeek(patientInfo, weekId)) continue;
+    // Mostrar únicamente altas de la semana consultada
+    if (!isDischarged || !isDischargeInWeek(patientInfo, weekId)) continue;
     
     // Filtrar por paciente
     if (patientQuery) {
@@ -2925,6 +2959,7 @@ function closePrintModal() {
 document.getElementById('prev-week').addEventListener('click', () => changeWeek(-1));
 document.getElementById('next-week').addEventListener('click', () => changeWeek(1));
 document.getElementById('btn-csv').addEventListener('click', () => openCSV());
+loadCSVLastUploadLegend();
 document.getElementById('btn-history').addEventListener('click', () => toggleView('history'));
 document.getElementById('btn-back-main').addEventListener('click', () => toggleView('main'));
 document.getElementById('btn-save-week').addEventListener('click', () => saveWeek());
