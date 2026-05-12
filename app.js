@@ -407,7 +407,7 @@ async function initFirebase(cfg) {
     const app = initializeApp(cfg);
     db   = getFirestore(app);
     auth = getAuth(app);
-    document.getElementById('config-banner').classList.add('hidden');
+    document.getElementById('config-banner')?.classList.add('hidden');
 
     // onAuthStateChanged is the single source of truth for auth state
     onAuthStateChanged(auth, async (user) => {
@@ -429,9 +429,11 @@ async function initFirebase(cfg) {
           saveAudit('login', null, null, 'Sesión iniciada');
           renderAll();
           showToast(`Bienvenido, ${getDisplayName(user)} ✓`);
+          setLoginLoading(false);
 
           // First login with no name set → prompt to set one
-          if (!getDisplayName(user).includes('@') === false && !userProfileName && !user.displayName) {
+          const loginUsesEmailFallback = getDisplayName(user).includes('@');
+          if (loginUsesEmailFallback && !userProfileName && !user.displayName) {
             setTimeout(() => openProfileModal(), 800);
           }
         } else {
@@ -454,7 +456,9 @@ async function initFirebase(cfg) {
       }
     });
   } catch (e) {
+    document.getElementById('config-banner')?.classList.remove('hidden');
     showToast('Error inicializando Firebase: ' + e.message);
+    setLoginLoading(false);
   }
 }
 
