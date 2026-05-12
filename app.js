@@ -424,13 +424,6 @@ async function initFirebase(cfg) {
     auth = getAuth(app);
     document.getElementById('config-banner').classList.add('hidden');
 
-    // Suscribirse a cambios en tiempo real de la semana actual
-    subscribeToWeekData();
-    
-    // Suscribirse a cambios en tiempo real de pacientes
-    subscribeToPatientsData();
-    subscribeToCSVMeta();
-
     // onAuthStateChanged is the single source of truth for auth state
     onAuthStateChanged(auth, async (user) => {
       currentUser = user;
@@ -441,6 +434,12 @@ async function initFirebase(cfg) {
 
         updateUserUI(user);
         hideLoginScreen();
+
+        // Suscripciones en tiempo real: se inician al autenticar para evitar listeners sin permisos
+        subscribeToWeekData();
+        subscribeToPatientsData();
+        subscribeToCSVMeta();
+
         saveAudit('login', null, null, 'Sesión iniciada');
         renderAll();
         showToast(`Bienvenido, ${getDisplayName(user)} ✓`);
@@ -455,9 +454,12 @@ async function initFirebase(cfg) {
         showLoginScreen();
         setLoginLoading(false);
         // Limpiar suscripciones al cerrar sesión
-        if (weekUnsubscribe) weekUnsubscribe();
-        if (patientsUnsubscribe) patientsUnsubscribe();
-        if (csvMetaUnsubscribe) csvMetaUnsubscribe();
+        if (weekUnsubscribe) { weekUnsubscribe(); weekUnsubscribe = null; }
+        if (patientsUnsubscribe) { patientsUnsubscribe(); patientsUnsubscribe = null; }
+        if (csvMetaUnsubscribe) { csvMetaUnsubscribe(); csvMetaUnsubscribe = null; }
+        allPatients = {};
+        weekData = {};
+        renderAll();
       }
     });
   } catch (e) {
