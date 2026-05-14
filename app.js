@@ -1628,7 +1628,7 @@ function handleFileInput(input) {
 }
 
 // ─── HISTORY VIEW (CONSULTA FIRESTORE) ────────────────────────────────────────
-let historyMode = 'lastweek';      // 'lastweek' o 'search'
+let historyMode = 'lastweek';      // 'lastweek', 'discharges' o 'search'
 let historyCurrentPage = 0;
 let historyTotalResults = 0;
 let historyLastDoc = null;          // Para paginación de Firestore
@@ -1642,6 +1642,8 @@ function toggleView(view) {
   if (view === 'history') {
     if (historyMode === 'lastweek') {
       loadLastWeekFromFirestore();
+    } else if (historyMode === 'discharges') {
+      loadWeeklyDischargesFromFirestore();
     } else {
       document.getElementById('history-results').innerHTML = '<div class="no-data" style="text-align:center; padding:40px;"><p>🔍 Completá los filtros y presioná "Buscar" para consultar Firestore.</p></div>';
       document.getElementById('history-pagination').style.display = 'none';
@@ -1972,6 +1974,85 @@ function updatePaginationControls(hasMore) {
   pageInfo.textContent = `Página ${historyCurrentPage + 1}`;
 }
 
+
+function renderWeeklyDischarges(results, title = null) {
+  const el = document.getElementById('history-results');
+
+  if (!results.length) {
+    el.innerHTML = '<div class="no-data"><p>📭 No se registraron altas en la semana consultada.</p></div>';
+    return;
+  }
+
+  const byFloor = {};
+  results.forEach(r => {
+    const floor = (r.patient.floor || detectFloor(r.cama || '', r.patient.agrupacion || '') || 'sin-piso').toLowerCase();
+    if (!byFloor[floor]) byFloor[floor] = [];
+    byFloor[floor].push(r);
+  });
+
+  const orderedFloors = Object.keys(byFloor).sort((a, b) => (FLOOR_LABELS[a] || a).localeCompare(FLOOR_LABELS[b] || b));
+  const titleHtml = title ? `<div style="margin-bottom:16px; font-size:13px; color:var(--text3); padding:8px 12px; background:var(--surface2); border-radius:8px;">${title}</div>` : '';
+
+  const cardsHtml = orderedFloors.map(floor => {
+    const floorPatients = byFloor[floor].sort((a, b) => String(a.cama).localeCompare(String(b.cama)));
+    return `
+      <div class="hist-card" style="margin-bottom:14px; border:1px solid var(--border); border-radius:10px; overflow:hidden;">
+        <div class="hist-card-header" style="display:flex; align-items:center; gap:8px; padding:10px 12px; background:var(--surface2);">
+          <strong style="flex:1; font-size:13px;">${FLOOR_LABELS[floor] || 'Sin piso'}</strong>
+          <span style="font-size:11px; color:var(--text3);">${floorPatients.length} alta(s)</span>
+        </div>
+        <div style="padding:10px 12px; display:flex; flex-direction:column; gap:8px;">
+          ${floorPatients.map(r => `
+            <div style="display:grid; grid-template-columns:auto 1fr auto; gap:8px; align-items:center; border:1px solid var(--border); border-radius:8px; padding:8px;">
+              <span class="cell-room" style="background:var(--surface2); padding:2px 10px; border-radius:15px; font-family:var(--mono); font-size:12px; font-weight:600;">${r.cama}</span>
+              <div>
+                <div style="font-weight:700; font-size:13px;">${r.patient.paciente}</div>
+                <div style="font-size:11px; color:var(--text3);">HC ${r.hc} · Semana ${r.wid}</div>
+              </div>
+              <span style="background:#ef5e5e20; color:#ef5e5e; font-size:10px; padding:2px 8px; border-radius:12px;">🚪 ALTA</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  el.innerHTML = titleHtml + cardsHtml;
+}
+
+async function loadWeeklyDischargesFromFirestore() {
+  const loading = document.getElementById('history-loading');
+  const resultsDiv = document.getElementById('history-results');
+
+  if (!db) {
+    showToast('Firestore no está configurado. Conectá Firebase primero.');
+    return;
+  }
+
+  loading.style.display = 'block';
+  resultsDiv.innerHTML = '';
+
+  try {
+    const weeksSnapshot = await getDocs(collection(db, 'weeks'));
+    const weeks = [];
+    weeksSnapshot.forEach(doc => weeks.push({ id: doc.id, data: doc.data() }));
+    weeks.sort((a, b) => b.id.localeCompare(a.id));
+
+    const lastClosedWeek = weeks.find(w => w.id !== currentWeek);
+    if (!lastClosedWeek) {
+      loading.style.display = 'none';
+      resultsDiv.innerHTML = '<div class="no-data"><p>📭 No hay una semana previa con datos.</p></div>';
+      return;
+    }
+
+    const results = await processWeekData(lastClosedWeek.id, lastClosedWeek.data);
+    loading.style.display = 'none';
+    renderWeeklyDischarges(results, `🚪 Altas de la semana ${lastClosedWeek.id} · ${getWeekDates(lastClosedWeek.id)}`);
+  } catch (error) {
+    loading.style.display = 'none';
+    resultsDiv.innerHTML = `<div class="no-data"><p>❌ Error al cargar altas: ${error.message}</p></div>`;
+  }
+}
 function renderHistoryResults(results, title = null) {
   const el = document.getElementById('history-results');
   
@@ -3114,15 +3195,27 @@ document.getElementById('hist-view-lastweek').addEventListener('click', () => {
   historyMode = 'lastweek';
   document.getElementById('hist-view-lastweek').classList.add('active');
   document.getElementById('hist-view-search').classList.remove('active');
+  document.getElementById('hist-view-discharges').classList.remove('active');
   document.getElementById('hist-search-panel').style.display = 'none';
   document.getElementById('history-pagination').style.display = 'none';
   loadLastWeekFromFirestore();
+});
+
+document.getElementById('hist-view-discharges').addEventListener('click', () => {
+  historyMode = 'discharges';
+  document.getElementById('hist-view-discharges').classList.add('active');
+  document.getElementById('hist-view-lastweek').classList.remove('active');
+  document.getElementById('hist-view-search').classList.remove('active');
+  document.getElementById('hist-search-panel').style.display = 'none';
+  document.getElementById('history-pagination').style.display = 'none';
+  loadWeeklyDischargesFromFirestore();
 });
 
 document.getElementById('hist-view-search').addEventListener('click', () => {
   historyMode = 'search';
   document.getElementById('hist-view-search').classList.add('active');
   document.getElementById('hist-view-lastweek').classList.remove('active');
+  document.getElementById('hist-view-discharges').classList.remove('active');
   document.getElementById('hist-search-panel').style.display = 'block';
   document.getElementById('history-pagination').style.display = 'none';
   document.getElementById('history-results').innerHTML = '<div class="no-data" style="text-align:center; padding:40px;"><p>🔍 Completá los filtros y presioná "Buscar" para consultar Firestore.</p></div>';
