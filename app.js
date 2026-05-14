@@ -1998,26 +1998,11 @@ function renderWeeklyDischarges(results, title = null) {
     return;
   }
 
-  const groupedByPatient = {};
-  results.forEach(r => {
-    const key = `${r.wid}_${r.hc}`;
-    if (!groupedByPatient[key]) {
-      groupedByPatient[key] = {
-        wid: r.wid,
-        hc: r.hc,
-        cama: r.cama,
-        patient: r.patient,
-        days: {}
-      };
-    }
-    groupedByPatient[key].days[r.day] = r.dayData;
-  });
-
   const byFloor = {};
-  Object.values(groupedByPatient).forEach(g => {
-    const floor = (g.patient.floor || detectFloor(g.cama || '', g.patient.agrupacion || '') || 'sin-piso').toLowerCase();
+  results.forEach(r => {
+    const floor = (r.patient.floor || detectFloor(r.cama || '', r.patient.agrupacion || '') || 'sin-piso').toLowerCase();
     if (!byFloor[floor]) byFloor[floor] = [];
-    byFloor[floor].push(g);
+    byFloor[floor].push(r);
   });
 
   const orderedFloors = Object.keys(byFloor).sort((a, b) => (FLOOR_LABELS[a] || a).localeCompare(FLOOR_LABELS[b] || b));
@@ -2032,31 +2017,16 @@ function renderWeeklyDischarges(results, title = null) {
           <span style="font-size:11px; color:var(--text3);">${floorPatients.length} alta(s)</span>
         </div>
         <div style="padding:10px 12px; display:flex; flex-direction:column; gap:8px;">
-          ${floorPatients.map(g => {
-            const lastDay = [...DAYS].reverse().find(day => g.days[day]) || null;
-            const lastDayData = lastDay ? g.days[lastDay] : null;
-            const meds = buildMedLine(lastDayData || {});
-            const medsHtml = meds.length
-              ? meds.map(line => `<div style="font-size:11px; line-height:1.35; color:var(--text2);">• ${line}</div>`).join('')
-              : '<div style="font-size:11px; color:var(--text3);">Sin medicación cargada previa al alta.</div>';
-
-            return `
-              <div style="border:1px solid var(--border); border-radius:8px; overflow:hidden;">
-                <div style="display:grid; grid-template-columns:auto 1fr auto; gap:8px; align-items:center; padding:8px; background:var(--surface);">
-                  <span class="cell-room" style="background:var(--surface2); padding:2px 10px; border-radius:15px; font-family:var(--mono); font-size:12px; font-weight:600;">${g.cama}</span>
-                  <div>
-                    <div style="font-weight:700; font-size:13px;">${g.patient.paciente}</div>
-                    <div style="font-size:11px; color:var(--text3);">HC ${g.hc} · Semana ${g.wid} ${lastDay ? `· Último día: ${DAY_LABELS[lastDay]}` : ''}</div>
-                  </div>
-                  <span style="background:#ef5e5e20; color:#ef5e5e; font-size:10px; padding:2px 8px; border-radius:12px;">🚪 ALTA</span>
-                </div>
-                <div style="padding:8px 10px; border-top:1px dashed var(--border); background:var(--surface2);">
-                  <div style="font-size:10px; color:var(--text3); margin-bottom:4px; text-transform:uppercase; letter-spacing:.04em;">Medicación previa al alta</div>
-                  ${medsHtml}
-                </div>
+          ${floorPatients.map(r => `
+            <div style="display:grid; grid-template-columns:auto 1fr auto; gap:8px; align-items:center; border:1px solid var(--border); border-radius:8px; padding:8px;">
+              <span class="cell-room" style="background:var(--surface2); padding:2px 10px; border-radius:15px; font-family:var(--mono); font-size:12px; font-weight:600;">${r.cama}</span>
+              <div>
+                <div style="font-weight:700; font-size:13px;">${r.patient.paciente}</div>
+                <div style="font-size:11px; color:var(--text3);">HC ${r.hc} · Semana ${r.wid}</div>
               </div>
-            `;
-          }).join('')}
+              <span style="background:#ef5e5e20; color:#ef5e5e; font-size:10px; padding:2px 8px; border-radius:12px;">🚪 ALTA</span>
+            </div>
+          `).join('')}
         </div>
       </div>
     `;
