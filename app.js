@@ -1705,9 +1705,31 @@ async function loadLastWeekFromFirestore() {
   }
 }
 
+
+async function getDischargesByHc() {
+  const dischargesByHc = new Map();
+  const dischargesSnapshot = await getDocs(collection(db, 'discharges'));
+
+  dischargesSnapshot.forEach(dischargeDoc => {
+    const discharge = dischargeDoc.data();
+    if (!discharge?.hc) return;
+
+    const hcKey = String(discharge.hc);
+    const existing = dischargesByHc.get(hcKey);
+
+    // Conservar el registro más reciente cuando hay duplicados por HC
+    if (!existing || Number(discharge.timestamp || 0) > Number(existing.timestamp || 0)) {
+      dischargesByHc.set(hcKey, discharge);
+    }
+  });
+
+  return dischargesByHc;
+}
+
 // Procesar los datos de una semana
 async function processWeekData(weekId, weekData) {
   const results = [];
+  const dischargesByHc = await getDischargesByHc();
   
   for (const [key, dayData] of Object.entries(weekData)) {
     const parts = key.split('_');
@@ -1728,14 +1750,10 @@ async function processWeekData(weekId, weekData) {
         isDischarged = patientInfo.status === 'archived';
       } else {
         // Buscar en discharges
-        const dischargesSnapshot = await getDocs(collection(db, 'discharges'));
-        for (const dischargeDoc of dischargesSnapshot.docs) {
-          const discharge = dischargeDoc.data();
-          if (String(discharge.hc) === String(hc)) {
-            patientInfo = discharge;
-            isDischarged = true;
-            break;
-          }
+        const discharge = dischargesByHc.get(String(hc));
+        if (discharge) {
+          patientInfo = discharge;
+          isDischarged = true;
         }
       }
     } catch (e) {
@@ -1817,6 +1835,7 @@ async function executeFirestoreSearch() {
 // Filtrar datos de una semana específica
 async function filterWeekData(weekId, weekData, patientQuery, drugQuery) {
   const results = [];
+  const dischargesByHc = await getDischargesByHc();
   
   for (const [key, dayData] of Object.entries(weekData)) {
     const parts = key.split('_');
@@ -1835,14 +1854,10 @@ async function filterWeekData(weekId, weekData, patientQuery, drugQuery) {
         patientInfo.hc = hc;
         isDischarged = patientInfo.status === 'archived';
       } else {
-        const dischargesSnapshot = await getDocs(collection(db, 'discharges'));
-        for (const dischargeDoc of dischargesSnapshot.docs) {
-          const discharge = dischargeDoc.data();
-          if (String(discharge.hc) === String(hc)) {
-            patientInfo = discharge;
-            isDischarged = true;
-            break;
-          }
+        const discharge = dischargesByHc.get(String(hc));
+        if (discharge) {
+          patientInfo = discharge;
+          isDischarged = true;
         }
       }
     } catch (e) {
