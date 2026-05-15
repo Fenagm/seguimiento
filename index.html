@@ -625,7 +625,24 @@ const firebaseConfig = {
 };
 </script>
   
-<script src="./app.js"></script>
+<script>
+(function loadAppScript() {
+  const pathParts = window.location.pathname.split('/').filter(Boolean);
+  const repoBase = pathParts.length ? `/${pathParts[0]}` : '';
+  const appScript = document.createElement('script');
+  appScript.src = `${repoBase}/app.js?v=20260515`;
+  appScript.defer = true;
+  appScript.onerror = () => {
+    console.error('[APP] No se pudo cargar app.js desde', appScript.src);
+    const err = document.getElementById('lerr');
+    if (err) {
+      err.textContent = 'Error al cargar la aplicación. Recargá la página.';
+      err.style.display = 'block';
+    }
+  };
+  document.head.appendChild(appScript);
+})();
+</script>
 <script>
 // Registrar Service Worker + flujo de instalación PWA
 if ('serviceWorker' in navigator) {
