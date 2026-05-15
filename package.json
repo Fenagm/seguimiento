@@ -4,7 +4,6 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "prebuild": "cp app.js public/app.js",
     "build": "vite build",
     "preview": "vite preview"
   },
