@@ -3,6 +3,13 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
   base: '/seguimiento/',   // GitHub Pages: nombre exacto del repo
+  define: {
+    // Expose Firebase env variables globally for runtime access
+    'import.meta.env.VITE_FB_API_KEY': JSON.stringify(process.env.VITE_FB_API_KEY || ''),
+    'import.meta.env.VITE_FB_AUTH_DOMAIN': JSON.stringify(process.env.VITE_FB_AUTH_DOMAIN || ''),
+    'import.meta.env.VITE_FB_PROJECT_ID': JSON.stringify(process.env.VITE_FB_PROJECT_ID || ''),
+    'import.meta.env.VITE_FB_APP_ID': JSON.stringify(process.env.VITE_FB_APP_ID || ''),
+  },
   plugins: [
     VitePWA({
       registerType: 'autoUpdate',
