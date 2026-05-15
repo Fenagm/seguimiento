@@ -359,16 +359,20 @@ function getWeekDateRange(weekId) {
 }
 
 function isDischargeInWeek(patientInfo, weekId) {
-  if (!patientInfo || patientInfo.archivedReason !== 'discharge') return false;
-
+  if (!patientInfo) return false;
+  
+  // Considerar como alta tanto discharge explícito como csv_import
+  const isDischargeType = patientInfo.archivedReason === 'discharge' || patientInfo.archivedReason === 'csv_import';
+  if (!isDischargeType) return false;
+  
   if (patientInfo.dischargeWeek) {
     return patientInfo.dischargeWeek === weekId;
   }
-
-  if (!patientInfo.dischargeAt) return false;
-  const dischargeDate = new Date(patientInfo.dischargeAt);
+  
+  if (!patientInfo.dischargeAt && !patientInfo.archivedAt) return false;
+  const dischargeDate = new Date(patientInfo.dischargeAt || patientInfo.archivedAt);
   if (Number.isNaN(dischargeDate.getTime())) return false;
-
+  
   const { startOfWeek, endOfWeek } = getWeekDateRange(weekId);
   return dischargeDate >= startOfWeek && dischargeDate <= endOfWeek;
 }
