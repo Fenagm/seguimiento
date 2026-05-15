@@ -299,14 +299,9 @@ async function doLogin() {
     try {
         const cred = await getAuth().signInWithEmailAndPassword(email, password);
         currentUser = cred.user;
-        await Promise.all([loadDataFromFirestore(), loadEstabilidades()]);
-        document.getElementById('login').style.display = 'none';
-        document.getElementById('app').style.display = 'flex';
         if (email === 'farmaceuticasiaf@gmail.com') {
             document.getElementById('adminBtn').style.display = '';
         }
-        initApp();
-        renderEstabTable(); // Renderizar tabla para mostrar/ocultar botón Agregar
     } catch (err) {
         const e = errBox;
         const msg = err && err.message ? err.message : 'No se pudo iniciar sesión';
@@ -970,15 +965,22 @@ getAuth().onAuthStateChanged(async (user) => {
     if (user) {
         currentUser = user;
         loginScreen.style.display = 'none';
-        try {
-            await Promise.all([loadDataFromFirestore(), loadEstabilidades()]);
-            appScreen.style.display = 'flex';
-            if (user.email === 'farmaceuticasiaf@gmail.com') document.getElementById('adminBtn').style.display = '';
-            initApp();
-        } catch (error) {
-            console.error(error);
-            alert("Hubo un error al cargar la base de datos.");
+
+        const loadResults = await Promise.allSettled([loadDataFromFirestore(), loadEstabilidades()]);
+        const hasDataError = loadResults.some(r => r.status === 'rejected');
+
+        if (hasDataError) {
+            console.error('[DATA] Error al cargar datos iniciales:', loadResults);
+            const errBox = document.getElementById('lerr');
+            if (errBox) {
+                errBox.textContent = 'Sesión iniciada, pero hubo un error al cargar algunos datos. Recargá la página.';
+                errBox.style.display = 'block';
+            }
         }
+
+        appScreen.style.display = 'flex';
+        if (user.email === 'farmaceuticasiaf@gmail.com') document.getElementById('adminBtn').style.display = '';
+        initApp();
     } else {
         appScreen.style.display = 'none';
         loginScreen.style.display = 'flex';
