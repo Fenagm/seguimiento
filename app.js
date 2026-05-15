@@ -340,6 +340,16 @@ Revisión:
 document.getElementById('pwd').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 document.getElementById('usr').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('pwd').focus(); });
 
+if (!isFirebaseConfigComplete(resolvedFirebaseConfig)) {
+    const err = document.getElementById('lerr');
+    const btn = document.querySelector('.lbtn');
+    if (err) {
+        err.textContent = 'Configuración de Firebase incompleta. Definí window.FIREBASE_CONFIG o localStorage.firebaseConfig.';
+        err.style.display = 'block';
+    }
+    if (btn) btn.disabled = true;
+}
+
 // ── PAGE SWITCHING ─────────────────────────────────────────────────────
 function switchPage(pageId, btn, isMobile = false) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('on'));
