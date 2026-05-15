@@ -2,476 +2,789 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-<title>Seguimiento Clínico Semanal</title>
-<meta name="description" content="Sistema de seguimiento semanal de pacientes internados">
-<meta name="theme-color" content="#0e1621">
-<meta name="mobile-web-app-capable" content="yes">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, shrink-to-fit=no">
+<meta name="theme-color" content="#ba0070">
+<meta name="description" content="Sistema de consulta de antibióticos y estabilidades para farmacia clínica">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Seg. Clínico">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<link rel="icon" type="image/svg+xml" href="icons/icon.svg">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.json">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23ba0070'/><text x='50' y='70' font-size='60' text-anchor='middle' fill='white'>💊</text></svg>">
+<title>Farmacia Clínica | Antibióticos y Estabilidades</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;0,9..144,700;1,9..144,300&family=DM+Mono:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --white:#ffffff; --paper:#fafafa; --paper2:#f5f5f5; --paper3:#e8e8e8;
+  --ink:#1a1a1a; --ink2:#333333; --ink3:#4d4d4d;
+  --g1:#f0f0f0; --g2:#d0d0d0; --g3:#999999; --g4:#666666;
+  --rose:#ba0070; --rose-l:#d9008a; --rose-pale:#fff0f8; --rose-pale2:#ffe0f0;
+  --amber:#f0a830; --sage:#38c47a; --copper:#d4784a;
+  --sidebar:280px; --header:60px; --bottom-nav:58px;
+  --r:12px;
+  --shadow:0 1px 3px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.08);
+  --shadow-lg:0 8px 32px rgba(0,0,0,.14);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--paper);color:var(--ink);min-height:100vh;margin:0;}
+
+/* LOGIN */
+#login{position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;width:100%;
+  background:radial-gradient(ellipse 120% 80% at 50% 0%, #fff8fc 0%, #ffe7f4 100%);}
+.login-bg{position:absolute;inset:0;overflow:hidden;}
+.login-bg::before{content:'';position:absolute;width:600px;height:600px;border-radius:50%;
+  background:radial-gradient(circle, rgba(186,0,112,.12) 0%, transparent 70%);top:-100px;left:50%;transform:translateX(-50%);}
+.login-bg::after{content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(255,255,255,.015) 39px,rgba(255,255,255,.015) 40px),
+  repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(255,255,255,.015) 39px,rgba(255,255,255,.015) 40px);}
+.lcard{position:relative;background:var(--white);border-radius:20px;padding:48px 44px;width:380px;
+  box-shadow:0 40px 80px rgba(0,0,0,.45),0 0 0 1px rgba(255,255,255,.06);}
+.lcard-eyebrow{font-size:10px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--rose);margin-bottom:8px;}
+.lcard h1{font-family:'Fraunces',serif;font-size:26px;font-weight:700;color:var(--ink);line-height:1.15;margin-bottom:6px;}
+.lcard h1 em{font-style:italic;font-weight:300;color:var(--g3);}
+.lcard-sub{font-size:12px;color:var(--g3);margin-bottom:36px;line-height:1.5;}
+.lfield{margin-bottom:16px;}
+.lfield label{display:block;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--g4);margin-bottom:6px;}
+.lfield input{width:100%;border:1.5px solid var(--g1);border-radius:10px;padding:12px 14px;
+  font-family:'DM Mono',monospace;font-size:13.5px;color:var(--ink);outline:none;
+  transition:border-color .18s,box-shadow .18s;background:var(--paper);}
+.lfield input:focus{border-color:var(--rose);box-shadow:0 0 0 3px rgba(186,0,112,.12);background:var(--white);}
+.lbtn{width:100%;background:var(--rose);color:var(--white);border:none;border-radius:10px;
+  padding:14px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .18s;margin-top:6px;}
+.lbtn:hover{background:var(--rose-l);transform:translateY(-1px);box-shadow:0 4px 16px rgba(186,0,112,.25);}
+.lbtn:active{transform:translateY(0);}
+.lerr{color:var(--rose);font-size:12px;margin-top:10px;display:none;text-align:center;background:#fef1f2;border-radius:6px;padding:8px;}
+.lcard-deco{position:absolute;top:20px;right:24px;font-size:32px;opacity:.08;}
+
+/* APP SHELL */
+#app{display:none;flex-direction:column;min-height:100vh;width:100%;}
+.hdr{height:var(--header);background:var(--white);display:flex;align-items:center;
+  padding:0 20px 0 24px;gap:14px;border-bottom:1px solid var(--g1);flex-shrink:0;z-index:10;}
+.hdr-logo{display:flex;align-items:center;gap:10px;}
+.hdr-logo-mark{width:30px;height:30px;border-radius:8px;background:var(--rose);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.hdr-logo-mark svg{width:16px;height:16px;fill:none;stroke:var(--white);stroke-width:2;stroke-linecap:round;}
+.hdr-logo-text{font-family:'Fraunces',serif;color:var(--ink2);font-size:15px;font-weight:600;letter-spacing:.01em;white-space:nowrap;}
+.hdr-logo-text span{color:var(--rose);}
+.hdr-nav{display:flex;gap:2px;margin-left:20px;flex:1;}
+.hnav-btn{background:none;border:none;color:var(--g4);padding:6px 14px;border-radius:8px;
+  font-size:12.5px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;white-space:nowrap;display:flex;align-items:center;gap:6px;}
+.hnav-btn:hover{background:var(--rose-pale);color:var(--ink2);}
+.hnav-btn.on{background:var(--rose-pale);color:var(--rose);}
+.hdr-btns{display:flex;gap:6px;align-items:center;}
+.hbtn{background:var(--paper);border:1px solid var(--g1);color:var(--g4);
+  border-radius:8px;padding:6px 13px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;white-space:nowrap;}
+.hbtn:hover{background:var(--rose-pale);border-color:var(--rose-pale2);color:var(--rose);}
+.hbtn.accent{background:rgba(186,0,112,.15);border-color:rgba(186,0,112,.3);color:var(--rose);}
+.hbtn.accent:hover{background:rgba(186,0,112,.25);}
+
+.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:100;
+  height:var(--bottom-nav);background:var(--white);border-top:1px solid var(--g1);
+  padding:0 8px;align-items:center;justify-content:space-around;}
+.bnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;background:none;border:none;cursor:pointer;padding:6px 4px;border-radius:10px;
+  color:var(--g3);transition:all .15s;}
+.bnav-btn .bnav-ico{font-size:20px;line-height:1;}
+.bnav-btn .bnav-lbl{font-size:9.5px;font-weight:600;letter-spacing:.02em;font-family:'DM Sans',sans-serif;white-space:nowrap;}
+.bnav-btn.on{color:var(--rose);}
+
+.layout{display:flex;flex:1;overflow:auto;width:100%;}
+.page{display:none;flex:1;overflow:auto;}
+.page.on{display:flex;}
+
+.sidebar{width:var(--sidebar);flex-shrink:0;background:var(--white);border-right:1px solid var(--g1);display:flex;flex-direction:column;overflow:hidden;}
+.srch{padding:14px 14px 10px;}
+.srch-wrap{position:relative;}
+.srch-wrap svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:var(--g3);pointer-events:none;}
+.srch-inp{width:100%;border:1.5px solid var(--g1);border-radius:10px;padding:10px 10px 10px 34px;
+  font-size:12.5px;font-family:'DM Sans',sans-serif;outline:none;color:var(--ink);background:var(--paper);transition:all .18s;}
+.srch-inp:focus{border-color:var(--rose);background:var(--white);box-shadow:0 0 0 3px rgba(186,0,112,.1);}
+.fam-wrap{padding:6px 10px 8px;border-bottom:1px solid var(--g1);}
+.fam-lbl{font-size:8px;font-weight:600;text-transform:uppercase;letter-spacing:.12em;color:var(--g3);margin-bottom:4px;}
+.fam-row{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:3px;padding-bottom:2px;}
+.fbtn{font-size:9px;padding:2px 7px;border-radius:20px;border:1px solid var(--g1);background:none;color:var(--g3);
+  cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .12s;white-space:nowrap;font-weight:500;}
+.fbtn.on{background:var(--rose);border-color:var(--rose);color:var(--white);}
+.fbtn:hover:not(.on){border-color:var(--ink2);color:var(--ink2);}
+.list-meta{padding:8px 14px 4px;font-size:10px;color:var(--g3);letter-spacing:.04em;font-weight:500;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center;}
+.abx-list{overflow-y:auto;flex:1;}
+.abx-item{padding:11px 14px;cursor:pointer;border-bottom:1px solid var(--g1);transition:background .1s;display:flex;align-items:center;gap:10px;}
+.abx-item:hover{background:var(--paper);}
+.abx-item.sel{background:var(--rose-pale);border-left:3px solid var(--rose);}
+.abx-item.sel .aname{color:var(--ink2);}
+.aname{font-size:13px;font-weight:500;color:var(--ink);flex:1;line-height:1.3;}
+.atag{font-size:9px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:20px;background:var(--g1);color:var(--g3);white-space:nowrap;flex-shrink:0;}
+.clear-btn{background:none;border:1px solid var(--g2);border-radius:16px;padding:2px 10px;font-size:9px;cursor:pointer;color:var(--g3);transition:all .1s;}
+.clear-btn:hover{background:var(--g1);}
+
+.main{flex:1;overflow:auto;background:var(--paper);width:100%;}
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--g3);gap:14px;text-align:center;padding:40px;}
+.empty-ico{font-size:52px;opacity:.2;}
+.empty-txt{font-size:13px;font-weight:500;}
+.empty-hint{font-size:11px;color:var(--g2);}
+
+.detail{padding:24px 20px 80px;max-width:none;margin:0;width:100%;}
+.d-hdr{margin-bottom:24px;padding-bottom:22px;border-bottom:1px solid var(--paper3);}
+.d-fam{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:600;letter-spacing:.1em;
+  text-transform:uppercase;padding:4px 11px;border-radius:20px;background:var(--rose-pale);color:var(--rose);margin-bottom:12px;}
+.d-name{font-family:'Fraunces',serif;font-size:42px;font-weight:600;color:var(--ink);line-height:1.05;margin-bottom:8px;letter-spacing:-.01em;}
+.cards-grid{display:grid;gap:16px;}
+.two-col{grid-template-columns:1fr 1fr;}
+.three-col{grid-template-columns:1fr 1fr 1fr;}
+.card{background:var(--white);border-radius:var(--r);padding:20px 24px;border:1px solid var(--paper3);box-shadow:var(--shadow);min-width:0;}
+.card-full{grid-column:1/-1;min-width:0;}
+.card-ttl{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--rose);margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+.card-ttl::before{content:'';width:16px;height:1.5px;background:var(--rose);}
+.body-txt{font-size:14px;line-height:1.7;color:var(--ink);white-space:pre-wrap;}
+.pill{display:inline-block;font-size:10px;font-weight:600;letter-spacing:.04em;padding:2px 8px;border-radius:20px;margin:1px;}
+.pill-green{background:#d1fae5;color:#047857;}
+.pill-amber{background:#fef3c7;color:#b45309;}
+.pill-red{background:#fee2e2;color:#b91c1c;}
+.section-divider{display:flex;align-items:center;gap:10px;margin:22px 0 14px;}
+.section-divider span{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--g3);white-space:nowrap;}
+.section-divider::before,.section-divider::after{content:'';flex:1;height:1px;background:var(--paper3);}
+
+.detail-tabs{display:flex;gap:4px;margin-bottom:20px;background:var(--paper2);border-radius:12px;padding:4px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.detail-tabs::-webkit-scrollbar{height:0;}
+.dtab{padding:8px 16px;border-radius:9px;border:none;background:none;font-size:12.5px;font-weight:500;color:var(--g3);
+  cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;white-space:nowrap;flex-shrink:0;}
+.dtab.on{background:var(--white);color:var(--ink);font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.1);}
+.dtab:hover:not(.on){color:var(--ink2);}
+.dtab-panel{display:none;}
+.dtab-panel.on{display:block;}
+
+.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.sum-card{background:var(--white);border-radius:var(--r);padding:14px 16px;border:1px solid var(--paper3);box-shadow:var(--shadow);}
+.sum-card:first-child{grid-column:1/-1;}
+.sum-label{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--rose);margin-bottom:6px;display:flex;align-items:center;gap:5px;}
+.sum-label::before{content:'';width:12px;height:1.5px;background:var(--rose);}
+.sum-value{font-size:13px;line-height:1.65;color:var(--ink);white-space:pre-wrap;}
+.sum-value.sum-small{font-size:12px;color:var(--g4);}
+.sum-main .sum-value{font-size:15px;font-weight:500;}
+
+.tools-section{margin-top:4px;}
+.tools-tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;}
+.ttab{padding:7px 14px;border-radius:8px;border:1.5px solid var(--paper3);background:none;
+  font-size:11.5px;font-weight:500;color:var(--g3);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;}
+.ttab.on{background:var(--rose);border-color:var(--rose);color:var(--white);}
+.ttab:hover:not(.on){border-color:var(--g2);color:var(--ink);}
+.tool-panel{display:none;}
+.tool-panel.on{display:block;}
+.tool-card{background:var(--white);border-radius:var(--r);padding:20px 24px;border:1px solid var(--paper3);box-shadow:var(--shadow);}
+.tool-card h3{font-size:13px;font-weight:600;color:var(--ink);margin-bottom:4px;}
+.tool-card p{font-size:11.5px;color:var(--g3);margin-bottom:16px;line-height:1.5;}
+.tool-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:16px;}
+.tf{display:flex;flex-direction:column;gap:5px;}
+.tf label{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--g4);}
+.tf input,.tf select{border:1.5px solid var(--g1);border-radius:8px;padding:9px 11px;
+  font-size:13px;font-family:'DM Mono',monospace;color:var(--ink);outline:none;background:var(--paper);transition:border-color .18s;}
+.tf input:focus,.tf select:focus{border-color:var(--rose);box-shadow:0 0 0 3px rgba(186,0,112,.1);}
+.tf select{font-family:'DM Sans',sans-serif;font-size:12px;}
+.calc-btn{padding:10px 22px;background:var(--rose);color:var(--ink);border:none;border-radius:8px;
+  font-size:12.5px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;}
+.calc-btn:hover{background:var(--rose-l);transform:translateY(-1px);}
+.result-box{margin-top:14px;padding:14px 16px;background:var(--rose-pale);border:1.5px solid var(--rose-pale2);border-radius:10px;display:none;}
+.result-box.show{display:block;}
+.result-main{font-family:'Fraunces',serif;font-size:26px;color:var(--ink);font-weight:600;margin-bottom:4px;}
+.result-sub{font-size:12px;color:var(--g3);line-height:1.6;}
+.result-warn{margin-top:10px;font-size:11px;color:var(--copper);background:#fef5ec;border-radius:6px;padding:8px 10px;border:1px solid #fde3c2;}
+
+/* ESTABILIDADES */
+.estab-page{flex:1;display:flex;flex-direction:column;overflow:auto;background:var(--paper);width:100%;}
+.estab-toolbar{padding:12px 20px;background:var(--white);border-bottom:1px solid var(--g1);display:flex;gap:10px;align-items:center;flex-wrap:wrap;flex-shrink:0;}
+.estab-srch-wrap{position:relative;flex:1;min-width:180px;}
+.estab-srch-wrap svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:var(--g3);pointer-events:none;}
+.estab-srch{width:100%;border:1.5px solid var(--g1);border-radius:10px;padding:9px 10px 9px 34px;
+  font-size:12.5px;font-family:'DM Sans',sans-serif;outline:none;color:var(--ink);background:var(--paper);transition:all .18s;}
+.estab-srch:focus{border-color:var(--rose);background:var(--white);box-shadow:0 0 0 3px rgba(186,0,112,.1);}
+.estab-tipo-filter{display:flex;gap:4px;}
+.etfbtn{font-size:11px;padding:5px 12px;border-radius:20px;border:1.5px solid var(--g1);background:none;color:var(--g3);
+  cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .12s;white-space:nowrap;font-weight:500;}
+.etfbtn.on{background:var(--rose);border-color:var(--rose);color:var(--white);}
+.estab-meta{font-size:10px;color:var(--g3);padding:6px 20px 2px;letter-spacing:.04em;font-weight:500;text-transform:uppercase;flex-shrink:0;}
+.estab-table-wrap{flex:1;overflow:auto;}
+.estab-table{width:100%;border-collapse:collapse;font-size:12.5px;}
+.estab-table thead th{position:sticky;top:0;background:var(--rose-pale);color:var(--g4);
+  font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:10px 14px;text-align:left;white-space:nowrap;z-index:2;}
+.estab-table tbody tr{border-bottom:1px solid var(--g1);transition:background .08s;}
+.estab-table tbody td{padding:10px 14px;vertical-align:top;color:var(--ink);line-height:1.5;}
+.drug-name-cell{font-weight:600;font-size:13px;color:var(--ink2);}
+.etpill{display:inline-block;font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;white-space:nowrap;}
+.etpill-qmt{background:#dbeafe;color:#1d4ed8;}
+.etpill-noqmt{background:#d1fae5;color:#047857;}
+.estab-time{font-family:'DM Mono',monospace;font-size:11.5px;}
+.estab-time.na{color:var(--g3);font-style:italic;font-family:'DM Sans',sans-serif;}
+.estab-obs-cell{font-size:11.5px;color:var(--g4);max-width:240px;}
+.estab-loading{display:flex;align-items:center;justify-content:center;height:100%;color:var(--g3);gap:10px;font-size:13px;}
+
+/* MODALES ADMIN */
+#admin-panel, #estab-admin-panel {
+  display:none; position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:500;
+  align-items:center; justify-content:center; backdrop-filter:blur(4px);
+}
+#admin-panel.open, #estab-admin-panel.open { display:flex; }
+.admin-modal {
+  background:var(--white); border-radius:20px; width:min(700px,95vw); max-height:88vh;
+  display:flex; flex-direction:column; overflow:auto; box-shadow:var(--shadow-lg);
+}
+#estab-admin-panel .admin-modal { width:min(600px,95vw); }
+.admin-hdr { padding:20px 26px; border-bottom:1px solid var(--g1); display:flex; align-items:center; gap:12px; }
+.admin-hdr h2 { font-size:15px; font-weight:600; color:var(--ink); flex:1; }
+.admin-close { background:none; border:none; font-size:22px; cursor:pointer; color:var(--g3); width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; }
+.admin-close:hover { background:var(--g1); color:var(--ink); }
+.admin-body { flex:1; overflow-y:auto; padding:20px 26px; }
+.admin-select { width:100%; border:1.5px solid var(--g1); border-radius:10px; padding:10px 13px; font-size:13px; font-family:'DM Sans',sans-serif; color:var(--ink); outline:none; margin-bottom:16px; background:var(--paper); }
+.admin-select:focus { border-color:var(--rose); }
+.afield { margin-bottom:14px; }
+.afield label { display:block; font-size:10px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--g4); margin-bottom:5px; }
+.afield input, .afield textarea, .afield select { width:100%; border:1.5px solid var(--g1); border-radius:8px; padding:9px 12px; font-size:13px; font-family:'DM Sans',sans-serif; color:var(--ink); outline:none; transition:border .2s; background:var(--white); }
+.afield textarea { resize:vertical; min-height:80px; font-family:'DM Mono',monospace; font-size:12px; line-height:1.6; }
+.afield input:focus, .afield textarea:focus, .afield select:focus { border-color:var(--rose); box-shadow:0 0 0 3px rgba(186,0,112,.1); }
+.admin-ftr { padding:16px 26px; border-top:1px solid var(--g1); display:flex; gap:8px; justify-content:flex-end; }
+.asbtn { padding:9px 20px; border-radius:8px; font-size:12.5px; font-weight:600; cursor:pointer; font-family:'DM Sans',sans-serif; border:none; transition:all .15s; }
+.asbtn-save { background:var(--rose); color:var(--ink); }
+.asbtn-save:hover { background:var(--rose-l); }
+.asbtn-del { background:none; border:1.5px solid var(--rose); color:var(--rose); }
+.asbtn-del:hover { background:var(--rose); color:var(--white); }
+.asbtn-cancel { background:none; border:1.5px solid var(--g1); color:var(--g4); }
+.asbtn-cancel:hover { background:var(--g1); }
+.admin-notice { font-size:11.5px; color:#047857; display:none; padding:10px 13px; background:#d1fae5; border-radius:8px; margin-bottom:12px; font-weight:500; }
+
+/* RENAL TABLE (mejora visual) */
+/* El wrapper hace scroll horizontal; la tabla mantiene su ancho natural */
+.renal-table {
+    width: 100%;
+    max-width: 100%;
+    display: block;
+    overflow-x: auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    max-height: 440px;
+    border: 1px solid var(--g2);
+    border-radius: 8px;
+    background: var(--white);
+    position: relative;
+    /* Cursor para indicar que es scrolleable */
+    cursor: auto;
+}
+/* Degradado derecho — hint visual de scroll en mobile */
+.renal-scroll-hint {
+    display: none;
+    font-size: 10px;
+    color: var(--g3);
+    text-align: right;
+    margin-top: 4px;
+    padding-right: 2px;
+    letter-spacing: .02em;
+}
+.farma-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 600px;   /* forzar scroll horizontal en lugar de comprimir */
+    table-layout: auto;
+}
+.farma-table thead {
+    background-color: #4A746A;
+    color: #FFFFFF;
+}
+.farma-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    white-space: nowrap;  /* headers nunca envuelven en desktop */
+}
+.farma-table th,
+.farma-table td {
+    border: 1px solid var(--g2);
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: top;
+    line-height: 1.45;
+    white-space: normal;
+    word-break: break-word;
+}
+.farma-table td:first-child { white-space: nowrap; font-weight: 600; }
+.farma-table tbody tr { transition: background-color 0.2s ease; }
+.farma-table tbody tr:nth-child(even) { background-color: #FAF5F0; }
+.farma-table tbody tr:hover { background-color: #F4EFE9; }
+.farma-table tbody tr:hover td:first-child { box-shadow: inset 4px 0 0 0 #B87333; }
+
+/* Tabla interna generada por renderAjusteRenal (path ajuste_renal) */
+.renal-table table {
+    width: max-content;         /* se expande tanto como necesite */
+    min-width: 100%;            /* nunca más chica que el contenedor */
+    border-collapse: collapse;
+    table-layout: auto;
+}
+.renal-table table thead tr {
+    background-color: var(--rose-pale);
+}
+.renal-table table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background-color: var(--rose-pale);
+    color: var(--rose);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    padding: 9px 12px;
+    border: 1px solid var(--g2);
+    text-align: left;
+    white-space: nowrap;    /* headers nunca se parten */
+}
+.renal-table table tbody tr {
+    transition: background-color 0.15s ease;
+}
+.renal-table table tbody tr:nth-child(even) {
+    background-color: var(--paper);
+}
+.renal-table table tbody tr:hover {
+    background-color: var(--rose-pale);
+}
+.renal-table table td {
+    padding: 8px 12px;
+    border: 1px solid var(--g2);
+    text-align: left;
+    vertical-align: top;
+    line-height: 1.5;
+    font-size: 12.5px;
+    color: var(--ink);
+    white-space: normal;
+    word-break: break-word;
+    min-width: 140px;       /* ancho mínimo por celda de datos */
+    max-width: 260px;       /* evitar columnas demasiado anchas */
+}
+.renal-table table td:first-child {
+    font-weight: 600;
+    color: var(--ink2);
+    white-space: nowrap;    /* valores de CrCl nunca se parten */
+    min-width: auto;
+    max-width: none;
+}
+
+@media (max-width: 768px) {
+  .renal-table {
+    max-height: 360px;
+    border-radius: 6px;
+    /* Scrollbar visible en mobile para indicar contenido */
+    scrollbar-width: thin;
+    scrollbar-color: var(--g2) transparent;
+  }
+  .renal-scroll-hint { display: block; } /* mostrar hint de scroll */
+  /* Reducir padding del card para ganar ancho */
+  .card-full { padding: 14px 10px !important; }
+  /* Tabla interna: dimensiones para scroll horizontal real */
+  .renal-table table { }
+  .renal-table table thead th { font-size: 10px; padding: 7px 10px; }
+  .renal-table table td { font-size: 11.5px; padding: 7px 10px; min-width: 120px; max-width: 200px; }
+  .renal-table table td:first-child { min-width: 80px; }
+  /* farma-table en mobile: igual, scroll horizontal */
+  .farma-table { font-size: 10.5px; min-width: 500px; }
+  .farma-table th, .farma-table td { padding: 7px 8px; }
+}
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width:5px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--g1); border-radius:3px; }
+::-webkit-scrollbar-thumb:hover { background:var(--g2); }
+
+
+.mono-text{margin-bottom:12px;}
+.mono-table-wrap{overflow:auto;border:1px solid var(--paper3);border-radius:10px;background:var(--white);margin-bottom:12px;}
+.mono-table{width:100%;min-width:620px;border-collapse:collapse;font-size:12.5px;}
+.mono-table thead th{background:var(--rose-pale);color:var(--rose);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:9px 12px;border-bottom:1px solid var(--paper3);text-align:left;white-space:nowrap;}
+.mono-table td{padding:9px 12px;border-bottom:1px solid var(--paper3);vertical-align:top;line-height:1.5;}
+.mono-table tbody tr:nth-child(even){background:var(--paper);}
+.mono-link{color:var(--rose);text-decoration:underline;text-underline-offset:2px;word-break:break-all;}
+.mono-link:hover{color:var(--rose-l);}
+.pre-renal {
+    background: var(--paper);
+    padding: 12px;
+    border-radius: 8px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    white-space: pre-wrap;
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: 400px;
+    margin: 0;
+}
+  
+/* RESPONSIVE */
+@media(max-width:768px), (hover:none) and (pointer:coarse){
+  :root{--sidebar:100%;--header:44px;}
+  .hdr{height:44px;padding:0 12px 0 14px;}
+  .hdr-logo-text{display:none;}
+  .hdr-nav{display:none;}
+  .bottom-nav{display:flex;}
+  .layout{flex-direction:column;}
+  .sidebar{width:100%;max-height:45vh;border-right:none;border-bottom:1px solid var(--g1);display:flex;flex-direction:column;overflow:hidden;}
+  .abx-list{max-height:calc(45vh - 110px);overflow-y:auto;}
+  .fam-row{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;gap:6px;}
+  .fam-row::-webkit-scrollbar{height:3px;}
+  .fbtn{font-size:10px;padding:3px 10px;white-space:nowrap;}
+  .aname{font-size:14px;}
+  .atag{font-size:9px;}
+  .detail{padding:14px 16px 80px;}
+  .two-col,.three-col{grid-template-columns:1fr;}
+  .tool-grid{grid-template-columns:1fr;}
+  .d-name{font-size:28px;}
+  .detail-tabs{border-radius:10px;}
+  .dtab{font-size:11px;padding:7px 11px;}
+  .page.on{padding-bottom:var(--bottom-nav);}
+  .page.on{flex-direction:column;}
+  .main{min-height:0;}
+  .estab-table th,.estab-table td{font-size:11px;padding:8px 10px;}
+  .drug-name-cell{font-size:12px;}
+}
+
+
+@media (orientation: landscape) and (hover:none) and (pointer:coarse) {
+  :root{--header:40px;--bottom-nav:50px;}
+  .sidebar{max-height:58vh;}
+  .abx-list{max-height:calc(58vh - 96px);}
+  .detail{padding:12px 14px 64px;}
+  .d-name{font-size:24px;}
+}
+
+/* FONDO CLARO EN ESCRITORIO */
+@media(min-width:769px){
+  body{background:linear-gradient(135deg, #fff4fa 0%, #ffe7f4 100%);}
+  #login{box-shadow:0 0 40px rgba(0,0,0,.3);}
+  #app{width:100%;max-width:none;margin:0;border-left:none;border-right:none;box-shadow:none;}
+  .fam-row{gap:3px;}
+  .fbtn{font-size:9px;padding:2px 7px;border-width:1px;}
+}
+</style>
 </head>
 <body>
 
-<!-- HEADER -->
-<div id="header">
-  <div class="week-nav">
-    <button id="prev-week" title="Semana anterior">‹</button>
-    <span id="week-label">—</span>
-    <button id="next-week" title="Semana siguiente">›</button>
-  </div>
-
-  <div class="floor-tabs" id="floor-tabs"></div>
-
-  <div class="header-actions">
-    <div class="search-box">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-      <input id="search-input" placeholder="Buscar paciente...">
-    </div>
-    <button class="btn" id="btn-history">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      Historial
-    </button>
-    <button class="btn" id="btn-save-week" style="display:none" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-      Guardar semana
-    </button>
-    <button class="btn" id="btn-print">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-      Imprimir
-    </button>
-  </div>
-
-  <div class="user-panel" id="user-panel" style="display: none;">
-    <button class="user-name-btn" id="btn-edit-profile" title="Editar nombre">
-      <span id="user-name-display"></span>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:11px;height:11px;opacity:.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-    </button>
-    <button class="user-logout-btn" id="btn-logout" title="Cerrar sesión">✕</button>
+<div id="login">
+  <div class="login-bg"></div>
+  <div class="lcard">
+    <div class="lcard-deco">💊</div>
+    <div class="lcard-eyebrow">Farmacia Clínica</div>
+    <h1>Acceso al<br><em>Sistema</em></h1>
+    <p class="lcard-sub">Ingresá tus credenciales para continuar</p>
+    <div class="lfield"><label>Usuario (Correo)</label><input id="usr" type="text" autocomplete="username" placeholder="usuario@hospital.ar"></div>
+    <div class="lfield"><label>Contraseña</label><input id="pwd" type="password" autocomplete="current-password" placeholder="••••••••"></div>
+    <button class="lbtn" onclick="doLogin()">Ingresar →</button>
+    <div class="lerr" id="lerr">Usuario o contraseña incorrectos.</div>
   </div>
 </div>
 
-<!-- PROFILE MODAL -->
-<div id="profile-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:310;align-items:center;justify-content:center;backdrop-filter:blur(4px);">
-  <div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;width:360px;max-width:95vw;">
-    <div class="modal-header">
-      <span class="modal-title">Tu perfil</span>
-      <button class="panel-close" id="close-profile">✕</button>
+<div id="app">
+  <header class="hdr">
+    <div class="hdr-logo">
+      <div class="hdr-logo-mark"><svg viewBox="0 0 16 16"><path d="M8 2v12M2 8h12" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="hdr-logo-text">Farmacia <span>Clínica</span></div>
     </div>
-    <div class="modal-body" style="padding:20px;display:flex;flex-direction:column;gap:14px;">
-      <div>
-        <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Nombre para mostrar</label>
-        <input id="profile-name" type="text" placeholder="Ej: Dr. García"
-               style="width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:7px;color:var(--text);font-size:14px;padding:10px 12px;outline:none;font-family:var(--sans);">
-        <p style="font-size:11px;color:var(--text3);margin-top:6px;">Este nombre aparece en el historial de movimientos.</p>
-      </div>
-      <div style="background:var(--surface2);border-radius:6px;padding:10px 12px;">
-        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Email</div>
-        <div id="profile-email" style="font-size:13px;color:var(--text2);font-family:var(--mono);"></div>
-      </div>
+    <nav class="hdr-nav">
+      <button class="hnav-btn on" id="nav-abx" onclick="switchPage('page-abx',this)"><span>💊</span> Antibióticos</button>
+      <button class="hnav-btn" id="nav-calc" onclick="switchPage('page-calc',this)"><span>🧮</span> Calcular</button>
+      <button class="hnav-btn" id="nav-estab" onclick="switchPage('page-estab',this)"><span>🧪</span> Estabilidades</button>
+    </nav>
+    <div class="hdr-btns">
+      <button class="hbtn" onclick="showEditorsPopup()">Editores</button>
+      <button class="hbtn accent" id="adminBtn" onclick="openAdmin()" style="display:none">⚙ Admin</button>
+      <button class="hbtn" onclick="doLogout()">Salir</button>
     </div>
-    <div class="modal-footer">
-      <button class="btn" id="cancel-profile">Cancelar</button>
-      <button class="btn primary" id="save-profile">Guardar nombre</button>
-    </div>
-  </div>
-</div>
+  </header>
 
-<!-- LOGIN SCREEN (full page, shown before auth) -->
-<div id="login-screen">
-  <div class="login-bg-grid"></div>
-  <div class="login-container">
-    <div class="login-logo">
-      <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect width="40" height="40" rx="10" fill="#3d7ef5" fill-opacity="0.15"/>
-        <path d="M10 28V14a2 2 0 012-2h16a2 2 0 012 2v14" stroke="#3d7ef5" stroke-width="2" stroke-linecap="round"/>
-        <path d="M7 28h26" stroke="#3d7ef5" stroke-width="2" stroke-linecap="round"/>
-        <path d="M17 22h6M20 19v6" stroke="#3d7ef5" stroke-width="1.5" stroke-linecap="round"/>
-      </svg>
-      <div>
-        <div class="login-title">Seguimiento Clínico</div>
-        <div class="login-subtitle">Sistema de seguimiento semanal</div>
-      </div>
-    </div>
-
-    <div class="login-card">
-      <div class="login-card-header">Iniciar sesión</div>
-
-      <div id="login-error" class="login-error" style="display:none"></div>
-
-      <div class="login-field">
-        <label>Email</label>
-        <input type="email" id="login-email" placeholder="usuario@hospital.com"
-               autocomplete="email" inputmode="email">
-      </div>
-      <div class="login-field">
-        <label>Contraseña</label>
-        <div class="login-pass-wrap">
-          <input type="password" id="login-pass" placeholder="••••••••"
-                 autocomplete="current-password">
-          <button type="button" id="btn-toggle-pass" class="pass-toggle" tabindex="-1">
-            <svg id="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-          </button>
+  <div class="layout">
+    <!-- ANTIBIÓTICOS -->
+    <div class="page on" id="page-abx">
+      <aside class="sidebar">
+        <div class="srch">
+          <div class="srch-wrap">
+            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/></svg>
+            <input class="srch-inp" id="srch" type="text" placeholder="Buscar en todas las categorías…" oninput="handleSearchInput()">
+          </div>
         </div>
-      </div>
-
-      <div id="login-forgot" class="login-forgot">
-        <button type="button" id="btn-forgot">¿Olvidaste tu contraseña?</button>
-      </div>
-
-      <button class="btn primary login-btn" id="btn-login">
-        <span id="login-btn-text">Ingresar</span>
-        <span id="login-spinner" class="spinner" style="display:none"></span>
-      </button>
+        <div class="fam-wrap"><div class="fam-lbl">Familia</div><div class="fam-row" id="fam-row"></div></div>
+        <div class="list-meta" id="list-meta"></div>
+        <div class="abx-list" id="abx-list"></div>
+      </aside>
+      <main class="main" id="main">
+        <div class="empty"><div class="empty-ico">💊</div><div class="empty-txt">Seleccioná un antibiótico para ver su ficha</div><div class="empty-hint">Usá el buscador o filtrá por familia</div></div>
+      </main>
     </div>
 
-    <div id="reset-sent" class="login-reset-msg" style="display:none">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;flex-shrink:0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-      Te enviamos un email para restablecer tu contraseña.
-    </div>
-  </div>
-</div>
-
-<!-- MAIN VIEW -->
-<div id="view-main">
-  <div id="main-area">
-    <div class="section-header">
-      <span class="section-title" id="floor-title">Piso —</span>
-      <span class="patient-count" id="patient-count"></span>
-      <div class="section-actions">
-        <div style="display:flex;flex-direction:column;align-items:flex-start;">
-          <button class="btn" id="btn-csv">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-            Cargar CSV
-          </button>
-          <div id="csv-last-upload" style="font-size:11px;color:var(--text3);margin-top:6px;display:none;">Última carga CSV: —</div>
-        </div>
-        <button class="btn primary" id="btn-add-patient">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-          Nuevo Paciente
-        </button>
-      </div>
-    </div>
-    <div class="table-wrap">
-      <table class="patient-table">
-        <thead>
-          <tr>
-            <th style="width:50px">Cama</th>
-            <th style="min-width:200px">Paciente</th>
-            <th style="min-width:140px">Médico / Cobertura</th>
-            <th style="min-width:90px">Diagnóstico</th>
-            <th style="width:80px;text-align:right">Acciones</th>
-          </tr>
-        </thead>
-        <tbody id="patient-tbody"></tbody>
-      </table>
-    </div>
-    <div id="mobile-card-list"></div>
-    <div id="no-patients" class="no-data" style="display:none">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-      <p>Sin pacientes en este piso.<br><small>Cargá el CSV para importar la lista.</small></p>
-    </div>
-  </div>
-</div>
-
-<!-- HISTORY VIEW -->
-<div id="view-history" style="display:none; padding:16px 20px;">
-  <div class="section-header">
-    <span class="section-title">Historial de Seguimientos</span>
-    <button class="btn" id="btn-back-main">← Volver</button>
-  </div>
-  
-  <!-- Selector de vista -->
-  <div class="history-view-selector" style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
-    <button id="hist-view-lastweek" class="btn active" style="font-size:12px; padding:4px 12px;">📅 Última semana</button>
-    <button id="hist-view-discharges" class="btn" style="font-size:12px; padding:4px 12px;">🚪 Altas semana</button>
-    <button id="hist-view-search" class="btn" style="font-size:12px; padding:4px 12px;">🔍 Búsqueda avanzada</button>
-  </div>
-  
-  <!-- Panel de búsqueda (oculto por defecto) -->
-  <div id="hist-search-panel" style="display:none; background:var(--surface2); border-radius:12px; padding:16px; margin-bottom:16px;">
-    <div style="display:grid; gap:12px; grid-template-columns:1fr 1fr auto; align-items:end;">
-      <div>
-        <label style="font-size:11px; color:var(--text3); display:block; margin-bottom:4px;">Paciente (nombre o HC)</label>
-        <input id="hist-search-patient" type="text" placeholder="Ej: Juan Pérez o 12345" style="width:100%;">
-      </div>
-      <div>
-        <label style="font-size:11px; color:var(--text3); display:block; margin-bottom:4px;">Medicación / Tag</label>
-        <input id="hist-search-drug" type="text" placeholder="Ej: Vancomicina, Midazolam...">
-      </div>
-      <div>
-        <label style="font-size:11px; color:var(--text3); display:block; margin-bottom:4px;">Semana</label>
-        <div style="display:flex; gap:6px;">
-          <input id="hist-search-week" type="week" style="flex:1;" placeholder="YYYY-W##">
-          <button id="btn-search-history" class="btn primary" style="padding:8px 16px;">🔍 Buscar</button>
-        </div>
-      </div>
-    </div>
-  </div>
-  
-  <!-- Indicador de carga -->
-  <div id="history-loading" style="display:none; text-align:center; padding:40px;">
-    <div class="spinner" style="margin:0 auto 12px;"></div>
-    <p>Cargando datos desde Firestore...</p>
-  </div>
-  
-  <div id="history-results">
-    <div class="no-data" style="text-align:center; padding:40px;">
-      <p>📭 Usá los filtros y presioná "Buscar" para consultar el historial en Firestore.</p>
-    </div>
-  </div>
-  
-  <div id="history-pagination" style="text-align:center; margin-top:20px; display:none; gap:8px; justify-content:center;">
-    <button class="btn" id="btn-prev-page" style="display:none;">← Anterior</button>
-    <span id="page-info" style="font-size:12px; color:var(--text3);"></span>
-    <button class="btn" id="btn-next-page" style="display:none;">Siguiente →</button>
-  </div>
-</div>
-
-<!-- ENTRY PANEL OVERLAY -->
-<div id="entry-overlay">
-  <!-- ENTRY PANEL -->
-  <div id="entry-panel">
-    <div class="panel-header">
-      <div class="panel-title">
-        <div class="panel-patient-name" id="panel-patient-name">—</div>
-        <div class="panel-meta" id="panel-meta">—</div>
-      </div>
-      <button class="panel-close" id="panel-close">✕</button>
-    </div>
-    <div class="day-selector" id="day-selector"></div>
-    <div class="panel-body" id="panel-body"></div>
-    <div class="panel-footer">
-      <button class="btn" id="panel-cancel">Cancelar</button>
-      <button class="btn" id="btn-copy-prev">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/><line x1="9" y1="12" x2="21" y2="12"/></svg>
-        <span id="btn-copy-prev-label">Copiar desde día anterior</span>
-      </button>
-      <button class="btn primary" id="panel-save">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-        Guardar
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- ADD PATIENT MODAL -->
-<div id="add-patient-overlay">
-  <div id="add-patient-modal">
-    <div class="modal-header">
-      <span class="modal-title">Nuevo Paciente</span>
-      <button class="panel-close" id="close-add-patient">✕</button>
-    </div>
-    <div class="modal-body">
-      <form id="add-patient-form">
-        <div style="display:grid; gap:12px;">
-
-          <!-- Sector picker -->
-          <div>
-            <label style="font-size:11px; color:var(--text3); display:block; margin-bottom:6px;">Sector *</label>
-            <div id="new-sector-tabs" style="display:flex;flex-wrap:wrap;gap:4px;">
-              <!-- rendered by JS -->
+    <!-- CALCULAR -->
+    <div class="page" id="page-calc">
+      <main class="main" style="overflow-y:auto;">
+        <div class="detail" style="padding:20px 20px 80px;">
+          <div class="tools-section">
+            <div class="tools-tabs">
+              <button class="ttab on" onclick="switchTab(event,'tab-crcl')">🧪 CrCl Renal</button>
+              <button class="ttab" onclick="switchTab(event,'tab-dosis')">⚖️ Dosis Obesos</button>
+              <button class="ttab" onclick="switchTab(event,'tab-pk')">📈 T&gt;CMI</button>
+              <button class="ttab" onclick="switchTab(event,'tab-cp')">💉 Pico/Valle</button>
             </div>
-          </div>
-
-          <!-- Bed picker -->
-          <div id="new-cama-wrap">
-            <label style="font-size:11px; color:var(--text3); display:block; margin-bottom:6px;">Cama *</label>
-            <div id="new-bed-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:5px;max-height:160px;overflow-y:auto;padding-right:2px;">
-              <span style="color:var(--text3);font-size:12px;">← Elegí un sector primero</span>
-            </div>
-            <!-- Hidden inputs read by saveNewPatient -->
-            <input type="hidden" id="new-cama" value="">
-            <div id="new-floor-display" data-floor="" style="display:none;"></div>
-          </div>
-
-          <div>
-            <label style="font-size:11px; color:var(--text3); display:block; margin-bottom:4px;">Nombre del Paciente *</label>
-            <input type="text" id="new-paciente" required placeholder="Apellido, Nombre">
-          </div>
-          <div>
-            <label style="font-size:11px; color:var(--text3); display:block; margin-bottom:4px;">Historia Clínica *</label>
-            <input type="text" id="new-hc" required placeholder="Número HC">
-          </div>
-          <div>
-            <label style="font-size:11px; color:var(--text3); display:block; margin-bottom:4px;">Médico</label>
-            <input type="text" id="new-medico" placeholder="Nombre del médico">
-          </div>
-          <div>
-            <label style="font-size:11px; color:var(--text3); display:block; margin-bottom:4px;">Cobertura Social</label>
-            <input type="text" id="new-cobertura" placeholder="Ej: OSDE, PAMI">
-          </div>
-          <div>
-            <label style="font-size:11px; color:var(--text3); display:block; margin-bottom:4px;">Fecha de Ingreso</label>
-            <input type="date" id="new-ingreso">
-          </div>
-          <div>
-            <label style="font-size:11px; color:var(--text3); display:block; margin-bottom:4px;">Días de Internación</label>
-            <input type="number" id="new-dias" placeholder="Ej: 3">
-          </div>
-          <div>
-            <label style="font-size:11px; color:var(--text3); display:block; margin-bottom:4px;">Servicio</label>
-            <input type="text" id="new-servicio" placeholder="Ej: CLINICA MEDICA">
-          </div>
-          <div>
-            <label style="font-size:11px; color:var(--text3); display:block; margin-bottom:4px;">Diagnóstico</label>
-            <textarea id="new-diagnostico" rows="2" placeholder="Diagnóstico principal"></textarea>
+            <div class="tool-panel on" id="tab-crcl"><div class="tool-card"><h3>Filtrado Glomerular Estimado (MDRD)</h3><p>Primero estimá eGFR con MDRD (mL/min/1.73 m²). Útil para estadificar ERC.</p><div class="tool-grid"><div class="tf"><label>Edad (años)</label><input id="mdrd-edad" type="number" placeholder="65"></div><div class="tf"><label>Sexo</label><select id="mdrd-sexo"><option value="M">Masculino</option><option value="F">Femenino</option></select></div><div class="tf"><label>Raza</label><select id="mdrd-raza"><option value="no-negro">No negro</option><option value="negro">Negro</option></select></div><div class="tf"><label>Creatinina (mg/dL)</label><input id="mdrd-cr" type="number" step="0.1" placeholder="1.0"></div></div><button class="calc-btn" onclick="calcMDRD()">Calcular MDRD →</button><div class="result-box" id="res-mdrd"></div></div><div class="tool-card" style="margin-top:14px;"><h3>Aclaramiento de Creatinina (Cockcroft-Gault)</h3><p>Luego estimá CrCl para ajuste de dosis. Usa peso ajustado en obesos automáticamente.</p><div class="tool-grid"><div class="tf"><label>Edad (años)</label><input id="cg-edad" type="number" placeholder="65"></div><div class="tf"><label>Peso real (kg)</label><input id="cg-peso" type="number" placeholder="70"></div><div class="tf"><label>Altura <span style="font-weight:400;text-transform:none;color:var(--g3);">(opcional, cm o m)</span></label><input id="cg-talla" type="number" step="0.01" placeholder="170 o 1.70"></div><div class="tf"><label>Sexo</label><select id="cg-sexo"><option value="M">Masculino</option><option value="F">Femenino</option></select></div><div class="tf"><label>Creatinina (mg/dL)</label><input id="cg-cr" type="number" step="0.1" placeholder="1.0"></div></div><button class="calc-btn" onclick="calcCrCl()">Calcular CrCl →</button><div class="result-box" id="res-crcl"></div></div></div>
+            <div class="tool-panel" id="tab-dosis"><div class="tool-card"><h3>Peso de Dosificación en Obesidad</h3><p>Calcula IBW (Devine), ABW (factor 0.4) e IMC para orientar la dosificación.</p><div class="tool-grid"><div class="tf"><label>Peso real (kg)</label><input id="ob-peso" type="number" placeholder="110"></div><div class="tf"><label>Talla (cm)</label><input id="ob-talla" type="number" placeholder="170"></div><div class="tf"><label>Sexo</label><select id="ob-sexo"><option value="M">Masculino</option><option value="F">Femenino</option></select></div></div><button class="calc-btn" onclick="calcObesos()">Calcular →</button><div class="result-box" id="res-obesos"></div></div></div>
+            <div class="tool-panel" id="tab-pk"><div class="tool-card"><h3>T&gt;CMI — Antibióticos Tiempo-Dependientes</h3><p>Estima % del intervalo con concentración libre sobre la CMI. Meta ≥ 40–50% (beta-lactámicos).</p><div class="tool-grid"><div class="tf"><label>Dosis (mg)</label><input id="pk-dosis" type="number" placeholder="1000"></div><div class="tf"><label>Intervalo (hs)</label><input id="pk-intervalo" type="number" placeholder="8"></div><div class="tf"><label>Vd (L/kg)</label><input id="pk-vd" type="number" step="0.01" placeholder="0.2"></div><div class="tf"><label>Peso (kg)</label><input id="pk-peso" type="number" placeholder="70"></div><div class="tf"><label>t½ (hs)</label><input id="pk-t12" type="number" step="0.1" placeholder="1.5"></div><div class="tf"><label>CMI (mg/L)</label><input id="pk-cmi" type="number" step="0.001" placeholder="2"></div><div class="tf"><label>Fracción libre (fu)</label><input id="pk-fu" type="number" step="0.01" placeholder="0.9"></div></div><button class="calc-btn" onclick="calcPKPD()">Calcular T&gt;CMI →</button><div class="result-box" id="res-pkpd"></div></div></div>
+            <div class="tool-panel" id="tab-cp"><div class="tool-card"><h3>Concentración Pico y Valle (1 compartimento)</h3><p>Cmax y Ctrough al estado estacionario. Útil para aminoglucósidos y vancomicina.</p><div class="tool-grid"><div class="tf"><label>Dosis (mg)</label><input id="cp-dosis" type="number" placeholder="500"></div><div class="tf"><label>Intervalo τ (hs)</label><input id="cp-tau" type="number" placeholder="8"></div><div class="tf"><label>Vd (L/kg)</label><input id="cp-vd" type="number" step="0.01" placeholder="0.25"></div><div class="tf"><label>Peso (kg)</label><input id="cp-peso" type="number" placeholder="70"></div><div class="tf"><label>t½ (hs)</label><input id="cp-t12" type="number" step="0.1" placeholder="2"></div><div class="tf"><label>Infusión (min)</label><input id="cp-tinf" type="number" placeholder="30"></div></div><button class="calc-btn" onclick="calcPicovalle()">Calcular →</button><div class="result-box" id="res-cp"></div></div></div>
           </div>
         </div>
-      </form>
+      </main>
     </div>
-    <div class="modal-footer">
-      <button class="btn" id="cancel-add-patient">Cancelar</button>
-      <button class="btn primary" id="confirm-add-patient">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-        Agregar Paciente
-      </button>
-    </div>
-  </div>
-</div>
 
-<!-- MOVE PATIENT MODAL -->
-<div id="move-patient-overlay">
-  <div id="move-patient-modal">
-    <div class="modal-header">
-      <div>
-        <div class="modal-title">Mover de Cama</div>
-        <div style="font-size:11px;color:var(--text3);margin-top:3px;">
-          <span id="move-patient-name-label"></span> · Cama actual: <strong id="move-current-room" style="color:var(--accent)"></strong>
+    <!-- ESTABILIDADES -->
+    <div class="page" id="page-estab">
+      <div class="estab-page">
+        <div class="estab-toolbar">
+          <div class="estab-srch-wrap"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/></svg><input class="estab-srch" id="estab-srch" type="text" placeholder="Buscar fármaco, vehículo, observaciones…" oninput="filterEstab()"></div>
+          <div class="estab-tipo-filter"><button class="etfbtn on" onclick="filterEstabTipo('',this)">Todos</button><button class="etfbtn" onclick="filterEstabTipo('QMT',this)">QMT</button><button class="etfbtn" onclick="filterEstabTipo('NO_QMT',this)">No QMT</button></div>
+          <button class="hbtn accent" id="estabAddBtn" onclick="openEstabAdmin()">＋ Agregar</button>
+        </div>
+        <div class="estab-meta" id="estab-meta"></div>
+        <div class="estab-table-wrap">
+          <table class="estab-table"><thead><tr><th>Fármaco</th><th>Tipo</th><th>Presentación</th><th>Vehículo dilución</th><th>Estab. dil. amb.</th><th>Estab. dil. ref.</th><th>T. infusión</th><th>Observaciones</th></tr></thead><tbody id="estab-tbody"></tbody></table>
+          <div id="estab-loading" class="estab-loading">Cargando datos…</div>
         </div>
       </div>
-      <button class="panel-close" id="close-move-patient">✕</button>
     </div>
-    <div class="modal-body" style="padding:16px 20px;">
-      <div style="margin-bottom:12px;">
-        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:6px;font-weight:600;">Filtrar por sector</div>
-        <div id="move-floor-filter" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
-      </div>
-      <div class="search-box" style="margin-bottom:12px;min-width:unset;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-        <input id="move-search" placeholder="Buscar cama o paciente...">
-      </div>
-      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:8px;font-weight:600;">Seleccioná la cama destino</div>
-      <div id="move-bed-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px;max-height:min(280px,28dvh);overflow-y:auto;padding-right:2px;"></div>
-      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
-        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:6px;font-weight:600;">O ingresá una cama manualmente</div>
-        <input type="text" id="new-move-room" placeholder="Ej: 405, TAMO-02...">
-      </div>
-      <p id="move-room-warning" style="font-size:11px;color:var(--cat-qmt);margin-top:8px;display:none;"></p>
+  </div>
+
+  <nav class="bottom-nav">
+    <button class="bnav-btn on" id="bnav-abx" onclick="switchPage('page-abx',this,true)"><span class="bnav-ico">💊</span><span class="bnav-lbl">Antibióticos</span></button>
+    <button class="bnav-btn" id="bnav-calc" onclick="switchPage('page-calc',this,true)"><span class="bnav-ico">🧮</span><span class="bnav-lbl">Calcular</span></button>
+    <button class="bnav-btn" id="bnav-estab" onclick="switchPage('page-estab',this,true)"><span class="bnav-ico">🧪</span><span class="bnav-lbl">Estabilidades</span></button>
+  </nav>
+</div>
+
+<!-- MODAL ADMIN ANTIBIÓTICOS -->
+<div id="admin-panel">
+  <div class="admin-modal">
+    <div class="admin-hdr"><h2>⚙ Administrar Antibióticos</h2><button class="admin-close" onclick="closeAdmin()">×</button></div>
+    <div class="admin-body">
+      <select id="admin-select" class="admin-select" onchange="loadAdminData(this.value)"><option value="">-- Crear Nuevo --</option></select>
+      <div id="admin-notice" class="admin-notice">¡Guardado con éxito!</div>
+      <div class="afield"><label>Nombre (ID)</label><input type="text" id="af-name"></div>
+      <div class="afield"><label>Familia</label><input type="text" id="af-fam"></div>
+      <div class="afield"><label>Mecanismo de acción</label><textarea id="af-mecanismo" rows="4"></textarea></div>
+      <div class="afield"><label>Dosificación</label><textarea id="af-dose" rows="3"></textarea></div>
+      <div class="afield"><label>Administración</label><textarea id="af-administracion" rows="4"></textarea></div>
+      <div class="afield"><label>Preparación / Reconstitución</label><textarea id="af-preparacion" rows="4"></textarea></div>
+      <div class="afield"><label>Ajuste Renal (texto plano)</label><textarea id="af-renal-raw" rows="8" placeholder="Ej: CrCl >50: sin ajuste..."></textarea></div>
+      <div class="afield"><label>Ajuste Hepático</label><textarea id="af-hepatico" rows="2"></textarea></div>
+      <div class="afield"><label>Ajuste en Obesos</label><textarea id="af-obesos" rows="3"></textarea></div>
+      <div class="afield"><label>Embarazo</label><textarea id="af-embarazo" rows="2"></textarea></div>
+      <div class="afield"><label>Lactancia</label><textarea id="af-lactancia" rows="2"></textarea></div>
+      <div class="afield"><label>Observaciones</label><textarea id="af-obs" rows="5"></textarea></div>
+      <div class="afield"><label>Interacciones</label><textarea id="af-inter" rows="5"></textarea></div>
+      <div class="afield"><label>Farmacocinética</label><textarea id="af-pk" rows="4"></textarea></div>
+      <div class="afield"><label>Monografía / Extra</label><textarea id="af-completo" style="min-height:150px;"></textarea></div>
     </div>
-    <div class="modal-footer">
-      <button class="btn" id="cancel-move-patient">Cancelar</button>
-      <button class="btn primary" id="confirm-move-patient">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-        Confirmar Mudanza
-      </button>
+    <div class="admin-ftr">
+      <button class="asbtn asbtn-del" id="delBtn" onclick="deleteAntibiotic()" style="display:none">Eliminar</button>
+      <button class="asbtn asbtn-cancel" onclick="closeAdmin()">Cancelar</button>
+      <button class="asbtn asbtn-save" onclick="saveData()">Guardar en la Nube</button>
     </div>
   </div>
 </div>
 
-<!-- PATIENT DAYS VIEW OVERLAY -->
-<div id="patient-days-overlay">
-  <div id="patient-days-panel">
-    <div class="panel-header">
-      <div class="panel-title">
-        <div class="panel-patient-name" id="days-patient-name">—</div>
-        <div class="panel-meta" id="days-patient-meta">—</div>
-      </div>
-      <button class="panel-close" id="close-patient-days">✕</button>
+<!-- MODAL ADMIN ESTABILIDADES -->
+<div id="estab-admin-panel">
+  <div class="admin-modal">
+    <div class="admin-hdr"><h2>🧪 Administrar Estabilidades</h2><button class="admin-close" onclick="closeEstabAdmin()">×</button></div>
+    <div class="admin-body">
+      <select id="admin-estab-select" class="admin-select" onchange="loadEstabAdminData(this.value)"><option value="">-- Crear Nueva --</option></select>
+      <div id="admin-estab-notice" class="admin-notice">¡Guardado con éxito!</div>
+      <div class="afield"><label>Nombre</label><input id="ea-name"></div>
+      <div class="afield"><label>Tipo</label><select id="ea-tipo" class="admin-select"><option value="QMT">QMT</option><option value="NO_QMT">No QMT</option></select></div>
+      <div class="afield"><label>Presentación</label><input id="ea-presentacion"></div>
+      <div class="afield"><label>Vehículo</label><input id="ea-vehiculo"></div>
+      <div class="afield"><label>Estab. Amb</label><input id="ea-amb"></div>
+      <div class="afield"><label>Estab. Ref</label><input id="ea-ref"></div>
+      <div class="afield"><label>Infusión</label><input id="ea-inf"></div>
+      <div class="afield"><label>Observaciones</label><textarea id="ea-obs" rows="3"></textarea></div>
+      <div class="afield"><label>Fuente</label><textarea id="ea-fuente" rows="2"></textarea></div>
     </div>
-    <div class="panel-body" id="patient-days-body" style="padding:0;">
-      <div id="patient-days-list"></div>
-    </div>
-    <div class="panel-footer" style="flex-wrap:wrap;gap:6px;">
-      <button class="btn" id="close-days-panel">Cerrar</button>
-      <button class="btn" id="days-panel-copy-prev" style="display:none;gap:5px;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><path d="M3 12h18M3 6h18M3 18h12"/></svg>
-        Sem. anterior
-      </button>
-      <button class="btn" id="days-panel-move" style="gap:5px;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M5 9l7-7 7 7M5 15l7 7 7-7"/></svg>
-        Mover
-      </button>
-      <button class="btn" id="days-panel-discharge" style="gap:5px;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-        Alta
-      </button>
-      <button class="btn primary" id="btn-add-day-entry" style="gap:5px;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-        Cargar Día
-      </button>
+    <div class="admin-ftr">
+      <button class="asbtn asbtn-del" id="delEstabBtn" onclick="deleteEstabilidad()" style="display:none">Eliminar</button>
+      <button class="asbtn asbtn-cancel" onclick="closeEstabAdmin()">Cancelar</button>
+      <button class="asbtn asbtn-save" onclick="saveEstabilidad()">Guardar</button>
     </div>
   </div>
 </div>
 
-<!-- CSV IMPORT MODAL -->
-<div id="csv-overlay">
-  <div id="csv-modal">
-    <div class="modal-header">
-      <span class="modal-title">Importar Listado de Internaciones</span>
-      <button class="panel-close" id="close-csv">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="drop-zone" id="drop-zone">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-          <polyline points="17 8 12 3 7 8"/>
-          <line x1="12" y1="3" x2="12" y2="15"/>
-        </svg>
-        <p>Arrastrá el CSV o hacé click para seleccionar</p>
-        <small>Formato: Listado de Internaciones (sal_internaciones.csv)</small>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "__FIREBASE_API_KEY__",
+  authDomain: "__FIREBASE_AUTH_DOMAIN__",
+  projectId: "__FIREBASE_PROJECT_ID__",
+  storageBucket: "__FIREBASE_STORAGE_BUCKET__",
+  messagingSenderId: "__FIREBASE_MESSAGING_SENDER_ID__",
+  appId: "__FIREBASE_APP_ID__"
+};
+</script>
+  
+<script src="app.js"></script>
+<script>
+// Registrar Service Worker + flujo de instalación PWA
+if ('serviceWorker' in navigator) {
+  let deferredPrompt = null;
+  const isMobile = window.matchMedia('(max-width: 768px)').matches;
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+
+    if (isMobile && !localStorage.getItem('pwa-install-dismissed') && !localStorage.getItem('pwa-installed')) {
+      showInstallBanner();
+    }
+  });
+
+  window.addEventListener('appinstalled', () => {
+    console.log('[PWA] App instalada exitosamente');
+    localStorage.setItem('pwa-installed', 'true');
+    deferredPrompt = null;
+    hideInstallBanner();
+  });
+
+  window.addEventListener('load', () => {
+navigator.serviceWorker.register('/farma-tablas/sw.js', { scope: '/farma-tablas/' })
+      .then((registration) => {
+        console.log('[PWA] SW registrado:', registration.scope);
+      })
+      .catch((error) => {
+        console.error('[PWA] Error al registrar SW:', error);
+      });
+  });
+  
+  // Función para mostrar banner de instalación
+  function showInstallBanner() {
+    // Crear banner si no existe
+    if (document.getElementById('install-banner')) return;
+    
+    const banner = document.createElement('div');
+    banner.id = 'install-banner';
+    banner.innerHTML = `
+      <div class="install-banner-content">
+        <div class="install-banner-icon">💊</div>
+        <div class="install-banner-text">
+          <strong>Instalar App</strong>
+          <span>Acceso rápido desde tu pantalla de inicio</span>
+        </div>
+        <button id="install-btn" class="install-btn">Instalar</button>
+        <button id="dismiss-install" class="dismiss-install">×</button>
       </div>
-      <input type="file" id="file-input" accept=".csv" style="display:none">
-      <div id="csv-preview"></div>
-      <div id="csv-archive-summary" style="display:none;margin-top:10px;"></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn" id="cancel-csv">Cancelar</button>
-      <button class="btn primary" id="btn-import" disabled>Importar pacientes</button>
-    </div>
-  </div>
-</div>
-
-<!-- TOAST -->
-<div id="toast"></div>
-
-<script type="module" src="app.js?v=2.0.1"></script>
-<!-- PRINT MODAL -->
-<div id="print-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:310;align-items:center;justify-content:center;backdrop-filter:blur(4px);">
-  <div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;width:380px;max-width:95vw;display:flex;flex-direction:column;">
-    <div class="modal-header">
-      <span class="modal-title">Imprimir reporte del día</span>
-      <button class="panel-close" id="close-print">✕</button>
-    </div>
-    <div class="modal-body" style="padding:20px;display:flex;flex-direction:column;gap:16px;">
-      <div>
-        <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Día</label>
-        <div id="print-day-picker" style="display:flex;gap:5px;flex-wrap:wrap;"></div>
-      </div>
-      <div>
-        <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Sector</label>
-        <div id="print-floor-picker" style="display:flex;gap:5px;flex-wrap:wrap;"></div>
-      </div>
-      <div id="print-preview-count" style="font-size:12px;color:var(--text3);min-height:18px;"></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn" id="cancel-print">Cancelar</button>
-      <button class="btn primary" id="confirm-print">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-        Imprimir
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- Populated right before window.print() -->
-<div id="print-content" aria-hidden="true"></div>
-
+    `;
+    
+    // Agregar estilos dinámicos
+    const style = document.createElement('style');
+    style.textContent = `
+      #install-banner {
+        position: fixed;
+        bottom: 70px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--white);
+        border-radius: 16px;
+        padding: 16px 20px;
+        box-shadow: 0 8px 32px rgba(0,0,0,.2);
+        z-index: 9999;
+        width: calc(100% - 40px);
+        max-width: 440px;
+        border: 1px solid var(--paper3);
+        animation: slideUp 0.3s ease-out;
+      }
+      @keyframes slideUp {
+        from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+        to { opacity: 1; transform: translateX(-50%) translateY(0); }
+      }
+      .install-banner-content {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .install-banner-icon {
+        font-size: 32px;
+        flex-shrink: 0;
+      }
+      .install-banner-text {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .install-banner-text strong {
+        font-size: 14px;
+        color: var(--ink);
+        font-weight: 600;
+      }
+      .install-banner-text span {
+        font-size: 11px;
+        color: var(--g3);
+      }
+      .install-btn {
+        background: var(--rose);
+        color: var(--ink);
+        border: none;
+        border-radius: 10px;
+        padding: 10px 18px;
+        font-size: 12.5px;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: 'DM Sans', sans-serif;
+        white-space: nowrap;
+        transition: all 0.15s;
+      }
+      .install-btn:hover {
+        background: var(--rose-l);
+        transform: translateY(-1px);
+      }
+      .dismiss-install {
+        background: none;
+        border: none;
+        font-size: 20px;
+        color: var(--g3);
+        cursor: pointer;
+        padding: 4px 8px;
+        line-height: 1;
+      }
+      .dismiss-install:hover {
+        color: var(--ink);
+      }
+    `;
+    document.head.appendChild(style);
+    document.body.appendChild(banner);
+    
+    // Event listeners
+    document.getElementById('install-btn').addEventListener('click', async () => {
+      if (!deferredPrompt) return;
+      
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      
+      if (outcome === 'accepted') {
+        console.log('[PWA] Usuario aceptó instalar');
+        hideInstallBanner();
+      }
+      deferredPrompt = null;
+    });
+    
+    document.getElementById('dismiss-install').addEventListener('click', () => {
+      hideInstallBanner();
+      localStorage.setItem('pwa-install-dismissed', 'true');
+    });
+  }
+  
+  function hideInstallBanner() {
+    const banner = document.getElementById('install-banner');
+    if (banner) {
+      banner.style.animation = 'slideUp 0.3s ease-out reverse';
+      setTimeout(() => banner.remove(), 300);
+    }
+  }
+}
+</script>
 </body>
 </html>
