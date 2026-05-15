@@ -21,21 +21,6 @@ function resolveFirebaseConfig(rawConfig) {
     return rawConfig;
 }
 
-function isFirebaseConfigComplete(config) {
-    if (!config || typeof config !== 'object') return false;
-    const requiredKeys = ['apiKey', 'authDomain', 'projectId', 'appId'];
-    const placeholderPattern = /^__.+__$/;
-    return requiredKeys.every((key) => {
-        const value = config[key];
-        if (typeof value !== 'string') return false;
-        const trimmed = value.trim();
-        if (!trimmed) return false;
-        if (placeholderPattern.test(trimmed)) return false;
-        if (trimmed.includes('__FIREBASE_')) return false;
-        return true;
-    });
-}
-
 const resolvedFirebaseConfig = resolveFirebaseConfig(firebaseConfig);
 firebase.initializeApp(resolvedFirebaseConfig);
 let auth = null;
@@ -291,12 +276,6 @@ function getValue(d, keys, defaultValue = '—') {
 async function doLogin() {
     const email = document.getElementById('usr').value.trim();
     const password = document.getElementById('pwd').value;
-    const errBox = document.getElementById('lerr');
-    if (!isFirebaseConfigComplete(resolvedFirebaseConfig)) {
-        errBox.textContent = 'Configuración de Firebase incompleta. Definí window.FIREBASE_CONFIG o localStorage.firebaseConfig.';
-        errBox.style.display = 'block';
-        return;
-    }
     const btn = document.querySelector('.lbtn');
     btn.innerText = 'Verificando...'; btn.disabled = true;
     try {
@@ -311,9 +290,9 @@ async function doLogin() {
         initApp();
         renderEstabTable(); // Renderizar tabla para mostrar/ocultar botón Agregar
     } catch (err) {
-        const e = errBox;
+        const e = document.getElementById('lerr');
         const msg = err && err.message ? err.message : 'No se pudo iniciar sesión';
-        e.textContent = msg.includes('__FIREBASE_') || msg.includes('API key not valid') || msg.includes('CONFIGURATION_NOT_FOUND')
+        e.textContent = msg.includes('__FIREBASE_')
             ? 'Configuración de Firebase incompleta. Definí window.FIREBASE_CONFIG o localStorage.firebaseConfig.'
             : 'Usuario o contraseña incorrectos.';
         e.style.display = 'block';
@@ -344,16 +323,6 @@ Revisión:
 }
 document.getElementById('pwd').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 document.getElementById('usr').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('pwd').focus(); });
-
-if (!isFirebaseConfigComplete(resolvedFirebaseConfig)) {
-    const err = document.getElementById('lerr');
-    const btn = document.querySelector('.lbtn');
-    if (err) {
-        err.textContent = 'Configuración de Firebase incompleta. Definí window.FIREBASE_CONFIG o localStorage.firebaseConfig.';
-        err.style.display = 'block';
-    }
-    if (btn) btn.disabled = true;
-}
 
 // ── PAGE SWITCHING ─────────────────────────────────────────────────────
 function switchPage(pageId, btn, isMobile = false) {

@@ -27,12 +27,7 @@ function isFirebaseConfigComplete(config) {
     const placeholderPattern = /^__.+__$/;
     return requiredKeys.every((key) => {
         const value = config[key];
-        if (typeof value !== 'string') return false;
-        const trimmed = value.trim();
-        if (!trimmed) return false;
-        if (placeholderPattern.test(trimmed)) return false;
-        if (trimmed.includes('__FIREBASE_')) return false;
-        return true;
+        return typeof value === 'string' && value.trim() && !placeholderPattern.test(value.trim());
     });
 }
 
