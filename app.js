@@ -1,6 +1,8 @@
 // Importar configuración de Firebase desde archivo separado
 // Esto permite gestionar las credenciales de forma más organizada y segura
 
+const firebaseConfig = window.FIREBASE_CONFIG || {};
+
 function resolveFirebaseConfig(rawConfig) {
     const placeholderPattern = /^__.+__$/;
     const hasPlaceholders = rawConfig && Object.values(rawConfig).some(v => typeof v === 'string' && placeholderPattern.test(v));

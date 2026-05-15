@@ -5,45 +5,72 @@ node_modules/
 # Build outputs
 dist/
 build/
-coverage/
-htmlcov/
+*.js.map
 
-# Environment variables
+# Environment
 .env
 .env.local
-.env.*
+*.env.*
 
-# IDE files
+# Editors
 .vscode/
 .idea/
-*.swp
-*.swo
-*.tmp
 
 # Logs
 *.log
 
-# Python cache
+# Temporary files
+*.tmp
+*.swp
+*.swo
+
+# Python
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 
-# Virtual environments
-venv/
-.venv/
-.env/
+# Compiled
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dll
+*.dylib
+*.exe
+*.out
 
-# Coverage reports
-.coverage
-coverage.xml
+# Compression
+*.zip
+*.gz
+*.tar
+*.tgz
+*.bz2
+*.xz
+*.7z
+*.rar
+*.zst
+*.lz4
+*.lzh
+*.cab
+*.arj
+*.rpm
+*.deb
+*.Z
+*.lz
+*.lzo
 
-# Distribution / packaging
-.Python
-pip-log.txt
-pip-delete-this-directory.txt
-.tox/
+# Coverage
+coverage/
+htmlcov/
 .coverage
-.cache/
-nosetests.xml
+
+# Testing
+.mypy_cache/
+.pytest_cache/
+
+# System
+.DS_Store
+Thumbs.db
 ```

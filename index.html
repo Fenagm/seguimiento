@@ -617,10 +617,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--paper);color:var(--ink);m
 <script>
 // Firebase config from environment variables (VITE_FB_* from GitHub secrets/variables)
 window.FIREBASE_CONFIG = {
-  apiKey: import.meta.env.VITE_FB_API_KEY || "",
-  authDomain: import.meta.env.VITE_FB_AUTH_DOMAIN || "",
-  projectId: import.meta.env.VITE_FB_PROJECT_ID || "",
-  appId: import.meta.env.VITE_FB_APP_ID || ""
+  apiKey: "%VITE_FB_API_KEY%",
+  authDomain: "%VITE_FB_AUTH_DOMAIN%",
+  projectId: "%VITE_FB_PROJECT_ID%",
+  appId: "%VITE_FB_APP_ID%"
 };
 </script>
   
