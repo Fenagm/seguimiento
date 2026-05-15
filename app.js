@@ -1680,21 +1680,22 @@ async function loadLastWeekFromFirestore() {
     });
     weeks.sort((a, b) => b.id.localeCompare(a.id));
 
-    // "Última semana" = última semana cerrada con datos (excluye la semana actual)
-    const lastClosedWeek = weeks.find(w => w.id !== currentWeek);
-    if (!lastClosedWeek) {
+    // "Última semana" = semana inmediatamente anterior a la actual
+    const lastWeekId = getPrevWeekId(currentWeek);
+    const lastWeekDoc = weeks.find(w => w.id === lastWeekId);
+
+    if (!lastWeekDoc) {
       loading.style.display = 'none';
-      resultsDiv.innerHTML = '<div class="no-data"><p>📭 No hay una semana previa con datos.</p><p style="font-size:12px; margin-top:8px;">La única semana con registros es la actual.</p></div>';
+      resultsDiv.innerHTML = `<div class="no-data"><p>📭 No hay datos para la semana anterior (${lastWeekId}).</p><p style="font-size:12px; margin-top:8px;">Cargá datos en esa semana para visualizar el historial.</p></div>`;
       return;
     }
 
-    const lastWeekId = lastClosedWeek.id;
-    const lastWeekData = lastClosedWeek.data;
+    const lastWeekData = lastWeekDoc.data;
     
     loading.style.display = 'none';
     
     // Procesar y mostrar los datos
-    const results = await processWeekData(lastWeekId, lastWeekData);
+    const results = await processWeekData(lastWeekId, lastWeekData, { onlyDischarges: false });
     renderHistoryResults(results, `📅 Última semana con datos: ${lastWeekId} · ${getWeekDates(lastWeekId)}`);
     
   } catch (error) {
@@ -1727,13 +1728,13 @@ async function getDischargesByHc() {
 }
 
 // Procesar los datos de una semana
-async function processWeekData(weekId, weekData) {
+async function processWeekData(weekId, weekData, options = {}) {
+  const { onlyDischarges = false } = options;
   const results = [];
   const dischargesByHc = await getDischargesByHc();
   
   for (const [key, dayData] of Object.entries(weekData)) {
     const parts = key.split('_');
-    const hc = parts[0];
     const day = parts[1];
     if (!day || !DAYS.includes(day)) continue;
     
@@ -1774,11 +1775,9 @@ async function processWeekData(weekId, weekData) {
       dayData,
       isDischarged,
       isDischargeInCurrentWeek: isDischarged && isDischargeInWeek(patientInfo, weekId),
-      cama: patientInfo.cama || patientInfo.camaAnterior || '—'
-    });
+      cama: patientInfo.cama || patientInfo.camaAnterior || '—' });
   }
-  
-  // Ordenar por cama
+
   results.sort((a, b) => String(a.cama).localeCompare(String(b.cama)));
   return results;
 }
@@ -1839,7 +1838,6 @@ async function filterWeekData(weekId, weekData, patientQuery, drugQuery) {
   
   for (const [key, dayData] of Object.entries(weekData)) {
     const parts = key.split('_');
-    const hc = parts[0];
     const day = parts[1];
     if (!day || !DAYS.includes(day)) continue;
     
@@ -1875,8 +1873,7 @@ async function filterWeekData(weekId, weekData, patientQuery, drugQuery) {
       const matchesHc = String(patientInfo.hc).includes(patientQuery);
       if (!matchesName && !matchesHc) continue;
     }
-    
-    // Filtrar por medicación
+
     if (drugQuery) {
       let drugMatch = false;
       for (const cat of CATS) {
@@ -1887,19 +1884,12 @@ async function filterWeekData(weekId, weekData, patientQuery, drugQuery) {
       }
       if (!drugMatch) continue;
     }
-    
-    results.push({
-      wid: weekId,
-      day,
-      patient: patientInfo,
-      hc,
-      dayData,
-      isDischarged,
+
+    results.push({ wid: weekId, day, patient: patientInfo, hc, dayData, isDischarged,
       isDischargeInCurrentWeek: isDischarged && isDischargeInWeek(patientInfo, weekId),
-      cama: patientInfo.cama || patientInfo.camaAnterior || '—'
-    });
+      cama: patientInfo.cama || patientInfo.camaAnterior || '—' });
   }
-  
+
   return results;
 }
 
