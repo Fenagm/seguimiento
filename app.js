@@ -1,7 +1,28 @@
 // Importar configuración de Firebase desde archivo separado
 // Esto permite gestionar las credenciales de forma más organizada y segura
 
-firebase.initializeApp(firebaseConfig);
+function resolveFirebaseConfig(rawConfig) {
+    const placeholderPattern = /^__.+__$/;
+    const hasPlaceholders = rawConfig && Object.values(rawConfig).some(v => typeof v === 'string' && placeholderPattern.test(v));
+
+    if (!hasPlaceholders && rawConfig) return rawConfig;
+
+    const fromWindow = window.FIREBASE_CONFIG;
+    if (fromWindow && typeof fromWindow === 'object') return fromWindow;
+
+    try {
+        const stored = localStorage.getItem('firebaseConfig');
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            if (parsed && typeof parsed === 'object') return parsed;
+        }
+    } catch (_) {}
+
+    return rawConfig;
+}
+
+const resolvedFirebaseConfig = resolveFirebaseConfig(firebaseConfig);
+firebase.initializeApp(resolvedFirebaseConfig);
 let auth = null;
 const db = firebase.firestore();
 
@@ -268,10 +289,14 @@ async function doLogin() {
         }
         initApp();
         renderEstabTable(); // Renderizar tabla para mostrar/ocultar botón Agregar
-    } catch {
+    } catch (err) {
         const e = document.getElementById('lerr');
+        const msg = err && err.message ? err.message : 'No se pudo iniciar sesión';
+        e.textContent = msg.includes('__FIREBASE_')
+            ? 'Configuración de Firebase incompleta. Definí window.FIREBASE_CONFIG o localStorage.firebaseConfig.'
+            : 'Usuario o contraseña incorrectos.';
         e.style.display = 'block';
-        setTimeout(() => e.style.display = 'none', 4000);
+        setTimeout(() => e.style.display = 'none', 5000);
     } finally {
         btn.innerText = 'Ingresar →'; btn.disabled = false;
     }
