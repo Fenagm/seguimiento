@@ -1727,11 +1727,30 @@ async function getDischargesByHc() {
   return dischargesByHc;
 }
 
-// Procesar los datos de una semana
+// Procesar los datos de una semana - versión optimizada
 async function processWeekData(weekId, weekData, options = {}) {
   const { onlyDischarges = false } = options;
   const results = [];
+  
+  // Extraer todos los HC únicos de esta semana primero
+  const uniqueHcs = new Set();
+  for (const [key] of Object.entries(weekData)) {
+    const parts = key.split('_');
+    const hc = parts[0];
+    if (hc) uniqueHcs.add(String(hc));
+  }
+  
+  // Cargar todos los discharges de una sola vez
   const dischargesByHc = await getDischargesByHc();
+  
+  // Usar allPatients que ya está en memoria (cargado por subscribeToPatientsData)
+  // Esto evita hacer llamadas individuales a Firestore para cada paciente
+  const activePatientsByHc = new Map();
+  Object.values(allPatients).forEach(p => {
+    if (p && p.hc) {
+      activePatientsByHc.set(String(p.hc), p);
+    }
+  });
   
   for (const [key, dayData] of Object.entries(weekData)) {
     const parts = key.split('_');
@@ -1743,24 +1762,18 @@ async function processWeekData(weekId, weekData, options = {}) {
     let patientInfo = null;
     let isDischarged = false;
     
-    try {
-      // Primero buscar en pacientes activos
-      const patientDoc = await getDoc(doc(db, 'patients', String(hc)));
-      if (patientDoc.exists()) {
-        patientInfo = patientDoc.data();
-        patientInfo.hc = hc;
-        isDischarged = patientInfo.status === 'archived';
-      } else {
-        // Buscar en discharges
-        const discharge = dischargesByHc.get(String(hc));
-        if (discharge) {
-          patientInfo = discharge;
-          isDischarged = true;
-        }
+    // Primero buscar en pacientes activos (ya cargados en memoria via suscripción)
+    const activePatient = activePatientsByHc.get(String(hc));
+    if (activePatient) {
+      patientInfo = activePatient;
+      isDischarged = patientInfo.status === 'archived';
+    } else {
+      // Buscar en discharges
+      const discharge = dischargesByHc.get(String(hc));
+      if (discharge) {
+        patientInfo = discharge;
+        isDischarged = true;
       }
-    } catch (e) {
-      console.warn(`Error fetching patient ${hc}:`, e);
-      continue;
     }
     
     if (!patientInfo) continue;
@@ -1832,35 +1845,49 @@ async function executeFirestoreSearch() {
   }
 }
 
-// Filtrar datos de una semana específica
+// Filtrar datos de una semana específica - versión optimizada
 async function filterWeekData(weekId, weekData, patientQuery, drugQuery) {
   const results = [];
+  
+  // Extraer todos los HC únicos de esta semana primero
+  const uniqueHcs = new Set();
+  for (const [key] of Object.entries(weekData)) {
+    const parts = key.split('_');
+    const hc = parts[0];
+    if (hc) uniqueHcs.add(String(hc));
+  }
+  
+  // Cargar todos los discharges de una sola vez
   const dischargesByHc = await getDischargesByHc();
+  
+  // Usar allPatients que ya está en memoria (cargado por subscribeToPatientsData)
+  const activePatientsByHc = new Map();
+  Object.values(allPatients).forEach(p => {
+    if (p && p.hc) {
+      activePatientsByHc.set(String(p.hc), p);
+    }
+  });
   
   for (const [key, dayData] of Object.entries(weekData)) {
     const parts = key.split('_');
+    const hc = parts[0];
     const day = parts[1];
-    if (!day || !DAYS.includes(day)) continue;
+    if (!hc || !day || !DAYS.includes(day)) continue;
     
-    // Obtener paciente
+    // Obtener paciente (ya cargado en memoria)
     let patientInfo = null;
     let isDischarged = false;
     
-    try {
-      const patientDoc = await getDoc(doc(db, 'patients', String(hc)));
-      if (patientDoc.exists()) {
-        patientInfo = patientDoc.data();
-        patientInfo.hc = hc;
-        isDischarged = patientInfo.status === 'archived';
-      } else {
-        const discharge = dischargesByHc.get(String(hc));
-        if (discharge) {
-          patientInfo = discharge;
-          isDischarged = true;
-        }
+    const activePatient = activePatientsByHc.get(String(hc));
+    if (activePatient) {
+      patientInfo = activePatient;
+      isDischarged = patientInfo.status === 'archived';
+    } else {
+      const discharge = dischargesByHc.get(String(hc));
+      if (discharge) {
+        patientInfo = discharge;
+        isDischarged = true;
       }
-    } catch (e) {
-      continue;
     }
     
     if (!patientInfo) continue;
