@@ -1735,8 +1735,9 @@ async function processWeekData(weekId, weekData, options = {}) {
   
   for (const [key, dayData] of Object.entries(weekData)) {
     const parts = key.split('_');
+    const hc = parts[0];
     const day = parts[1];
-    if (!day || !DAYS.includes(day)) continue;
+    if (!hc || !day || !DAYS.includes(day)) continue;
     
     // Buscar el paciente en Firestore
     let patientInfo = null;
