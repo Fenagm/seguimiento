@@ -2072,7 +2072,7 @@ function renderWeeklyDischarges(results, title = null) {
                   <div style="font-weight:700; font-size:13px;">${r.patient.paciente}</div>
                   <div style="font-size:11px; color:var(--text3);">HC ${r.hc} · Semana ${r.wid}</div>
                 </div>
-                <span style="background:#ef5e5e20; color:#ef5e5e; font-size:10px; padding:2px 8px; border-radius:12px;">🚪 ALTA</span>
+                <span style="background:#ef5e5e20; color:#ef5e5e; font-size:10px; padding:2px 8px; border-radius:12px;">🚪 ALTA en semana</span>
               </div>
               <div style="padding:12px; background:var(--surface); display:none;">
                 ${DAYS.filter(d => r.days[d]).map(d => {
@@ -2182,7 +2182,7 @@ function renderHistoryResults(results, title = null) {
         <span class="cell-room" style="background:var(--surface3); padding:2px 10px; border-radius:15px; font-family:var(--mono); font-size:12px; font-weight:600;">${g.cama}</span>
         <strong style="flex:1; font-size:14px;">${g.patient.paciente}</strong>
         <span style="font-family:var(--mono); font-size:11px; color:var(--text3); background:var(--surface); padding:2px 8px; border-radius:12px;">📅 ${g.wid}</span>
-        ${g.isDischarged ? '<span style="background:#ef5e5e20; color:#ef5e5e; font-size:10px; padding:2px 8px; border-radius:12px;">🚪 ALTA en semana</span>' : '<span style="background:#2da44e20; color:#2da44e; font-size:10px; padding:2px 8px; border-radius:12px;">🟢 ACTIVO</span>'}
+        ${g.isDischarged ? '<span style="background:#ef5e5e20; color:#ef5e5e; font-size:10px; padding:2px 8px; border-radius:12px;">🚪 ALTA</span>' : '<span style="background:#2da44e20; color:#2da44e; font-size:10px; padding:2px 8px; border-radius:12px;">🟢 ACTIVO</span>'}
         <span style="color:var(--text3); font-size:16px;">▾</span>
       </div>
       <div class="hist-card-body" style="display:none; padding:16px; background:var(--surface);">
