@@ -839,7 +839,6 @@ function renderDaysRowContent(hc) {
     <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px 4px;border-bottom:1px solid var(--border);background:var(--surface);">
       <span style="font-size:11px;color:var(--text3);">
         Semana <strong style="color:var(--text2)">${currentWeek}</strong>
-        <button class="btn copy-prev-week-btn" data-hc="${hc}" style="margin-left:10px;padding:2px 8px;font-size:10px;">↩ Copiar semana anterior</button>
       </span>
       <button class="btn move-patient-btn" data-hc="${hc}" style="padding:3px 10px;font-size:11px;gap:4px;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><path d="M5 9l7-7 7 7M5 15l7 7 7-7"/></svg>
@@ -853,13 +852,6 @@ function renderDaysRowContent(hc) {
     const hc = card.dataset.hc;
     const day = card.dataset.day;
     card.addEventListener('click', () => openPanel(hc, day));
-  });
-  container.querySelectorAll('.copy-prev-week-btn').forEach(btn => {
-    const hc = btn.dataset.hc;
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      copiarSemanaAnterior(hc);
-    });
   });
   container.querySelectorAll('.move-patient-btn').forEach(btn => {
     const hc = btn.dataset.hc;
@@ -936,11 +928,11 @@ function updateCopyPrevBtn() {
   const label = document.getElementById('btn-copy-prev-label');
   const idx = DAYS.indexOf(panelState.day);
   if (idx === 0) {
-    btn.disabled = true;
-    btn.title = 'No hay día anterior (es Lunes)';
-    btn.style.opacity = '0.4';
-    btn.style.cursor = 'not-allowed';
-    if (label) label.textContent = 'Copiar desde día anterior';
+    btn.disabled = false;
+    btn.title = 'Copia los datos del viernes de la semana anterior al día actual';
+    btn.style.opacity = '';
+    btn.style.cursor = '';
+    if (label) label.textContent = 'Copiar desde Vie (semana anterior)';
   } else {
     btn.disabled = false;
     btn.title = `Copia los datos del ${DAY_LABELS[DAYS[idx - 1]]} al día actual`;
@@ -1224,16 +1216,29 @@ function saveEntry() {
   showToast('Entrada guardada ✓');
 }
 
-function copyToPrevDay() {
+async function copyToPrevDay() {
   if (!requireAuth()) return;
   const idx = DAYS.indexOf(panelState.day);
+  let prevDay = null;
+  let prevData = null;
   if (idx <= 0) {
-    showToast('No hay día anterior para copiar (es Lunes)');
-    return;
+    prevDay = 'viernes';
+    const prevWeek = getPrevWeekId(currentWeek);
+    if (!db) {
+      showToast('No hay conexión para copiar el viernes de la semana anterior');
+      return;
+    }
+    const prevSnap = await getDoc(doc(db, 'weeks', prevWeek));
+    if (!prevSnap.exists()) {
+      showToast(`No hay datos de ${prevWeek} para copiar`);
+      return;
+    }
+    prevData = prevSnap.data()[`${panelState.hc}_${prevDay}`];
+  } else {
+    prevDay = DAYS[idx - 1];
+    const prevKey = `${panelState.hc}_${prevDay}`;
+    prevData = weekData[prevKey];
   }
-  const prevDay = DAYS[idx - 1];
-  const prevKey = `${panelState.hc}_${prevDay}`;
-  const prevData = weekData[prevKey];
   const hasPrevData = prevData && CATS.some(c => prevData[c.id] && (prevData[c.id].text || prevData[c.id].tags?.length));
   if (!hasPrevData) {
     showToast(`El ${DAY_LABELS[prevDay]} no tiene datos para copiar`);
@@ -2479,8 +2484,6 @@ function openPatientDays(hc) {
   currentDaysHc = hc;
   document.getElementById('days-patient-name').textContent = p.paciente;
   document.getElementById('days-patient-meta').textContent = `Cama ${p.cama} · HC ${p.hc} · ${p.medico || ''}`;
-  const copyBtn = document.getElementById('days-panel-copy-prev');
-  if (copyBtn) copyBtn.style.display = 'flex';
   renderPatientDaysList();
   document.getElementById('patient-days-overlay').classList.add('open');
   setTimeout(() => document.getElementById('patient-days-panel').classList.add('open'), 10);
