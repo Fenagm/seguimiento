@@ -549,7 +549,7 @@ async function saveToFirestore() {
       });
       payload._updatedAt = serverTimestamp();
       payload._updatedBy = currentUser?.uid || 'anonymous';
-      await updateDoc(doc(db, 'weeks', currentWeek), payload);
+      await setDoc(doc(db, 'weeks', currentWeek), payload, { merge: true });
       weekDirtyMap = {};
     }
     for (const [hc, p] of Object.entries(allPatients)) {
@@ -575,7 +575,7 @@ function queueWeekAutosave() {
       });
       payload._updatedAt = serverTimestamp();
       payload._updatedBy = currentUser?.uid || 'anonymous';
-      await updateDoc(doc(db, 'weeks', weekId), payload);
+      await setDoc(doc(db, 'weeks', weekId), payload, { merge: true });
       Object.keys(dirtyEntries).forEach((key) => {
         if (weekDirtyMap[key] === dirtyEntries[key]) delete weekDirtyMap[key];
       });
