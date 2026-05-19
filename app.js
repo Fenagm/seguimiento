@@ -1124,7 +1124,9 @@ function renderPanelBody() {
               id="med-input-${cat.id}"
               data-cat="${cat.id}"
               placeholder="Agregar medicación..."
-              autocomplete="off">
+              autocomplete="off"
+              ${autocompleteEnabled ? '' : 'disabled'}>
+            <div class="med-autocomplete-list" id="med-list-${cat.id}"></div>
           </div>
           <textarea class="cat-textarea" id="ta-${cat.id}" data-cat="${cat.id}"
                     placeholder="Notas adicionales de ${cat.label.toLowerCase()}...">${text}</textarea>
@@ -1148,21 +1150,15 @@ function renderPanelBody() {
   });
   document.querySelectorAll('.med-autocomplete-input').forEach(input => {
     const catId = input.dataset.cat;
-    input.dataset.typed = '';
-    input.addEventListener('input', () => applyInlineAutocomplete(catId, input));
+    input.addEventListener('input', () => renderMedSuggestions(catId, input.value));
+    input.addEventListener('focus', () => renderMedSuggestions(catId, input.value));
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
         applyMedicationSuggestion(catId, input.value.trim());
-      } else if (e.key === 'Tab' && autocompleteEnabled && input.selectionStart !== input.selectionEnd) {
-        const value = input.value;
-        input.value = value;
-        input.setSelectionRange(value.length, value.length);
+      } else if (e.key === 'Escape') {
+        clearMedSuggestions(catId);
       }
-    });
-    input.addEventListener('click', () => {
-      const len = input.value.length;
-      input.setSelectionRange(len, len);
     });
   });
   const autoToggleEl = document.getElementById('autocomplete-toggle');
@@ -1193,18 +1189,25 @@ function getMedicationSuggestions(catId, query) {
   return dict.filter(item => item.toLowerCase().includes(q)).slice(0, 6);
 }
 
-function applyInlineAutocomplete(catId, input) {
-  const raw = String(input.value || '').trimStart();
-  input.dataset.typed = raw;
-  if (!autocompleteEnabled) return;
-  if (!raw) return;
-  const suggestions = getMedicationSuggestions(catId, raw);
-  const candidate = suggestions.find(item => item.toLowerCase().startsWith(raw.toLowerCase()));
-  if (!candidate) {
+function clearMedSuggestions(catId) {
+  const list = document.getElementById(`med-list-${catId}`);
+  if (list) list.innerHTML = '';
+}
+
+function renderMedSuggestions(catId, query) {
+  const list = document.getElementById(`med-list-${catId}`);
+  if (!list) return;
+  const suggestions = getMedicationSuggestions(catId, query);
+  if (!suggestions.length) {
+    list.innerHTML = '';
     return;
   }
-  input.value = candidate;
-  input.setSelectionRange(raw.length, candidate.length);
+  list.innerHTML = suggestions.map(item => `
+    <button type="button" class="med-suggestion-item" data-cat="${catId}" data-value="${item.replace(/"/g, '&quot;')}">${item}</button>
+  `).join('');
+  list.querySelectorAll('.med-suggestion-item').forEach(btn => {
+    btn.addEventListener('click', () => applyMedicationSuggestion(catId, btn.dataset.value));
+  });
 }
 
 function applyMedicationSuggestion(catId, value) {
@@ -1212,6 +1215,7 @@ function applyMedicationSuggestion(catId, value) {
   if (!med) return;
   const input = document.getElementById(`med-input-${catId}`);
   if (input) input.value = '';
+  clearMedSuggestions(catId);
   const catTags = TAGS[catId] || [];
   const existingTagBtn = document.querySelector(`.tag-chip[data-cat="${catId}"][data-tag="${CSS.escape(med)}"]`);
   if (catTags.includes(med) && existingTagBtn && !existingTagBtn.classList.contains('active')) {

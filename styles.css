@@ -840,6 +840,28 @@ table.patient-table td {
   outline: none;
 }
 
+.med-autocomplete-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.med-suggestion-item {
+  text-align: left;
+  background: var(--surface);
+  color: var(--text2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 6px 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.med-suggestion-item:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
 
 .panel-footer {
   padding: 14px 20px;
