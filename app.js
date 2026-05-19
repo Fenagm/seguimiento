@@ -2143,17 +2143,6 @@ function renderPanelBody() {
                 ${t}
               </button>`).join('')}
           </div>
-          <div class="med-autocomplete-box">
-            <input
-              type="text"
-              class="med-autocomplete-input"
-              id="med-input-${cat.id}"
-              data-cat="${cat.id}"
-              placeholder="Agregar medicación..."
-              autocomplete="off"
-              ${autocompleteEnabled ? '' : 'disabled'}>
-            <div class="med-autocomplete-list" id="med-list-${cat.id}"></div>
-          </div>
           <textarea class="cat-textarea" id="ta-${cat.id}" data-cat="${cat.id}"
                     placeholder="Notas adicionales de ${cat.label.toLowerCase()}...">${text}</textarea>
         </div>
@@ -2192,7 +2181,8 @@ function renderPanelBody() {
         }
         applyMedicationSuggestion(catId, input.value.trim());
       } else if (e.key === 'Escape') {
-        clearMedSuggestions(catId);
+        const pos = ta.selectionStart || 0;
+        ta.setSelectionRange(pos, pos);
       }
     });
   });
