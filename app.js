@@ -1111,7 +1111,7 @@ function renderPanelBody() {
           <span class="cat-toggle">▾</span>
         </div>
         <div class="cat-body" id="cat-body-${cat.id}" style="display:none">
-          <div class="tags-row">
+          <div class="tags-row ${autocompleteEnabled ? 'hidden' : ''}">
             ${tags.map(t => `
               <button class="tag-chip ${cat.cls} ${activeTags.includes(t) ? 'active' : ''}" data-cat="${cat.id}" data-tag="${t.replace(/'/g, "\\'")}">
                 ${t}

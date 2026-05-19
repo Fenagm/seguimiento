@@ -710,6 +710,10 @@ table.patient-table td {
   padding-right: 2px;
 }
 
+.tags-row.hidden {
+  display: none;
+}
+
 .tag-chip {
   font-size: 11px;
   padding: 3px 9px;
