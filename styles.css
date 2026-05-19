@@ -690,19 +690,19 @@ table.patient-table td {
 }
 
 .cat-body {
-  padding: 12px 12px;
+  padding: 8px 10px;
   border-top: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   background: var(--surface2);
 }
 
 .tags-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
-  max-height: min(12dvh, 80px);
+  gap: 3px;
+  max-height: min(10dvh, 60px);
   overflow-y: auto;
   overscroll-behavior: contain;
   scroll-behavior: smooth;
@@ -716,9 +716,9 @@ table.patient-table td {
 }
 
 .tag-chip {
-  font-size: 11px;
-  padding: 4px 9px;
-  border-radius: 16px;
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 14px;
   cursor: pointer;
   border: 1px solid;
   transition: all .12s;
@@ -798,14 +798,14 @@ table.patient-table td {
   border: 1px solid var(--border);
   border-radius: 5px;
   color: var(--text);
-  font-size: 13px;
+  font-size: 12px;
   font-family: var(--sans);
-  padding: 8px 10px;
+  padding: 7px 9px;
   resize: vertical;
-  min-height: 84px;
+  min-height: 64px;
   outline: none;
   transition: border-color .15s;
-  line-height: 1.5;
+  line-height: 1.4;
 }
 
 .cat-textarea:focus {
@@ -830,6 +830,7 @@ table.patient-table td {
 
 .med-autocomplete-box {
   position: relative;
+  margin-top: 6px !important;
 }
 
 .med-autocomplete-input {
@@ -838,13 +839,30 @@ table.patient-table td {
   border: 1px solid var(--border);
   border-radius: 5px;
   color: var(--text);
-  font-size: 13px;
-  padding: 10px 12px;
+  font-size: 12px;
+  padding: 8px 10px;
   outline: none;
+  box-sizing: border-box;
 }
 
 .med-autocomplete-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 5px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  max-height: 200px;
+  overflow-y: auto;
   display: none;
+  margin-top: 4px;
+}
+
+.med-autocomplete-list.active {
+  display: block;
 }
 
 .med-suggestion-item {
