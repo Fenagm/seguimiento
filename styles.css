@@ -689,11 +689,11 @@ table.patient-table td {
 }
 
 .cat-body {
-  padding: 10px 12px;
+  padding: 16px;
   border-top: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   background: var(--surface2);
 }
 
@@ -701,7 +701,7 @@ table.patient-table td {
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
-  max-height: min(20dvh, 130px);
+  max-height: min(14dvh, 92px);
   overflow-y: auto;
   overscroll-behavior: contain;
   scroll-behavior: smooth;
@@ -716,7 +716,7 @@ table.patient-table td {
 
 .tag-chip {
   font-size: 11px;
-  padding: 3px 9px;
+  padding: 4px 9px;
   border-radius: 20px;
   cursor: pointer;
   border: 1px solid;
@@ -790,16 +790,17 @@ table.patient-table td {
 }
 
 .cat-textarea {
+  display: block;
   width: 100%;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 5px;
   color: var(--text);
-  font-size: 12px;
+  font-size: 13px;
   font-family: var(--sans);
   padding: 8px 10px;
   resize: vertical;
-  min-height: 60px;
+  min-height: 96px;
   outline: none;
   transition: border-color .15s;
   line-height: 1.5;
@@ -835,16 +836,13 @@ table.patient-table td {
   border: 1px solid var(--border);
   border-radius: 5px;
   color: var(--text);
-  font-size: 12px;
-  padding: 8px 10px;
+  font-size: 13px;
+  padding: 10px 12px;
   outline: none;
 }
 
 .med-autocomplete-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-top: 6px;
+  display: none;
 }
 
 .med-suggestion-item {
@@ -1930,8 +1928,8 @@ table.patient-table td {
   }
 
   .tag-chip {
-    min-height: 34px;
-    padding: 6px 12px;
+    min-height: 30px;
+    padding: 4px 10px;
   }
 
   .week-nav button {
