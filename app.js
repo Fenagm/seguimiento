@@ -2161,20 +2161,25 @@ function renderPanelBody() {
   });
   document.querySelectorAll('.cat-textarea').forEach(ta => {
     const catId = ta.dataset.cat;
-    ta.addEventListener('input', () => {
-      updateCatSummary(catId);
+    ta.addEventListener('input', () => updateCatSummary(catId));
+  });
+  document.querySelectorAll('.med-autocomplete-input').forEach(input => {
+    const catId = input.dataset.cat;
+    input.addEventListener('input', () => {
       if (isApplyingInlineSuggestion) return;
-      renderMedSuggestions(catId, ta);
+      renderMedSuggestions(catId, input.value);
     });
-    ta.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && ta.selectionStart !== ta.selectionEnd) {
+    input.addEventListener('focus', () => renderMedSuggestions(catId, input.value));
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
         e.preventDefault();
-        const cursor = ta.selectionStart || 0;
-        ta.value = ta.value.slice(0, ta.selectionStart) + ta.value.slice(ta.selectionEnd);
-        ta.setSelectionRange(cursor, cursor);
-        panelState.data[catId] = panelState.data[catId] || { tags: [], text: '' };
-        panelState.data[catId].text = ta.value;
-        updateCatSummary(catId);
+        const selectionStart = input.selectionStart || 0;
+        const selectionEnd = input.selectionEnd || 0;
+        if (selectionStart !== selectionEnd) {
+          input.value = input.value.slice(0, selectionStart) + input.value.slice(selectionEnd);
+          input.setSelectionRange(selectionStart, selectionStart);
+        }
+        applyMedicationSuggestion(catId, input.value.trim());
       } else if (e.key === 'Escape') {
         const pos = ta.selectionStart || 0;
         ta.setSelectionRange(pos, pos);
@@ -2216,38 +2221,20 @@ function clearMedSuggestions(catId) {
   if (list) list.innerHTML = '';
 }
 
-function renderMedSuggestions(catId, textareaEl) {
-  const query = extractCurrentMedicationToken(textareaEl);
+function renderMedSuggestions(catId, query) {
   const suggestions = getMedicationSuggestions(catId, query);
-  const input = textareaEl;
+  const input = document.getElementById(`med-input-${catId}`);
   if (!input) return;
-  const typed = String(query || '').trim();
+  const typed = String(query || '');
   if (!autocompleteEnabled || !typed.trim() || !suggestions.length) return;
   const suggestion = suggestions[0];
   if (!suggestion || suggestion.toLowerCase() === typed.toLowerCase()) return;
   if (!suggestion.toLowerCase().startsWith(typed.toLowerCase())) return;
 
   isApplyingInlineSuggestion = true;
-  const cursor = input.selectionStart || 0;
-  const before = input.value.slice(0, cursor);
-  const tokenStart = Math.max(before.lastIndexOf(';'), before.lastIndexOf(','), before.lastIndexOf('\n')) + 1;
-  const head = input.value.slice(0, tokenStart);
-  const tail = input.value.slice(cursor);
-  input.value = `${head}${suggestion}${tail}`;
-  const selStart = head.length + typed.length;
-  const selEnd = head.length + suggestion.length;
-  input.setSelectionRange(selStart, selEnd);
+  input.value = suggestion;
+  input.setSelectionRange(typed.length, suggestion.length);
   isApplyingInlineSuggestion = false;
-  panelState.data[catId] = panelState.data[catId] || { tags: [], text: '' };
-  panelState.data[catId].text = input.value;
-}
-
-function extractCurrentMedicationToken(textareaEl) {
-  if (!textareaEl) return '';
-  const cursor = textareaEl.selectionStart || 0;
-  const before = textareaEl.value.slice(0, cursor);
-  const idx = Math.max(before.lastIndexOf(';'), before.lastIndexOf(','), before.lastIndexOf('\n'));
-  return before.slice(idx + 1).trim();
 }
 
 function applyMedicationSuggestion(catId, value) {
