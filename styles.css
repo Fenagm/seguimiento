@@ -693,7 +693,7 @@ table.patient-table td {
   border-top: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   background: var(--surface2);
 }
 
