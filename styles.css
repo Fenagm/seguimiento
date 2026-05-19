@@ -609,6 +609,7 @@ table.patient-table td {
 .panel-body {
   overflow-y: auto;
   flex: 1;
+  min-height: 0;
   padding: 16px 20px;
   display: flex;
   flex-direction: column;
