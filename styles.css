@@ -710,6 +710,10 @@ table.patient-table td {
   padding-right: 2px;
 }
 
+.tags-row.hidden {
+  display: none;
+}
+
 .tag-chip {
   font-size: 11px;
   padding: 3px 9px;
@@ -808,6 +812,34 @@ table.patient-table td {
 .cat-textarea::placeholder {
   color: var(--text3);
 }
+
+.autocomplete-toggle-row {
+  margin-bottom: 4px;
+}
+
+.autocomplete-toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text2);
+}
+
+.med-autocomplete-box {
+  position: relative;
+}
+
+.med-autocomplete-input {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text);
+  font-size: 12px;
+  padding: 8px 10px;
+  outline: none;
+}
+
 
 .panel-footer {
   padding: 14px 20px;
