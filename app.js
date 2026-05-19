@@ -2163,6 +2163,26 @@ function renderPanelBody() {
     const catId = ta.dataset.cat;
     ta.addEventListener('input', () => updateCatSummary(catId));
   });
+  
+  // Add autocomplete input fields for each category that supports medication
+  if (autocompleteEnabled) {
+    CATS.forEach(cat => {
+      const catBody = document.getElementById(`cat-body-${cat.id}`);
+      if (catBody && MEDICATION_DICTIONARY[cat.id] && MEDICATION_DICTIONARY[cat.id].length > 0) {
+        const autocompleteBox = document.createElement('div');
+        autocompleteBox.className = 'med-autocomplete-box';
+        autocompleteBox.style.marginTop = '8px';
+        autocompleteBox.innerHTML = `
+          <input type="text" class="med-autocomplete-input" id="med-input-${cat.id}" data-cat="${cat.id}"
+                 placeholder="Escribí para buscar ${cat.label.toLowerCase()}..." autocomplete="off">
+          <div class="med-autocomplete-list" id="med-list-${cat.id}"></div>
+        `;
+        catBody.appendChild(autocompleteBox);
+      }
+    });
+  }
+  
+  // Attach autocomplete event listeners after inputs are created
   document.querySelectorAll('.med-autocomplete-input').forEach(input => {
     const catId = input.dataset.cat;
     input.addEventListener('input', () => {
@@ -2181,9 +2201,12 @@ function renderPanelBody() {
         }
         applyMedicationSuggestion(catId, input.value.trim());
       } else if (e.key === 'Escape') {
-        const pos = ta.selectionStart || 0;
-        ta.setSelectionRange(pos, pos);
+        clearMedSuggestions(catId);
       }
+    });
+    // Click outside to close suggestions
+    input.addEventListener('blur', () => {
+      setTimeout(() => clearMedSuggestions(catId), 150);
     });
   });
   const autoToggleEl = document.getElementById('autocomplete-toggle');
@@ -4453,10 +4476,10 @@ document.getElementById('btn-toggle-pass').addEventListener('click', () => {
 
 document.getElementById('search-input').addEventListener('input', (e) => filterPatients(e.target.value));
 
-// Panel event listeners
-document.getElementById('entry-overlay').addEventListener('click', (e) => {
-  if (e.target === document.getElementById('entry-overlay')) closePanel();
-});
+// Panel event listeners - click outside should NOT close the panel anymore
+// document.getElementById('entry-overlay').addEventListener('click', (e) => {
+//   if (e.target === document.getElementById('entry-overlay')) closePanel();
+// });
 document.getElementById('panel-close').addEventListener('click', () => closePanel());
 document.getElementById('panel-cancel').addEventListener('click', () => closePanel());
 document.getElementById('btn-copy-prev').addEventListener('click', () => copyToPrevDay());
