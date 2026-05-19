@@ -64,7 +64,7 @@ import {
 // ─── CATEGORIES & TAGS ───────────────────────────────────────────────────────
 export const CATS = [
   { id: 'nutricion', label: 'Nutrición', cls: 'nut', dot: '#2da44e' },
-  { id: 'sedacion', label: 'Sedación', cls: 'sed', dot: '#c87af0' },
+  { id: 'sedacion', label: 'Sedación y Dolor', cls: 'sed', dot: '#c87af0' },
   { id: 'antibioticos', label: 'Antibióticos', cls: 'atb', dot: '#f5a623' },
   { id: 'qmt', label: 'QMT', cls: 'qmt', dot: '#ef5e5e' },
   { id: 'otros', label: 'Otros', cls: 'oth', dot: '#4ab3c7' },
@@ -79,6 +79,115 @@ export const TAGS = {
   otros: ['Filgrastim', 'Bactrim forte', 'Isavuconazol', 'Ceftolozano + Tazobactam', 'Heparina', 'HBPM', 'Omeprazol', 'Dexametasona'],
   laboratorio: ['Glob. blancos', 'Glob. rojos', 'Hemoglobina', 'Hematocrito', 'Neutrófilos', 'Linfocitos', 'Rec. plaquetas', 'Potasio', 'Glucemia', 'Uremia', 'Creatinina'],
 };
+
+const AUTOCOMPLETE_STORAGE_KEY = 'med_autocomplete_enabled';
+const CUSTOM_MEDICATION_DICTIONARY_RAW = `AC. ASCORBICO - VIT. C 1 GR. INY.
+ACETILCISTEINA . 600 MG COMP. EFERV.
+ACETILSALICILICO, AC. 100 MG.  COMP.
+ACICLOVIR 200 MG COMP.
+ACICLOVIR 500 MG F.A.
+ACICLOVIR 800 MG COMP.
+ALLOPURINOL 300 MG COMP.
+AMINOFILINA 240 MG/10 ML FA.
+AMLODIPINA 5 MG COMP.
+AMOXICILINA+CLAVULANICO, C. 875/125 MG COMP.
+AMPICILINA+SULBACTAM 1000/500MG INY.
+ANIDULAFUNGINA 100 MG FA.
+APIXABAN 2,5 MG. COMP.
+APIXABAN 5 MG COMP.
+ATORVASTATIN 20 MG COMP.
+AZITROMICINA 500 MG COMP.
+BETAMETASONA (DIPROP.+ FOSF).FA
+BISOPROLOL 2.5 MG COMP.
+BUDESONIDE 3 MG CAPS.
+BUPRENORFINA 10 MCG/HORA PARCHE
+CARVEDILOL 12,50 MG COMP.
+CEFALEXINA 500 MG COMP.
+CEFTAZIDIMA + AVIBACTAM 2/0,5 G . FA.
+CIPROFLOXACINA 500 MG COMP.
+CLARITROMICINA 500 MG COMP.
+CLINDAMICINA 600 MG. INY.
+CLONAZEPAM 0.5 MG COMP.
+CLONIDINA 150 MCG/ML F.A.
+CLOPIDOGREL 75 MG. COMP.
+COLISTINA 100 MG. AMP.
+DAPTOMICINA 500 MG F.A.
+DEXAMETASONA  8 MG. AMP.
+DEXMEDETOMIDINE 200 MCG F.A.
+DIAZEPAN 10 MG. INY.
+DIPIRONA 1 GR. INY.
+DOMPERIDONA 10 MG COMP.
+ENOXAPARINA 40 MG JP
+ERTAPENEM 1000 MG F.A.
+ESCITALOPRAM 10 MG COMP.
+ESOMEPRAZOL 40 MG CAPS. / COMP.
+FENTANILO 50 MCG/MLFRASCO AMPOLLA
+FLUCONAZOL 100 MG COMP.
+FUROSEMIDA 20 MG INY
+GABAPENTIN 300 MG COMP
+GANCICLOVIR 500 MG. INY.
+HALOPERIDOL 5 MG/ML F.A.
+HEPARINA SODICA 25000 UI F.A. X 5ML
+HIDROCORTISONA 100 MG INY.
+HIDROXIUREA 500 MG. COMP.
+IBUPROFENO 600MG  COMP.
+IMIPENEM+CILASTATIN 500/500 MG FA
+ISAVUCONAZOL 100 MG CAPS.
+KETAMINA 10 ML INY.
+LEVOFLOXACINA 500 MG  INY.
+LEVOTIROXINA 100 MCG COMP.
+LINEZOLID 600 MG TAB.
+LORAZEPAM 1 MG COMP.
+LOSARTAN 50 MG COMP.
+MEROPENEM 1000 MG AMP./ F.A.LIOFIL.
+METADONA 10 MG COMP.
+METOCLOPRAMIDA 10 MG INY
+METRONIDAZOL 500 MG INY.
+MIDAZOLAM 15MG INY
+MORFINA,CLORHIDRATO 10 MG/ML1% AMP.
+NALOXONA 0.4 MG/ML F.A.
+NORADRENALINA 4 MG F.A.
+OMEPRAZOL 40 MG FA
+ONDANSETRON 8 MG INY.
+OXICODONA 10 MG. COMP
+PANTOPRAZOL 40 MG COMP.
+PARACETAMOL 1000MG/100ML SACHET ECOFLAC
+PIPERACILINA+TAZOBACTAM 4000/500 MG FA
+POTASIO, CL 15 MEQ./ML INY.
+PREDNISONA 20 MG. COMP.
+PREGABALINA 75 MG CAPS.
+PROPOFOL 1 %  200 MG AMPOLLAS10 MG/ML
+QUETIAPINA 25 MG COMP.
+REMIFENTANIL 5 MG FRASCO INY.
+RIVAROXABAN 20 MG COMP
+RISPERIDONA 1 MG COMP.
+SERTRALINA 50 MG COMP.
+SODIO,NITROPRUSIATO 50 MG F.A.
+TACROLIMUS 5 MG. INY
+TEICOPLANIDA 400 MG INY.
+TIGECICLINA 50 MG F.A.
+TRAMADOL 50 MG/ML INY.
+VANCOMICINA 1000 MG F.A.
+VASOPRESINA 1ML AMP
+VENLAFAXINA 75 MG COMP.
+VORICONAZOL 200 MG F.A.`;
+
+function normalizeMedicationLine(line) {
+  return String(line || '').trim().replace(/\s+/g, ' ');
+}
+
+const BASE_DICTIONARY = Array.from(
+  new Set(
+    CUSTOM_MEDICATION_DICTIONARY_RAW
+      .split('\n')
+      .map(normalizeMedicationLine)
+      .filter(Boolean)
+  )
+);
+
+const MEDICATION_DICTIONARY = Object.fromEntries(
+  CATS.map(cat => [cat.id, Array.from(new Set([...(TAGS[cat.id] || []), ...BASE_DICTIONARY]))])
+);
 
 export const DAYS = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes'];
 export const DAY_LABELS = { lunes: 'Lun', martes: 'Mar', miercoles: 'Mié', jueves: 'Jue', viernes: 'Vie' };
@@ -113,6 +222,7 @@ let moveFilterFloor = 'all';
 let moveSelectedRoom = null;
 let weekAutosaveTimer = null;
 let weekDirtyMap = {};
+let autocompleteEnabled = localStorage.getItem(AUTOCOMPLETE_STORAGE_KEY) !== '0';
 
 // currentUser is set by Firebase Auth — single source of truth
 let currentUser = null;
@@ -978,7 +1088,15 @@ function switchPanelDay(day) {
 
 function renderPanelBody() {
   const el = document.getElementById('panel-body');
-  el.innerHTML = CATS.map(cat => {
+  const autoToggle = `
+    <div class="autocomplete-toggle-row">
+      <label class="autocomplete-toggle-label">
+        <input type="checkbox" id="autocomplete-toggle" ${autocompleteEnabled ? 'checked' : ''}>
+        Autocompletado de medicación
+      </label>
+    </div>
+  `;
+  el.innerHTML = autoToggle + CATS.map(cat => {
     const entry = panelState.data[cat.id] || {};
     const activeTags = Array.isArray(entry.tags) ? entry.tags : [];
     const text = entry.text || '';
@@ -998,6 +1116,17 @@ function renderPanelBody() {
               <button class="tag-chip ${cat.cls} ${activeTags.includes(t) ? 'active' : ''}" data-cat="${cat.id}" data-tag="${t.replace(/'/g, "\\'")}">
                 ${t}
               </button>`).join('')}
+          </div>
+          <div class="med-autocomplete-box">
+            <input
+              type="text"
+              class="med-autocomplete-input"
+              id="med-input-${cat.id}"
+              data-cat="${cat.id}"
+              placeholder="Agregar medicación..."
+              autocomplete="off"
+              ${autocompleteEnabled ? '' : 'disabled'}>
+            <div class="med-autocomplete-list" id="med-list-${cat.id}"></div>
           </div>
           <textarea class="cat-textarea" id="ta-${cat.id}" data-cat="${cat.id}"
                     placeholder="Notas adicionales de ${cat.label.toLowerCase()}...">${text}</textarea>
@@ -1019,6 +1148,27 @@ function renderPanelBody() {
     const catId = ta.dataset.cat;
     ta.addEventListener('input', () => updateCatSummary(catId));
   });
+  document.querySelectorAll('.med-autocomplete-input').forEach(input => {
+    const catId = input.dataset.cat;
+    input.addEventListener('input', () => renderMedSuggestions(catId, input.value));
+    input.addEventListener('focus', () => renderMedSuggestions(catId, input.value));
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        applyMedicationSuggestion(catId, input.value.trim());
+      } else if (e.key === 'Escape') {
+        clearMedSuggestions(catId);
+      }
+    });
+  });
+  const autoToggleEl = document.getElementById('autocomplete-toggle');
+  if (autoToggleEl) {
+    autoToggleEl.addEventListener('change', () => {
+      autocompleteEnabled = autoToggleEl.checked;
+      localStorage.setItem(AUTOCOMPLETE_STORAGE_KEY, autocompleteEnabled ? '1' : '0');
+      renderPanelBody();
+    });
+  }
 
   // Agregar botón de historial al final del panel
   const historyBtnDiv = document.createElement('div');
@@ -1029,6 +1179,56 @@ function renderPanelBody() {
   </button>`;
   el.appendChild(historyBtnDiv);
   document.getElementById('show-history-btn').addEventListener('click', () => showEntryHistory(panelState.hc, panelState.day));
+}
+
+function getMedicationSuggestions(catId, query) {
+  if (!autocompleteEnabled) return [];
+  const dict = MEDICATION_DICTIONARY[catId] || [];
+  const q = String(query || '').trim().toLowerCase();
+  if (!q) return dict.slice(0, 6);
+  return dict.filter(item => item.toLowerCase().includes(q)).slice(0, 6);
+}
+
+function clearMedSuggestions(catId) {
+  const list = document.getElementById(`med-list-${catId}`);
+  if (list) list.innerHTML = '';
+}
+
+function renderMedSuggestions(catId, query) {
+  const list = document.getElementById(`med-list-${catId}`);
+  if (!list) return;
+  const suggestions = getMedicationSuggestions(catId, query);
+  if (!suggestions.length) {
+    list.innerHTML = '';
+    return;
+  }
+  list.innerHTML = suggestions.map(item => `
+    <button type="button" class="med-suggestion-item" data-cat="${catId}" data-value="${item.replace(/"/g, '&quot;')}">${item}</button>
+  `).join('');
+  list.querySelectorAll('.med-suggestion-item').forEach(btn => {
+    btn.addEventListener('click', () => applyMedicationSuggestion(catId, btn.dataset.value));
+  });
+}
+
+function applyMedicationSuggestion(catId, value) {
+  const med = String(value || '').trim();
+  if (!med) return;
+  const input = document.getElementById(`med-input-${catId}`);
+  if (input) input.value = '';
+  clearMedSuggestions(catId);
+  const catTags = TAGS[catId] || [];
+  const existingTagBtn = document.querySelector(`.tag-chip[data-cat="${catId}"][data-tag="${CSS.escape(med)}"]`);
+  if (catTags.includes(med) && existingTagBtn && !existingTagBtn.classList.contains('active')) {
+    toggleTag(catId, med, existingTagBtn);
+    return;
+  }
+  const ta = document.getElementById(`ta-${catId}`);
+  if (!ta) return;
+  const sep = ta.value.trim() ? '; ' : '';
+  ta.value = `${ta.value}${sep}${med}`;
+  panelState.data[catId] = panelState.data[catId] || { tags: [], text: '' };
+  panelState.data[catId].text = ta.value;
+  updateCatSummary(catId);
 }
 
 function toggleCat(catId) {
