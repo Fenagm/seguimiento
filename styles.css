@@ -690,24 +690,24 @@ table.patient-table td {
 }
 
 .cat-body {
-  padding: 14px 14px;
+  padding: 12px 12px;
   border-top: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   background: var(--surface2);
 }
 
 .tags-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
-  max-height: min(14dvh, 92px);
+  gap: 4px;
+  max-height: min(12dvh, 80px);
   overflow-y: auto;
   overscroll-behavior: contain;
   scroll-behavior: smooth;
-  scroll-padding-top: 6px;
-  scroll-padding-bottom: 6px;
+  scroll-padding-top: 4px;
+  scroll-padding-bottom: 4px;
   padding-right: 2px;
 }
 
@@ -716,14 +716,15 @@ table.patient-table td {
 }
 
 .tag-chip {
-  font-size: 12px;
-  padding: 5px 11px;
-  border-radius: 20px;
+  font-size: 11px;
+  padding: 4px 9px;
+  border-radius: 16px;
   cursor: pointer;
   border: 1px solid;
   transition: all .12s;
   background: none;
   font-family: var(--sans);
+  white-space: nowrap;
 }
 
 .tag-chip:hover {
