@@ -809,6 +809,56 @@ table.patient-table td {
   color: var(--text3);
 }
 
+.autocomplete-toggle-row {
+  margin-bottom: 4px;
+}
+
+.autocomplete-toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text2);
+}
+
+.med-autocomplete-box {
+  position: relative;
+}
+
+.med-autocomplete-input {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text);
+  font-size: 12px;
+  padding: 8px 10px;
+  outline: none;
+}
+
+.med-autocomplete-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.med-suggestion-item {
+  text-align: left;
+  background: var(--surface);
+  color: var(--text2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 6px 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.med-suggestion-item:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
 .panel-footer {
   padding: 14px 20px;
   border-top: 1px solid var(--border);
