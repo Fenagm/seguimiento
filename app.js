@@ -1248,6 +1248,7 @@ let moveSelectedRoom = null;
 let weekAutosaveTimer = null;
 let weekDirtyMap = {};
 let autocompleteEnabled = localStorage.getItem(AUTOCOMPLETE_STORAGE_KEY) !== '0';
+let isApplyingInlineSuggestion = false;
 
 // currentUser is set by Firebase Auth — single source of truth
 let currentUser = null;
@@ -2142,17 +2143,6 @@ function renderPanelBody() {
                 ${t}
               </button>`).join('')}
           </div>
-          <div class="med-autocomplete-box">
-            <input
-              type="text"
-              class="med-autocomplete-input"
-              id="med-input-${cat.id}"
-              data-cat="${cat.id}"
-              placeholder="Agregar medicación..."
-              autocomplete="off"
-              ${autocompleteEnabled ? '' : 'disabled'}>
-            <div class="med-autocomplete-list" id="med-list-${cat.id}"></div>
-          </div>
           <textarea class="cat-textarea" id="ta-${cat.id}" data-cat="${cat.id}"
                     placeholder="Notas adicionales de ${cat.label.toLowerCase()}...">${text}</textarea>
         </div>
@@ -2171,18 +2161,23 @@ function renderPanelBody() {
   });
   document.querySelectorAll('.cat-textarea').forEach(ta => {
     const catId = ta.dataset.cat;
-    ta.addEventListener('input', () => updateCatSummary(catId));
-  });
-  document.querySelectorAll('.med-autocomplete-input').forEach(input => {
-    const catId = input.dataset.cat;
-    input.addEventListener('input', () => renderMedSuggestions(catId, input.value));
-    input.addEventListener('focus', () => renderMedSuggestions(catId, input.value));
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
+    ta.addEventListener('input', () => {
+      updateCatSummary(catId);
+      if (isApplyingInlineSuggestion) return;
+      renderMedSuggestions(catId, ta);
+    });
+    ta.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && ta.selectionStart !== ta.selectionEnd) {
         e.preventDefault();
-        applyMedicationSuggestion(catId, input.value.trim());
+        const cursor = ta.selectionStart || 0;
+        ta.value = ta.value.slice(0, ta.selectionStart) + ta.value.slice(ta.selectionEnd);
+        ta.setSelectionRange(cursor, cursor);
+        panelState.data[catId] = panelState.data[catId] || { tags: [], text: '' };
+        panelState.data[catId].text = ta.value;
+        updateCatSummary(catId);
       } else if (e.key === 'Escape') {
-        clearMedSuggestions(catId);
+        const pos = ta.selectionStart || 0;
+        ta.setSelectionRange(pos, pos);
       }
     });
   });
@@ -2210,7 +2205,9 @@ function getMedicationSuggestions(catId, query) {
   if (!autocompleteEnabled) return [];
   const dict = MEDICATION_DICTIONARY[catId] || [];
   const q = String(query || '').trim().toLowerCase();
-  if (!q) return dict.slice(0, 6);
+  if (!q) return [];
+  const prefixMatches = dict.filter(item => item.toLowerCase().startsWith(q));
+  if (prefixMatches.length) return prefixMatches.slice(0, 6);
   return dict.filter(item => item.toLowerCase().includes(q)).slice(0, 6);
 }
 
@@ -2219,20 +2216,39 @@ function clearMedSuggestions(catId) {
   if (list) list.innerHTML = '';
 }
 
-function renderMedSuggestions(catId, query) {
-  const list = document.getElementById(`med-list-${catId}`);
-  if (!list) return;
+function renderMedSuggestions(catId, textareaEl) {
+  const query = extractCurrentMedicationToken(textareaEl);
   const suggestions = getMedicationSuggestions(catId, query);
-  if (!suggestions.length) {
-    list.innerHTML = '';
-    return;
-  }
-  list.innerHTML = suggestions.map(item => `
-    <button type="button" class="med-suggestion-item" data-cat="${catId}" data-value="${item.replace(/"/g, '&quot;')}">${item}</button>
-  `).join('');
-  list.querySelectorAll('.med-suggestion-item').forEach(btn => {
-    btn.addEventListener('click', () => applyMedicationSuggestion(catId, btn.dataset.value));
-  });
+  const input = textareaEl;
+  if (!input) return;
+  const typed = String(query || '').trim();
+  if (!autocompleteEnabled || !typed.trim() || !suggestions.length) return;
+  const suggestion = suggestions[0];
+  if (!suggestion || suggestion.toLowerCase() === typed.toLowerCase()) return;
+  if (!suggestion.toLowerCase().startsWith(typed.toLowerCase())) return;
+
+  isApplyingInlineSuggestion = true;
+  const cursor = input.selectionStart || 0;
+  const prefixText = input.value.slice(0, cursor);
+  const suffixText = input.value.slice(cursor);
+  const tokenStart = Math.max(prefixText.lastIndexOf(';'), prefixText.lastIndexOf(','), prefixText.lastIndexOf('\n')) + 1;
+  const head = input.value.slice(0, tokenStart);
+  const tailStart = tokenStart + prefixText.slice(tokenStart).length;
+  input.value = `${head}${suggestion}${suffixText}`;
+  const selStart = head.length + typed.length;
+  const selEnd = head.length + suggestion.length;
+  input.setSelectionRange(selStart, selEnd);
+  isApplyingInlineSuggestion = false;
+  panelState.data[catId] = panelState.data[catId] || { tags: [], text: '' };
+  panelState.data[catId].text = input.value;
+}
+
+function extractCurrentMedicationToken(textareaEl) {
+  if (!textareaEl) return '';
+  const cursor = textareaEl.selectionStart || 0;
+  const before = textareaEl.value.slice(0, cursor);
+  const idx = Math.max(before.lastIndexOf(';'), before.lastIndexOf(','), before.lastIndexOf('\n'));
+  return before.slice(idx + 1).trim();
 }
 
 function applyMedicationSuggestion(catId, value) {
