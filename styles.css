@@ -828,22 +828,7 @@ table.patient-table td {
   color: var(--text2);
 }
 
-.med-autocomplete-box {
-  position: relative;
-  margin-top: 6px !important;
-}
-
-.med-autocomplete-input {
-  width: 100%;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  color: var(--text);
-  font-size: 12px;
-  padding: 8px 10px;
-  outline: none;
-  box-sizing: border-box;
-}
+/* Removed .med-autocomplete-box and .med-autocomplete-input styles as they are no longer used */
 
 .med-autocomplete-list {
   position: absolute;
@@ -853,12 +838,12 @@ table.patient-table td {
   z-index: 1000;
   background: var(--surface);
   border: 1px solid var(--border2);
-  border-radius: 5px;
+  border-radius: 4px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  max-height: 200px;
+  max-height: 180px;
   overflow-y: auto;
   display: none;
-  margin-top: 4px;
+  margin-top: 3px;
 }
 
 .med-autocomplete-list.active {
@@ -870,15 +855,17 @@ table.patient-table td {
   background: var(--surface);
   color: var(--text2);
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: 4px;
   padding: 6px 8px;
   font-size: 12px;
   cursor: pointer;
 }
 
-.med-suggestion-item:hover {
+.med-suggestion-item:hover,
+.med-suggestion-item.selected {
   border-color: var(--accent);
   color: var(--text);
+  background: var(--surface2);
 }
 
 .panel-footer {
