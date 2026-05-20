@@ -63,21 +63,23 @@ import {
 
 // ─── CATEGORIES & TAGS ───────────────────────────────────────────────────────
 export const CATS = [
-  { id: 'nutricion', label: 'Nutrición', cls: 'nut', dot: '#2da44e' },
-  { id: 'sedacion', label: 'Sedación y Dolor', cls: 'sed', dot: '#c87af0' },
   { id: 'antibioticos', label: 'Antibióticos', cls: 'atb', dot: '#f5a623' },
-  { id: 'qmt', label: 'QMT', cls: 'qmt', dot: '#ef5e5e' },
+  { id: 'ptv', label: 'Profilaxis Trombosis Venosa', cls: 'ptv', dot: '#e056fd' },
+  { id: 'sedacion', label: 'Sedación y Analgesia', cls: 'sed', dot: '#c87af0' },
+  { id: 'nutricion', label: 'Nutrición', cls: 'nut', dot: '#2da44e' },
   { id: 'otros', label: 'Otros', cls: 'oth', dot: '#4ab3c7' },
   { id: 'laboratorio', label: 'Laboratorio', cls: 'lab', dot: '#3b82f6' },
+  { id: 'qmt', label: 'QMT', cls: 'qmt', dot: '#ef5e5e' },
 ];
 
 export const TAGS = {
-  nutricion: ['NPT Magistral 63 ml/h', 'Fresubin Original 63 ml/h', 'Fresubin Energy 42 ml/h', 'Protison 42 ml/h', 'NE por SNG', 'Ayuno', 'Dieta blanda'],
-  sedacion: ['Midazolam', 'Metadona 5mg c/8h', 'Morfina', 'Oxicodona', 'Fentanilo', 'Propofol', 'Dexmedetomidina', 'Ketamina'],
   antibioticos: ['Vancomicina', 'Meropenem', 'Pip/Tazo 4,5g c/6h', 'Aciclovir 400mg c/12h', 'Caspofungina', 'Daptomicina', 'Ampicilina-Sulbactam', 'Colistin'],
-  qmt: ['Rituximab + EPOCH', 'Ciclo 2', 'Carbo/Etopósido + Atezolizumab', 'FOLFIRI', 'FOLFOX', 'Cisplatino', 'Ciclofosfamida', 'Paclitaxel'],
-  otros: ['Filgrastim', 'Bactrim forte', 'Isavuconazol', 'Ceftolozano + Tazobactam', 'Heparina', 'HBPM', 'Omeprazol', 'Dexametasona'],
+  ptv: ['Heparina', 'HBPM', 'Enoxaparina', 'Fondaparinux', 'Rivaroxaban', 'Apixaban'],
+  sedacion: ['Midazolam', 'Metadona 5mg c/8h', 'Morfina', 'Oxicodona', 'Fentanilo', 'Propofol', 'Dexmedetomidina', 'Ketamina'],
+  nutricion: ['NPT Magistral 63 ml/h', 'Fresubin Original 63 ml/h', 'Fresubin Energy 42 ml/h', 'Protison 42 ml/h', 'NE por SNG', 'Ayuno', 'Dieta blanda'],
+  otros: ['Filgrastim', 'Bactrim forte', 'Isavuconazol', 'Ceftolozano + Tazobactam', 'Omeprazol', 'Dexametasona'],
   laboratorio: ['Glob. blancos', 'Glob. rojos', 'Hemoglobina', 'Hematocrito', 'Neutrófilos', 'Linfocitos', 'Rec. plaquetas', 'Potasio', 'Glucemia', 'Uremia', 'Creatinina'],
+  qmt: ['Rituximab + EPOCH', 'Ciclo 2', 'Carbo/Etopósido + Atezolizumab', 'FOLFIRI', 'FOLFOX', 'Cisplatino', 'Ciclofosfamida', 'Paclitaxel'],
 };
 
 const AUTOCOMPLETE_STORAGE_KEY = 'med_autocomplete_enabled';
