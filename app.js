@@ -2170,7 +2170,10 @@ function renderPanelBody() {
         const text = ta.value;
         const lineStart = text.lastIndexOf('\n', cursorPos - 1) + 1;
         const currentLine = text.substring(lineStart, cursorPos);
-        renderMedSuggestionsForTextarea(catId, currentLine, ta);
+        // Obtener solo la última palabra escrita (después del último espacio o coma)
+        const lastWordMatch = currentLine.match(/[\s,]([^,\s]+)$/);
+        const query = lastWordMatch ? lastWordMatch[1] : currentLine;
+        renderMedSuggestionsForTextarea(catId, query, ta);
       }
     });
     ta.addEventListener('keydown', (e) => {
@@ -2211,8 +2214,11 @@ function renderPanelBody() {
         const text = ta.value;
         const lineStart = text.lastIndexOf('\n', cursorPos - 1) + 1;
         const currentLine = text.substring(lineStart, cursorPos);
-        if (currentLine.trim()) {
-          renderMedSuggestionsForTextarea(catId, currentLine, ta);
+        // Obtener solo la última palabra escrita (después del último espacio o coma)
+        const lastWordMatch = currentLine.match(/[\s,]([^,\s]+)$/);
+        const query = lastWordMatch ? lastWordMatch[1] : currentLine;
+        if (query.trim()) {
+          renderMedSuggestionsForTextarea(catId, query, ta);
         }
       }
     });
@@ -2309,11 +2315,16 @@ function applyMedicationSuggestionFromTextarea(catId, value, textarea) {
   const lineStart = text.lastIndexOf('\n', cursorPos - 1) + 1;
   const currentLine = text.substring(lineStart, cursorPos);
   
-  // Replace the current line's last word with the medication
-  const newText = text.substring(0, lineStart) + text.substring(lineStart, cursorPos).replace(currentLine, med) + text.substring(cursorPos);
+  // Obtener solo la última palabra escrita (después del último espacio o coma)
+  const lastWordMatch = currentLine.match(/[\s,]([^,\s]+)$/);
+  const wordToReplace = lastWordMatch ? lastWordMatch[0] : currentLine;
+  
+  // Reemplazar solo la última palabra con la medicación seleccionada
+  const newText = text.substring(0, lineStart) + currentLine.replace(wordToReplace, med + ' ') + text.substring(cursorPos);
   
   textarea.value = newText;
-  textarea.setSelectionRange(lineStart + med.length, lineStart + med.length);
+  const newCursorPos = lineStart + currentLine.length - wordToReplace.length + med.length + 1;
+  textarea.setSelectionRange(newCursorPos, newCursorPos);
   
   panelState.data[catId] = panelState.data[catId] || { tags: [], text: '' };
   panelState.data[catId].text = textarea.value;
@@ -2389,13 +2400,11 @@ function toggleTag(catId, tag, btn) {
     currentText = currentText.replace(tagPattern, '');
     currentText = currentText.replace(/,\s*,/g, ',').replace(/^,\s*|,\s*$/g, '').trim();
   } else {
-    // Agregar tag al array y al texto
+    // Agregar tag al array y al texto - solo si no esta ya en el array de tags
     tags.push(tag);
     btn.classList.add('active');
-    // Agregar el tag al texto si no esta ya
-    if (!currentText.includes(tag)) {
-      currentText = currentText ? currentText + ', ' + tag : tag;
-    }
+    // No agregamos el tag al texto automaticamente para evitar duplicaciones
+    // El usuario puede escribir manualmente en el textarea si lo desea
   }
 
   panelState.data[catId].tags = tags;
@@ -2534,17 +2543,18 @@ async function copyToPrevDay() {
     return;
   }
   const doCopy = () => {
-    // Copiar datos sin el historial, asegurando que tags sea array
+    // Copiar datos completos: texto Y tags
+    // El texto es lo principal, los tags son solo para agilizar la carga
     const prevDataCopy = {};
     CATS.forEach(cat => {
       const entry = prevData[cat.id];
       if (entry) {
         prevDataCopy[cat.id] = {
-          tags: Array.isArray(entry.tags) ? entry.tags : [],
-          text: entry.text || ''
+          text: entry.text || '',
+          tags: Array.isArray(entry.tags) ? [...entry.tags] : []
         };
       } else {
-        prevDataCopy[cat.id] = { tags: [], text: '' };
+        prevDataCopy[cat.id] = { text: '', tags: [] };
       }
     });
     // Copy metadata fields
@@ -4203,8 +4213,8 @@ async function copiarSemanaAnterior(hc) {
       CATS.forEach(cat => {
         const entry = prevEntry[cat.id];
         nextEntry[cat.id] = {
-          tags: Array.isArray(entry?.tags) ? [...entry.tags] : [],
-          text: entry?.text || ''
+          text: entry?.text || '',
+          tags: Array.isArray(entry?.tags) ? [...entry.tags] : []
         };
       });
 
