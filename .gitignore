@@ -4,6 +4,7 @@
 __pycache__/
 *.o
 *.obj
+*.class
 *.exe
 *.dll
 *.so
@@ -37,7 +38,7 @@ coverage/
 htmlcov/
 .coverage
 
-# Build outputs
+# Build directories
 dist/
 build/
 target/
