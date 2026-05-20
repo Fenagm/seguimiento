@@ -844,7 +844,7 @@ table.patient-table td {
   max-height: 180px;
   overflow-y: auto;
   display: none;
-  margin-top: 3px;
+  margin-top: 2px;
 }
 
 .med-autocomplete-list.active {

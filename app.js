@@ -2145,8 +2145,10 @@ function renderPanelBody() {
                 ${t}
               </button>`).join('')}
           </div>
-          <textarea class="cat-textarea" id="ta-${cat.id}" data-cat="${cat.id}"
-                    placeholder="Notas adicionales de ${cat.label.toLowerCase()}...">${text}</textarea>
+          <div class="textarea-wrapper" style="position: relative;">
+            <textarea class="cat-textarea" id="ta-${cat.id}" data-cat="${cat.id}"
+                      placeholder="Notas adicionales de ${cat.label.toLowerCase()}...">${text}</textarea>
+          </div>
         </div>
       </div>`;
   }).join('');
@@ -2232,10 +2234,13 @@ function renderPanelBody() {
     CATS.forEach(cat => {
       const catBody = document.getElementById(`cat-body-${cat.id}`);
       if (catBody && MEDICATION_DICTIONARY[cat.id] && MEDICATION_DICTIONARY[cat.id].length > 0) {
-        const autocompleteList = document.createElement('div');
-        autocompleteList.className = 'med-autocomplete-list';
-        autocompleteList.id = `med-list-${cat.id}`;
-        catBody.appendChild(autocompleteList);
+        const textareaWrapper = catBody.querySelector('.textarea-wrapper');
+        if (textareaWrapper) {
+          const autocompleteList = document.createElement('div');
+          autocompleteList.className = 'med-autocomplete-list';
+          autocompleteList.id = `med-list-${cat.id}`;
+          textareaWrapper.appendChild(autocompleteList);
+        }
       }
     });
   }
