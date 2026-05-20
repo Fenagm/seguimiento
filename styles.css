@@ -832,11 +832,8 @@ table.patient-table td {
 /* Removed .med-autocomplete-box and .med-autocomplete-input styles as they are no longer used */
 
 .med-autocomplete-list {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  z-index: 1000;
+  position: fixed;
+  z-index: 9999;
   background: var(--surface);
   border: 1px solid var(--border2);
   border-radius: 4px;
@@ -844,7 +841,7 @@ table.patient-table td {
   max-height: 180px;
   overflow-y: auto;
   display: none;
-  margin-top: 2px;
+  min-width: 200px;
 }
 
 .med-autocomplete-list.active {

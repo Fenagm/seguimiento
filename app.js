@@ -2287,8 +2287,17 @@ function clearMedSuggestions(catId) {
 
 function renderMedSuggestionsForTextarea(catId, query, textarea) {
   const suggestions = getMedicationSuggestions(catId, query);
-  const list = document.getElementById(`med-list-${catId}`);
-  if (!list || !textarea) return;
+  let list = document.getElementById(`med-list-${catId}`);
+  
+  // Create the list if it doesn't exist
+  if (!list) {
+    list = document.createElement('div');
+    list.id = `med-list-${catId}`;
+    list.className = 'med-autocomplete-list';
+    document.body.appendChild(list);
+  }
+  
+  if (!textarea) return;
   
   console.log('renderMedSuggestionsForTextarea:', { catId, query, suggestionsCount: suggestions.length, textareaId: textarea.id });
   
@@ -2297,6 +2306,12 @@ function renderMedSuggestionsForTextarea(catId, query, textarea) {
     list.classList.remove('active');
     return;
   }
+  
+  // Position the list right below the textarea
+  const rect = textarea.getBoundingClientRect();
+  list.style.top = (rect.bottom + window.scrollY + 2) + 'px';
+  list.style.left = rect.left + 'px';
+  list.style.width = rect.width + 'px';
   
   list.innerHTML = suggestions.map((suggestion, idx) => {
     const isSelected = idx === 0 ? 'selected' : '';
