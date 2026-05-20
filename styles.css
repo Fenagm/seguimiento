@@ -696,6 +696,7 @@ table.patient-table td {
   flex-direction: column;
   gap: 6px;
   background: var(--surface2);
+  position: relative;
 }
 
 .tags-row {
@@ -854,16 +855,19 @@ table.patient-table td {
   text-align: left;
   background: var(--surface);
   color: var(--text2);
-  border: 1px solid var(--border);
-  border-radius: 4px;
+  border: none;
+  border-bottom: 1px solid var(--border);
   padding: 6px 8px;
   font-size: 12px;
   cursor: pointer;
 }
 
+.med-suggestion-item:last-child {
+  border-bottom: none;
+}
+
 .med-suggestion-item:hover,
 .med-suggestion-item.selected {
-  border-color: var(--accent);
   color: var(--text);
   background: var(--surface2);
 }
