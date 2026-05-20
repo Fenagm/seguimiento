@@ -2264,8 +2264,10 @@ function getMedicationSuggestions(catId, query) {
   if (!autocompleteEnabled) return [];
   const dict = MEDICATION_DICTIONARY[catId] || [];
   const q = String(query || '').trim().toLowerCase();
+  console.log('getMedicationSuggestions:', { catId, query: q, dictLength: dict.length });
   if (!q) return [];
   const prefixMatches = dict.filter(item => item.toLowerCase().startsWith(q));
+  console.log('prefixMatches:', prefixMatches);
   if (prefixMatches.length) return prefixMatches.slice(0, 6);
   return dict.filter(item => item.toLowerCase().includes(q)).slice(0, 6);
 }
@@ -2282,6 +2284,8 @@ function renderMedSuggestionsForTextarea(catId, query, textarea) {
   const suggestions = getMedicationSuggestions(catId, query);
   const list = document.getElementById(`med-list-${catId}`);
   if (!list || !textarea) return;
+  
+  console.log('renderMedSuggestionsForTextarea:', { catId, query, suggestionsCount: suggestions.length, textareaId: textarea.id });
   
   const typed = String(query || '');
   if (!autocompleteEnabled || !typed.trim() || !suggestions.length) {
