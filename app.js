@@ -2114,6 +2114,47 @@ function switchPanelDay(day) {
   showToast(`Cambiado a ${DAY_LABELS[day]} – cambios guardados`);
 }
 
+
+const ghostSuggestionState = new Map();
+
+function extractAutocompleteToken(text, cursorPos) {
+  const safeCursor = Number.isFinite(cursorPos) ? cursorPos : text.length;
+  const beforeCursor = text.slice(0, safeCursor);
+  const tokenMatch = beforeCursor.match(/([^\s,;]+)$/);
+  if (!tokenMatch) return null;
+  const token = tokenMatch[1];
+  return {
+    token,
+    start: safeCursor - token.length,
+    end: safeCursor,
+  };
+}
+
+function updateGhostText(catId, textarea) {
+  const ghost = document.getElementById(`ghost-${catId}`);
+  if (!ghost || !textarea) return;
+  const state = ghostSuggestionState.get(catId);
+  const baseText = textarea.value;
+  if (!autocompleteEnabled || !state || !state.suffix) {
+    ghost.textContent = '';
+    return;
+  }
+  const before = baseText.slice(0, state.cursorPos);
+  const after = baseText.slice(state.cursorPos);
+  ghost.innerHTML = `<span class="ghost-typed">${escapeHtml(before)}</span><span class="ghost-suffix">${escapeHtml(state.suffix)}</span><span class="ghost-typed">${escapeHtml(after)}</span>`;
+  ghost.scrollTop = textarea.scrollTop;
+  ghost.scrollLeft = textarea.scrollLeft;
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 function renderPanelBody() {
   const el = document.getElementById('panel-body');
   const autoToggle = `
@@ -2145,7 +2186,8 @@ function renderPanelBody() {
                 ${t}
               </button>`).join('')}
           </div>
-          <div class="textarea-wrapper" style="position: relative;">
+          <div class="textarea-wrapper">
+            <div class="cat-textarea-ghost" id="ghost-${cat.id}" aria-hidden="true"></div>
             <textarea class="cat-textarea" id="ta-${cat.id}" data-cat="${cat.id}"
                       placeholder="Notas adicionales de ${cat.label.toLowerCase()}...">${text}</textarea>
           </div>
@@ -2168,82 +2210,34 @@ function renderPanelBody() {
     ta.addEventListener('input', () => {
       updateCatSummary(catId);
       if (autocompleteEnabled && MEDICATION_DICTIONARY[catId] && MEDICATION_DICTIONARY[catId].length > 0) {
-        const cursorPos = ta.selectionStart;
-        const text = ta.value;
-        const lineStart = text.lastIndexOf('\n', cursorPos - 1) + 1;
-        const currentLine = text.substring(lineStart, cursorPos);
-        // Obtener solo la última palabra escrita (después del último espacio o coma)
-        const lastWordMatch = currentLine.match(/[\s,]([^,\s]+)$/);
-        const query = lastWordMatch ? lastWordMatch[1] : currentLine;
-        renderMedSuggestionsForTextarea(catId, query, ta);
+        renderMedSuggestionsForTextarea(catId, ta);
+      } else {
+        ghostSuggestionState.delete(catId);
+        updateGhostText(catId, ta);
       }
     });
     ta.addEventListener('keydown', (e) => {
       if (!autocompleteEnabled) return;
-      const list = document.getElementById(`med-list-${catId}`);
-      const isActive = list && list.classList.contains('active');
-      if (e.key === 'Enter' && isActive) {
-        e.preventDefault();
-        const selectedItem = list.querySelector('.med-suggestion-item.selected');
-        if (selectedItem) {
-          applyMedicationSuggestionFromTextarea(catId, selectedItem.textContent, ta);
+      if (e.key === 'Tab') {
+        const state = ghostSuggestionState.get(catId);
+        if (state && state.suffix) {
+          e.preventDefault();
+          applyMedicationSuggestionFromTextarea(catId, state.fullSuggestion, ta);
         }
-      } else if (e.key === 'Escape' && isActive) {
-        clearMedSuggestions(catId);
-      } else if (e.key === 'ArrowDown' && isActive) {
-        e.preventDefault();
-        const items = list.querySelectorAll('.med-suggestion-item');
-        const selected = list.querySelector('.med-suggestion-item.selected');
-        const idx = selected ? Array.from(items).indexOf(selected) : -1;
-        if (idx < items.length - 1) {
-          if (selected) selected.classList.remove('selected');
-          items[idx + 1].classList.add('selected');
-        }
-      } else if (e.key === 'ArrowUp' && isActive) {
-        e.preventDefault();
-        const items = list.querySelectorAll('.med-suggestion-item');
-        const selected = list.querySelector('.med-suggestion-item.selected');
-        const idx = selected ? Array.from(items).indexOf(selected) : 0;
-        if (idx > 0) {
-          selected.classList.remove('selected');
-          items[idx - 1].classList.add('selected');
-        }
+      } else if (e.key === 'Escape') {
+        ghostSuggestionState.delete(catId);
+        updateGhostText(catId, ta);
       }
     });
     ta.addEventListener('focus', () => {
-      if (autocompleteEnabled && MEDICATION_DICTIONARY[catId] && MEDICATION_DICTIONARY[catId].length > 0) {
-        const cursorPos = ta.selectionStart;
-        const text = ta.value;
-        const lineStart = text.lastIndexOf('\n', cursorPos - 1) + 1;
-        const currentLine = text.substring(lineStart, cursorPos);
-        // Obtener solo la última palabra escrita (después del último espacio o coma)
-        const lastWordMatch = currentLine.match(/[\s,]([^,\s]+)$/);
-        const query = lastWordMatch ? lastWordMatch[1] : currentLine;
-        if (query.trim()) {
-          renderMedSuggestionsForTextarea(catId, query, ta);
-        }
-      }
+      renderMedSuggestionsForTextarea(catId, ta);
     });
+    ta.addEventListener('scroll', () => updateGhostText(catId, ta));
     ta.addEventListener('blur', () => {
-      setTimeout(() => clearMedSuggestions(catId), 150);
+      ghostSuggestionState.delete(catId);
+      updateGhostText(catId, ta);
     });
   });
-  
-  // Add autocomplete list container for each category that supports medication
-  if (autocompleteEnabled) {
-    CATS.forEach(cat => {
-      const catBody = document.getElementById(`cat-body-${cat.id}`);
-      if (catBody && MEDICATION_DICTIONARY[cat.id] && MEDICATION_DICTIONARY[cat.id].length > 0) {
-        const textareaWrapper = catBody.querySelector('.textarea-wrapper');
-        if (textareaWrapper) {
-          const autocompleteList = document.createElement('div');
-          autocompleteList.className = 'med-autocomplete-list';
-          autocompleteList.id = `med-list-${cat.id}`;
-          textareaWrapper.appendChild(autocompleteList);
-        }
-      }
-    });
-  }
   
   const autoToggleEl = document.getElementById('autocomplete-toggle');
   if (autoToggleEl) {
@@ -2277,79 +2271,52 @@ function getMedicationSuggestions(catId, query) {
   return dict.filter(item => item.toLowerCase().includes(q)).slice(0, 6);
 }
 
-function clearMedSuggestions(catId) {
-  const list = document.getElementById(`med-list-${catId}`);
-  if (list) {
-    list.innerHTML = '';
-    list.classList.remove('active');
-  }
+function clearMedSuggestions(catId, textarea) {
+  ghostSuggestionState.delete(catId);
+  if (textarea) updateGhostText(catId, textarea);
 }
 
-function renderMedSuggestionsForTextarea(catId, query, textarea) {
-  const suggestions = getMedicationSuggestions(catId, query);
-  let list = document.getElementById(`med-list-${catId}`);
-  
-  // Create the list if it doesn't exist
-  if (!list) {
-    list = document.createElement('div');
-    list.id = `med-list-${catId}`;
-    list.className = 'med-autocomplete-list';
-    document.body.appendChild(list);
-  }
-  
+function renderMedSuggestionsForTextarea(catId, textarea) {
   if (!textarea) return;
-  
-  console.log('renderMedSuggestionsForTextarea:', { catId, query, suggestionsCount: suggestions.length, textareaId: textarea.id });
-  
-  const typed = String(query || '');
-  if (!autocompleteEnabled || !typed.trim() || !suggestions.length) {
-    list.classList.remove('active');
+  const tokenInfo = extractAutocompleteToken(textarea.value, textarea.selectionStart);
+  if (!autocompleteEnabled || !tokenInfo || !tokenInfo.token.trim()) {
+    clearMedSuggestions(catId, textarea);
     return;
   }
-  
-  // Position the list right below the textarea
-  const rect = textarea.getBoundingClientRect();
-  list.style.top = (rect.bottom + window.scrollY + 2) + 'px';
-  list.style.left = rect.left + 'px';
-  list.style.width = rect.width + 'px';
-  
-  list.innerHTML = suggestions.map((suggestion, idx) => {
-    const isSelected = idx === 0 ? 'selected' : '';
-    return `<div class="med-suggestion-item ${isSelected}" data-value="${suggestion.replace(/"/g, '&quot;')}">${suggestion}</div>`;
-  }).join('');
-  
-  list.classList.add('active');
-  
-  // Add click handlers to suggestions
-  list.querySelectorAll('.med-suggestion-item').forEach(item => {
-    item.addEventListener('click', () => {
-      applyMedicationSuggestionFromTextarea(catId, item.dataset.value, textarea);
-    });
+  const suggestions = getMedicationSuggestions(catId, tokenInfo.token);
+  const suggestion = suggestions.find(item => item.toLowerCase().startsWith(tokenInfo.token.toLowerCase())) || suggestions[0];
+  if (!suggestion) {
+    clearMedSuggestions(catId, textarea);
+    return;
+  }
+  const suffix = suggestion.slice(tokenInfo.token.length);
+  if (!suffix) {
+    clearMedSuggestions(catId, textarea);
+    return;
+  }
+  ghostSuggestionState.set(catId, {
+    tokenStart: tokenInfo.start,
+    tokenEnd: tokenInfo.end,
+    cursorPos: tokenInfo.end,
+    fullSuggestion: suggestion,
+    suffix,
   });
+  updateGhostText(catId, textarea);
 }
 
 function applyMedicationSuggestionFromTextarea(catId, value, textarea) {
   const med = String(value || '').trim();
   if (!med || !textarea) return;
-  
-  clearMedSuggestions(catId);
-  
-  const cursorPos = textarea.selectionStart;
-  const text = textarea.value;
-  const lineStart = text.lastIndexOf('\n', cursorPos - 1) + 1;
-  const currentLine = text.substring(lineStart, cursorPos);
-  
-  // Obtener solo la última palabra escrita (después del último espacio o coma)
-  const lastWordMatch = currentLine.match(/[\s,]([^,\s]+)$/);
-  const wordToReplace = lastWordMatch ? lastWordMatch[0] : currentLine;
-  
-  // Reemplazar solo la última palabra con la medicación seleccionada
-  const newText = text.substring(0, lineStart) + currentLine.replace(wordToReplace, med + ' ') + text.substring(cursorPos);
-  
+
+  const tokenInfo = extractAutocompleteToken(textarea.value, textarea.selectionStart);
+  if (!tokenInfo) return;
+
+  const newText = textarea.value.slice(0, tokenInfo.start) + med + ' ' + textarea.value.slice(tokenInfo.end);
+  const newCursorPos = tokenInfo.start + med.length + 1;
   textarea.value = newText;
-  const newCursorPos = lineStart + currentLine.length - wordToReplace.length + med.length + 1;
   textarea.setSelectionRange(newCursorPos, newCursorPos);
-  
+  clearMedSuggestions(catId, textarea);
+
   panelState.data[catId] = panelState.data[catId] || { tags: [], text: '' };
   panelState.data[catId].text = textarea.value;
   updateCatSummary(catId);
