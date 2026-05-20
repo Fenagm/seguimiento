@@ -2161,54 +2161,77 @@ function renderPanelBody() {
   });
   document.querySelectorAll('.cat-textarea').forEach(ta => {
     const catId = ta.dataset.cat;
-    ta.addEventListener('input', () => updateCatSummary(catId));
+    ta.addEventListener('input', () => {
+      updateCatSummary(catId);
+      if (autocompleteEnabled && MEDICATION_DICTIONARY[catId] && MEDICATION_DICTIONARY[catId].length > 0) {
+        const cursorPos = ta.selectionStart;
+        const text = ta.value;
+        const lineStart = text.lastIndexOf('\n', cursorPos - 1) + 1;
+        const currentLine = text.substring(lineStart, cursorPos);
+        renderMedSuggestionsForTextarea(catId, currentLine, ta);
+      }
+    });
+    ta.addEventListener('keydown', (e) => {
+      if (!autocompleteEnabled) return;
+      const list = document.getElementById(`med-list-${catId}`);
+      const isActive = list && list.classList.contains('active');
+      if (e.key === 'Enter' && isActive) {
+        e.preventDefault();
+        const selectedItem = list.querySelector('.med-suggestion-item.selected');
+        if (selectedItem) {
+          applyMedicationSuggestionFromTextarea(catId, selectedItem.textContent, ta);
+        }
+      } else if (e.key === 'Escape' && isActive) {
+        clearMedSuggestions(catId);
+      } else if (e.key === 'ArrowDown' && isActive) {
+        e.preventDefault();
+        const items = list.querySelectorAll('.med-suggestion-item');
+        const selected = list.querySelector('.med-suggestion-item.selected');
+        const idx = selected ? Array.from(items).indexOf(selected) : -1;
+        if (idx < items.length - 1) {
+          if (selected) selected.classList.remove('selected');
+          items[idx + 1].classList.add('selected');
+        }
+      } else if (e.key === 'ArrowUp' && isActive) {
+        e.preventDefault();
+        const items = list.querySelectorAll('.med-suggestion-item');
+        const selected = list.querySelector('.med-suggestion-item.selected');
+        const idx = selected ? Array.from(items).indexOf(selected) : 0;
+        if (idx > 0) {
+          selected.classList.remove('selected');
+          items[idx - 1].classList.add('selected');
+        }
+      }
+    });
+    ta.addEventListener('focus', () => {
+      if (autocompleteEnabled && MEDICATION_DICTIONARY[catId] && MEDICATION_DICTIONARY[catId].length > 0) {
+        const cursorPos = ta.selectionStart;
+        const text = ta.value;
+        const lineStart = text.lastIndexOf('\n', cursorPos - 1) + 1;
+        const currentLine = text.substring(lineStart, cursorPos);
+        if (currentLine.trim()) {
+          renderMedSuggestionsForTextarea(catId, currentLine, ta);
+        }
+      }
+    });
+    ta.addEventListener('blur', () => {
+      setTimeout(() => clearMedSuggestions(catId), 150);
+    });
   });
   
-  // Add autocomplete input fields for each category that supports medication
+  // Add autocomplete list container for each category that supports medication
   if (autocompleteEnabled) {
     CATS.forEach(cat => {
       const catBody = document.getElementById(`cat-body-${cat.id}`);
       if (catBody && MEDICATION_DICTIONARY[cat.id] && MEDICATION_DICTIONARY[cat.id].length > 0) {
-        const autocompleteBox = document.createElement('div');
-        autocompleteBox.className = 'med-autocomplete-box';
-        autocompleteBox.style.marginTop = '8px';
-        autocompleteBox.innerHTML = `
-          <input type="text" class="med-autocomplete-input" id="med-input-${cat.id}" data-cat="${cat.id}"
-                 placeholder="Escribí para buscar ${cat.label.toLowerCase()}..." autocomplete="off">
-          <div class="med-autocomplete-list" id="med-list-${cat.id}"></div>
-        `;
-        catBody.appendChild(autocompleteBox);
+        const autocompleteList = document.createElement('div');
+        autocompleteList.className = 'med-autocomplete-list';
+        autocompleteList.id = `med-list-${cat.id}`;
+        catBody.appendChild(autocompleteList);
       }
     });
   }
   
-  // Attach autocomplete event listeners after inputs are created
-  document.querySelectorAll('.med-autocomplete-input').forEach(input => {
-    const catId = input.dataset.cat;
-    input.addEventListener('input', () => {
-      if (isApplyingInlineSuggestion) return;
-      renderMedSuggestions(catId, input.value);
-    });
-    input.addEventListener('focus', () => renderMedSuggestions(catId, input.value));
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        const selectionStart = input.selectionStart || 0;
-        const selectionEnd = input.selectionEnd || 0;
-        if (selectionStart !== selectionEnd) {
-          input.value = input.value.slice(0, selectionStart) + input.value.slice(selectionEnd);
-          input.setSelectionRange(selectionStart, selectionStart);
-        }
-        applyMedicationSuggestion(catId, input.value.trim());
-      } else if (e.key === 'Escape') {
-        clearMedSuggestions(catId);
-      }
-    });
-    // Click outside to close suggestions
-    input.addEventListener('blur', () => {
-      setTimeout(() => clearMedSuggestions(catId), 150);
-    });
-  });
   const autoToggleEl = document.getElementById('autocomplete-toggle');
   if (autoToggleEl) {
     autoToggleEl.addEventListener('change', () => {
@@ -2241,43 +2264,57 @@ function getMedicationSuggestions(catId, query) {
 
 function clearMedSuggestions(catId) {
   const list = document.getElementById(`med-list-${catId}`);
-  if (list) list.innerHTML = '';
+  if (list) {
+    list.innerHTML = '';
+    list.classList.remove('active');
+  }
 }
 
-function renderMedSuggestions(catId, query) {
+function renderMedSuggestionsForTextarea(catId, query, textarea) {
   const suggestions = getMedicationSuggestions(catId, query);
-  const input = document.getElementById(`med-input-${catId}`);
-  if (!input) return;
+  const list = document.getElementById(`med-list-${catId}`);
+  if (!list || !textarea) return;
+  
   const typed = String(query || '');
-  if (!autocompleteEnabled || !typed.trim() || !suggestions.length) return;
-  const suggestion = suggestions[0];
-  if (!suggestion || suggestion.toLowerCase() === typed.toLowerCase()) return;
-  if (!suggestion.toLowerCase().startsWith(typed.toLowerCase())) return;
-
-  isApplyingInlineSuggestion = true;
-  input.value = suggestion;
-  input.setSelectionRange(typed.length, suggestion.length);
-  isApplyingInlineSuggestion = false;
-}
-
-function applyMedicationSuggestion(catId, value) {
-  const med = String(value || '').trim();
-  if (!med) return;
-  const input = document.getElementById(`med-input-${catId}`);
-  if (input) input.value = '';
-  clearMedSuggestions(catId);
-  const catTags = TAGS[catId] || [];
-  const existingTagBtn = document.querySelector(`.tag-chip[data-cat="${catId}"][data-tag="${CSS.escape(med)}"]`);
-  if (catTags.includes(med) && existingTagBtn && !existingTagBtn.classList.contains('active')) {
-    toggleTag(catId, med, existingTagBtn);
+  if (!autocompleteEnabled || !typed.trim() || !suggestions.length) {
+    list.classList.remove('active');
     return;
   }
-  const ta = document.getElementById(`ta-${catId}`);
-  if (!ta) return;
-  const sep = ta.value.trim() ? '; ' : '';
-  ta.value = `${ta.value}${sep}${med}`;
+  
+  list.innerHTML = suggestions.map((suggestion, idx) => {
+    const isSelected = idx === 0 ? 'selected' : '';
+    return `<div class="med-suggestion-item ${isSelected}" data-value="${suggestion.replace(/"/g, '&quot;')}">${suggestion}</div>`;
+  }).join('');
+  
+  list.classList.add('active');
+  
+  // Add click handlers to suggestions
+  list.querySelectorAll('.med-suggestion-item').forEach(item => {
+    item.addEventListener('click', () => {
+      applyMedicationSuggestionFromTextarea(catId, item.dataset.value, textarea);
+    });
+  });
+}
+
+function applyMedicationSuggestionFromTextarea(catId, value, textarea) {
+  const med = String(value || '').trim();
+  if (!med || !textarea) return;
+  
+  clearMedSuggestions(catId);
+  
+  const cursorPos = textarea.selectionStart;
+  const text = textarea.value;
+  const lineStart = text.lastIndexOf('\n', cursorPos - 1) + 1;
+  const currentLine = text.substring(lineStart, cursorPos);
+  
+  // Replace the current line's last word with the medication
+  const newText = text.substring(0, lineStart) + text.substring(lineStart, cursorPos).replace(currentLine, med) + text.substring(cursorPos);
+  
+  textarea.value = newText;
+  textarea.setSelectionRange(lineStart + med.length, lineStart + med.length);
+  
   panelState.data[catId] = panelState.data[catId] || { tags: [], text: '' };
-  panelState.data[catId].text = ta.value;
+  panelState.data[catId].text = textarea.value;
   updateCatSummary(catId);
 }
 
