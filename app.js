@@ -2377,37 +2377,27 @@ function toggleCat(catId) {
 }
 
 function toggleTag(catId, tag, btn) {
-  if (!panelState.data[catId]) panelState.data[catId] = { tags: [], text: '' };
+  if (!panelState.data[catId]) panelState.data[catId] = { text: '' };
 
-  // Ensure tags is always an array
-  if (!Array.isArray(panelState.data[catId].tags)) {
-    panelState.data[catId].tags = [];
-  }
-  
-  const tags = panelState.data[catId].tags;
   const textarea = document.getElementById(`ta-${catId}`);
   let currentText = textarea ? textarea.value : panelState.data[catId].text || '';
 
-  const idx = tags.indexOf(tag);
+  // Verificar si el tag ya está en el texto
+  const tagRegex = tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const tagPattern = new RegExp('\\b' + tagRegex + '\\b', 'g');
 
-  if (idx >= 0) {
-    // Remover tag del array y del texto
-    tags.splice(idx, 1);
-    btn.classList.remove('active');
-    // Remover el tag del texto si existe
-    const tagRegex = tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const tagPattern = new RegExp('\\b' + tagRegex + '\\b', 'g');
-    currentText = currentText.replace(tagPattern, '');
-    currentText = currentText.replace(/,\s*,/g, ',').replace(/^,\s*|,\s*$/g, '').trim();
-  } else {
-    // Agregar tag al array y al texto - solo si no esta ya en el array de tags
-    tags.push(tag);
-    btn.classList.add('active');
-    // No agregamos el tag al texto automaticamente para evitar duplicaciones
-    // El usuario puede escribir manualmente en el textarea si lo desea
+  if (tagPattern.test(currentText)) {
+    // Si ya está en el texto, no hacemos nada
+    return;
   }
 
-  panelState.data[catId].tags = tags;
+  // Agregar el tag al texto
+  if (currentText.length > 0 && !currentText.endsWith(' ') && !currentText.endsWith('\n')) {
+    currentText += ' ' + tag;
+  } else {
+    currentText += tag;
+  }
+
   panelState.data[catId].text = currentText;
 
   if (textarea) textarea.value = currentText;
@@ -2537,21 +2527,20 @@ async function copyToPrevDay() {
     const prevKey = `${panelState.hc}_${prevDay}`;
     prevData = weekData[prevKey];
   }
-  const hasPrevData = prevData && CATS.some(c => prevData[c.id] && (prevData[c.id].text || prevData[c.id].tags?.length));
+  const hasPrevData = prevData && CATS.some(c => prevData[c.id] && prevData[c.id].text);
   if (!hasPrevData) {
     showToast(`El ${DAY_LABELS[prevDay]} no tiene datos para copiar`);
     return;
   }
   const doCopy = () => {
-    // Copiar datos completos: texto Y tags
-    // El texto es lo principal, los tags son solo para agilizar la carga
+    // Copiar solo el texto, los tags se resetean
     const prevDataCopy = {};
     CATS.forEach(cat => {
       const entry = prevData[cat.id];
       if (entry) {
         prevDataCopy[cat.id] = {
           text: entry.text || '',
-          tags: Array.isArray(entry.tags) ? [...entry.tags] : []
+          tags: []
         };
       } else {
         prevDataCopy[cat.id] = { text: '', tags: [] };
@@ -2573,7 +2562,7 @@ async function copyToPrevDay() {
     updateCatSummariesFromData();
     showToast(`Datos copiados desde ${DAY_LABELS[prevDay]} → ${DAY_LABELS[panelState.day]}`);
   };
-  const currentHasData = CATS.some(c => panelState.data[c.id] && (panelState.data[c.id].text || panelState.data[c.id].tags?.length));
+  const currentHasData = CATS.some(c => panelState.data[c.id] && panelState.data[c.id].text);
   if (currentHasData) {
     showOverwriteConfirm(panelState.day, doCopy);
   } else {
@@ -2584,19 +2573,15 @@ async function copyToPrevDay() {
 function updateCatSummariesFromData() {
   CATS.forEach(cat => {
     const entry = panelState.data[cat.id] || {};
-    const tags = entry.tags || [];
     const text = entry.text || '';
-    const summary = tags.length ? tags.join(', ') : (text ? text.substring(0, 40) : '');
     const sumEl = document.getElementById(`cat-sum-${cat.id}`);
-    if (sumEl) sumEl.textContent = summary;
+    if (sumEl) sumEl.textContent = text || '';
     const ta = document.getElementById(`ta-${cat.id}`);
     if (ta) ta.value = text || '';
     const tagContainer = document.getElementById(`cat-body-${cat.id}`)?.querySelector('.tags-row');
     if (tagContainer) {
       tagContainer.querySelectorAll('.tag-chip').forEach(btn => {
-        const tagText = btn.dataset.tag;
-        if (tags.includes(tagText)) btn.classList.add('active');
-        else btn.classList.remove('active');
+        btn.classList.remove('active');
       });
     }
   });
@@ -4206,7 +4191,7 @@ async function copiarSemanaAnterior(hc) {
     DAYS.forEach(day => {
       const prevKey = `${hc}_${day}`;
       const prevEntry = prevWeekData[prevKey];
-      const hasPrevData = prevEntry && CATS.some(c => prevEntry[c.id] && (prevEntry[c.id].text || prevEntry[c.id].tags?.length));
+      const hasPrevData = prevEntry && CATS.some(c => prevEntry[c.id] && prevEntry[c.id].text);
       if (!hasPrevData) return;
 
       const nextEntry = {};
@@ -4214,7 +4199,7 @@ async function copiarSemanaAnterior(hc) {
         const entry = prevEntry[cat.id];
         nextEntry[cat.id] = {
           text: entry?.text || '',
-          tags: Array.isArray(entry?.tags) ? [...entry.tags] : []
+          tags: []
         };
       });
 
