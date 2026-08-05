@@ -2800,14 +2800,22 @@ function importPatients() {
   // Archive active patients NOT in the new CSV
   for (const [hc, p] of Object.entries(allPatients)) {
     if (isPatientActive(p) && !incomingHCs.has(String(hc))) {
-      allPatients[hc] = {
+      const archivedAt = new Date().toISOString();
+      const archivedBy = getDisplayName(currentUser);
+      const updatedPatient = {
         ...p,
         status: PATIENT_STATUS.ARCHIVED,
-        archivedAt: new Date().toISOString(),
+        dischargeAt: archivedAt,
+        dischargeWeek: currentWeek,
+        dischargedBy: archivedBy,
+        archivedAt,
         archivedReason: 'csv_import',
-        archivedBy: getDisplayName(currentUser),
+        archivedBy,
+        camaAnterior: p.cama,
+        cama: '',
       };
-      archivedPatients.push(p);
+      allPatients[hc] = updatedPatient;
+      archivedPatients.push(updatedPatient);
     }
   }
 
@@ -2826,6 +2834,7 @@ function importPatients() {
   // Persistencia multiusuario: actualizar solo campos controlados por CSV para evitar pisar cambios concurrentes
   if (db) {
     const csvPatientMap = new Map(pendingCSV.map(p => [String(p.hc), p]));
+    const archivedPatientMap = new Map(archivedPatients.map(p => [String(p.hc), p]));
 
     for (const [hc, p] of Object.entries(allPatients)) {
       if (csvPatientMap.has(String(hc))) {
@@ -2844,14 +2853,27 @@ function importPatients() {
           archivedAt: null,
           archivedReason: null,
           archivedBy: null,
+          dischargeAt: null,
+          dischargeWeek: null,
+          dischargedBy: null,
+          camaAnterior: null,
         }, { merge: true }).catch(() => {});
-      } else {
-        setDoc(doc(db, 'patients', hc), {
-          status: PATIENT_STATUS.ARCHIVED,
-          archivedAt: p.archivedAt || new Date().toISOString(),
-          archivedReason: p.archivedReason || 'csv_import',
-          archivedBy: p.archivedBy || getDisplayName(currentUser),
-        }, { merge: true }).catch(() => {});
+      } else if (archivedPatientMap.has(String(hc))) {
+        const archivedPatient = archivedPatientMap.get(String(hc));
+        setDoc(doc(db, 'patients', hc), archivedPatient, { merge: true }).catch(() => {});
+
+        const currentWeekEntries = {};
+        DAYS.forEach(day => {
+          const key = `${hc}_${day}`;
+          if (weekData[key]) currentWeekEntries[key] = weekData[key];
+        });
+
+        setDoc(doc(db, 'discharges', `${hc}_${currentWeek}_csv_import`), {
+          ...archivedPatient,
+          hc: String(hc),
+          weekEntries: currentWeekEntries,
+          timestamp: archivedPatient.archivedAt,
+        }).catch(() => {});
       }
     }
   }
@@ -3026,8 +3048,15 @@ async function getDischargesByHc() {
     const hcKey = String(discharge.hc);
     const existing = dischargesByHc.get(hcKey);
 
+    const getDischargeTime = record => {
+      const rawDate = record?.timestamp || record?.archivedAt || record?.dischargeAt || 0;
+      const parsedDate = new Date(rawDate).getTime();
+      if (!Number.isNaN(parsedDate)) return parsedDate;
+      return Number(rawDate || 0);
+    };
+
     // Conservar el registro más reciente cuando hay duplicados por HC
-    if (!existing || Number(discharge.timestamp || 0) > Number(existing.timestamp || 0)) {
+    if (!existing || getDischargeTime(discharge) > getDischargeTime(existing)) {
       dischargesByHc.set(hcKey, discharge);
     }
   });
