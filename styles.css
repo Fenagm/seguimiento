@@ -456,6 +456,20 @@ table.patient-table td {
   gap: 8px;
 }
 
+.discharge-days-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.discharge-day-card {
+  border: 1px solid var(--border);
+  border-left: 3px solid #ddd;
+  border-radius: 8px;
+  padding: 10px;
+  min-width: 0;
+}
+
 .days-row-day {
   font-size: 10px;
   text-transform: uppercase;
@@ -1878,6 +1892,10 @@ table.patient-table td {
     grid-template-columns: 1fr 1fr;
   }
 
+  .discharge-days-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
   .config-form {
     grid-template-columns: 1fr;
   }
@@ -1889,6 +1907,10 @@ table.patient-table td {
 
 @media (max-width: 480px) {
   .days-row-cards-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .discharge-days-grid {
     grid-template-columns: 1fr;
   }
 

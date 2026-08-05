@@ -3408,12 +3408,13 @@ function renderWeeklyDischarges(results, title = null) {
                 <span style="background:#ef5e5e20; color:#ef5e5e; font-size:10px; padding:2px 8px; border-radius:12px;">🚪 ALTA en semana</span>
               </div>
               <div style="padding:12px; background:var(--surface); display:none;">
+                <div class="discharge-days-grid">
                 ${DAYS.filter(d => r.days[d]).map(d => {
                   const dayData = r.days[d];
                   const who = dayData._lastModifiedBy;
                   const cats = CATS.filter(c => dayData[c.id]);
                   return `
-                    <div style="margin-bottom:10px; border-left:3px solid #ddd; padding-left:10px;">
+                    <div class="discharge-day-card">
                       <div style="font-size:11px; color:var(--text3); margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
                         <strong>${DAY_LABELS[d]}</strong>
                         ${who ? `<span style="font-size:9px;">✏️ ${who}</span>` : ''}
@@ -3434,6 +3435,7 @@ function renderWeeklyDischarges(results, title = null) {
                     </div>
                   `;
                 }).join('')}
+                </div>
                 ${!Object.keys(r.days).length ? '<div style="font-size:12px; color:var(--text3); font-style:italic;">Sin datos de medicación registrados</div>' : ''}
               </div>
             </div>
