@@ -3302,9 +3302,30 @@ function openPatientDays(hc) {
   currentDaysHc = hc;
   document.getElementById('days-patient-name').textContent = p.paciente;
   document.getElementById('days-patient-meta').textContent = `Cama ${p.cama} · HC ${p.hc} · ${p.medico || ''}`;
+  const admissionInput = document.getElementById('days-admission-reason');
+  if (admissionInput) admissionInput.value = p.motivoIngreso || p.motivoDeIngreso || '';
   renderPatientDaysList();
   document.getElementById('patient-days-overlay').classList.add('open');
   setTimeout(() => document.getElementById('patient-days-panel').classList.add('open'), 10);
+}
+
+async function savePatientAdmissionReason() {
+  if (!currentDaysHc) return;
+  const p = allPatients[currentDaysHc];
+  const input = document.getElementById('days-admission-reason');
+  if (!p || !input) return;
+  const nextReason = input.value.trim();
+  if ((p.motivoIngreso || '') === nextReason) return;
+  p.motivoIngreso = nextReason;
+  if (db) {
+    try {
+      await updateDoc(doc(db, 'patients', String(currentDaysHc)), { motivoIngreso: nextReason });
+      saveAudit('update', currentDaysHc, null, { field: 'motivoIngreso', motivoIngreso: nextReason });
+      showToast('Motivo de ingreso guardado ✓');
+    } catch (e) {
+      showToast('Error guardando motivo de ingreso: ' + e.message);
+    }
+  }
 }
 
 function closePatientDays() {
@@ -3928,7 +3949,7 @@ function hasMedsForDay(hc, day) {
 }
 
 function buildMedLine(entry) {
-  // Returns a flat array of medication strings for a day entry
+  // Returns one printable row per category for a day entry.
   const lines = [];
   CATS.forEach(cat => {
     const d = entry?.[cat.id];
@@ -3936,7 +3957,7 @@ function buildMedLine(entry) {
     // Use only the text field for printing (which may include copied tags + manual edits)
     // Do NOT duplicate tags separately
     const text = d.text?.trim();
-    if (text) lines.push(`[${cat.label}] ${text}`);
+    if (text) lines.push({ category: cat.label, text });
   });
   return lines;
 }
@@ -3973,15 +3994,16 @@ async function doPrint() {
       const entry   = savedWeekData[`${p.hc}_${printDay}`];
       const medLines = buildMedLine(entry);
       const medLinesHtml = medLines.map(line =>
-        line.replace(/^\[([^\]]+)\]\s*/, (_, cat) => `<strong>${String(cat).toUpperCase()}:</strong> `)
+        `<div class="print-meds-line">• <strong>${String(line.category).toUpperCase()}:</strong> ${line.text}</div>`
       );
       const medsHtml = medLines.length
-        ? `<div class="print-meds-line">• ${medLinesHtml.join(' · ')}</div>`
+        ? medLinesHtml.join('')
         : '<div class="print-no-meds">Sin medicación cargada</div>';
+      const admissionReason = String(p.motivoIngreso || p.motivoDeIngreso || '').trim() || 'cargar motivo de ingreso';
   
       rows.push(`
         <div class="print-patient">
-          <div class="print-patient-line">${p.cama}, ${p.paciente} (HC: ${p.hc} || OS: ${p.os || formatCoberturaForPrint(p.cobertura) || 'cargar OS'}):</div>
+          <div class="print-patient-line">${p.cama}, ${p.paciente} (HC: ${p.hc} || OS: ${p.os || formatCoberturaForPrint(p.cobertura) || 'cargar OS'} || Motivo de ingreso: ${admissionReason}):</div>
           ${medsHtml}
         </div>
         <hr class="print-separator">`);
@@ -4087,6 +4109,14 @@ document.getElementById('days-panel-discharge').addEventListener('click', () => 
 document.getElementById('btn-add-day-entry').addEventListener('click', () => addDayEntry());
 document.getElementById('patient-days-overlay').addEventListener('click', (e) => {
   if (e.target === document.getElementById('patient-days-overlay')) closePatientDays();
+});
+document.getElementById('days-admission-reason')?.addEventListener('change', savePatientAdmissionReason);
+document.getElementById('days-admission-reason')?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    savePatientAdmissionReason();
+    e.currentTarget.blur();
+  }
 });
 
 // CSV modal
