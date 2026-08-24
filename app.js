@@ -1486,10 +1486,16 @@ function renderDaysRowContent(hc) {
       </button>`;
   }).join('');
   container.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px 4px;border-bottom:1px solid var(--border);background:var(--surface);">
-      <span style="font-size:11px;color:var(--text3);">
-        Semana <strong style="color:var(--text2)">${currentWeek}</strong>
-      </span>
+    <div class="days-row-toolbar">
+      <div class="days-row-toolbar-main">
+        <span style="font-size:11px;color:var(--text3);">
+          Semana <strong style="color:var(--text2)">${currentWeek}</strong>
+        </span>
+        <label class="admission-reason-field admission-reason-field-inline">
+          <span>Motivo de ingreso</span>
+          <input class="days-admission-reason-input" data-hc="${hc}" type="text" placeholder="Anotar motivo de ingreso" value="${escapeHtml(p?.motivoIngreso || p?.motivoDeIngreso || '')}">
+        </label>
+      </div>
       <button class="btn move-patient-btn" data-hc="${hc}" style="padding:3px 10px;font-size:11px;gap:4px;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><path d="M5 9l7-7 7 7M5 15l7 7 7-7"/></svg>
         Mover cama
@@ -1502,6 +1508,16 @@ function renderDaysRowContent(hc) {
     const hc = card.dataset.hc;
     const day = card.dataset.day;
     card.addEventListener('click', () => openPanel(hc, day));
+  });
+  container.querySelectorAll('.days-admission-reason-input').forEach(input => {
+    input.addEventListener('change', () => persistPatientAdmissionReason(input.dataset.hc, input.value.trim()));
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        persistPatientAdmissionReason(input.dataset.hc, input.value.trim());
+        input.blur();
+      }
+    });
   });
   container.querySelectorAll('.move-patient-btn').forEach(btn => {
     const hc = btn.dataset.hc;
@@ -3309,23 +3325,27 @@ function openPatientDays(hc) {
   setTimeout(() => document.getElementById('patient-days-panel').classList.add('open'), 10);
 }
 
-async function savePatientAdmissionReason() {
-  if (!currentDaysHc) return;
-  const p = allPatients[currentDaysHc];
-  const input = document.getElementById('days-admission-reason');
-  if (!p || !input) return;
-  const nextReason = input.value.trim();
+async function persistPatientAdmissionReason(hc, nextReason) {
+  const p = allPatients[hc];
+  if (!p) return;
   if ((p.motivoIngreso || '') === nextReason) return;
   p.motivoIngreso = nextReason;
   if (db) {
     try {
-      await updateDoc(doc(db, 'patients', String(currentDaysHc)), { motivoIngreso: nextReason });
-      saveAudit('update', currentDaysHc, null, { field: 'motivoIngreso', motivoIngreso: nextReason });
+      await updateDoc(doc(db, 'patients', String(hc)), { motivoIngreso: nextReason });
+      saveAudit('update', hc, null, { field: 'motivoIngreso', motivoIngreso: nextReason });
       showToast('Motivo de ingreso guardado ✓');
     } catch (e) {
       showToast('Error guardando motivo de ingreso: ' + e.message);
     }
   }
+}
+
+async function savePatientAdmissionReason() {
+  if (!currentDaysHc) return;
+  const input = document.getElementById('days-admission-reason');
+  if (!input) return;
+  await persistPatientAdmissionReason(currentDaysHc, input.value.trim());
 }
 
 function closePatientDays() {
@@ -3999,7 +4019,7 @@ async function doPrint() {
       const medsHtml = medLines.length
         ? medLinesHtml.join('')
         : '<div class="print-no-meds">Sin medicación cargada</div>';
-      const admissionReason = String(p.motivoIngreso || p.motivoDeIngreso || '').trim() || 'cargar motivo de ingreso';
+      const admissionReason = String(p.motivoIngreso || p.motivoDeIngreso || '').trim();
   
       rows.push(`
         <div class="print-patient">

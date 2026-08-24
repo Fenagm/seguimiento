@@ -573,6 +573,36 @@ table.patient-table td {
   font: 12px var(--sans);
 }
 
+
+.days-row-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.days-row-toolbar-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.admission-reason-field-inline {
+  margin-top: 0;
+  flex: 1 1 260px;
+  min-width: 220px;
+}
+
+.admission-reason-field-inline input {
+  width: 100%;
+}
+
 .admission-reason-field input:focus {
   outline: none;
   border-color: var(--accent);
