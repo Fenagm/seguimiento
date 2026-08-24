@@ -2040,6 +2040,8 @@ function openPanel(hc, day) {
   });
   document.getElementById('panel-patient-name').textContent = p.paciente;
   document.getElementById('panel-meta').textContent = `Cama ${p.cama} · HC ${p.hc} · ${p.medico || ''}`;
+  const admissionInput = document.getElementById('days-admission-reason');
+  if (admissionInput) admissionInput.value = p.motivoIngreso || p.motivoDeIngreso || '';
   renderDaySelector();
   renderPanelBody();
   document.getElementById('entry-overlay').classList.add('open');
@@ -3819,6 +3821,32 @@ function openPatientDays(hc) {
   setTimeout(() => document.getElementById('patient-days-panel').classList.add('open'), 10);
 }
 
+
+async function persistPatientAdmissionReason(hc, nextReason) {
+  const p = allPatients[hc];
+  if (!p) return;
+  if ((p.motivoIngreso || '') === nextReason) return;
+  p.motivoIngreso = nextReason;
+  if (db) {
+    try {
+      await updateDoc(doc(db, 'patients', String(hc)), { motivoIngreso: nextReason });
+      saveAudit('update', hc, null, { field: 'motivoIngreso', motivoIngreso: nextReason });
+      showToast('Motivo de ingreso guardado ✓');
+    } catch (e) {
+      showToast('Error guardando motivo de ingreso: ' + e.message);
+    }
+  }
+}
+
+async function savePatientAdmissionReason() {
+  const entryOverlayOpen = document.getElementById('entry-overlay')?.classList.contains('open');
+  const hc = entryOverlayOpen ? panelState.hc : currentDaysHc;
+  if (!hc) return;
+  const input = document.getElementById('days-admission-reason');
+  if (!input) return;
+  await persistPatientAdmissionReason(hc, input.value.trim());
+}
+
 function closePatientDays() {
   document.getElementById('patient-days-panel').classList.remove('open');
   setTimeout(() => {
@@ -4564,6 +4592,14 @@ document.getElementById('panel-close').addEventListener('click', () => closePane
 document.getElementById('panel-cancel').addEventListener('click', () => closePanel());
 document.getElementById('btn-copy-prev').addEventListener('click', () => copyToPrevDay());
 document.getElementById('panel-save').addEventListener('click', () => saveEntry());
+document.getElementById('days-admission-reason')?.addEventListener('change', savePatientAdmissionReason);
+document.getElementById('days-admission-reason')?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    savePatientAdmissionReason();
+    e.currentTarget.blur();
+  }
+});
 
 // Add patient modal
 document.getElementById('close-add-patient').addEventListener('click', () => closeAddPatientModal());
