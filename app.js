@@ -1568,6 +1568,8 @@ function openPanel(hc, day) {
   });
   document.getElementById('panel-patient-name').textContent = p.paciente;
   document.getElementById('panel-meta').textContent = `Cama ${p.cama} · HC ${p.hc} · ${p.medico || ''}`;
+  const admissionInput = document.getElementById('days-admission-reason');
+  if (admissionInput) admissionInput.value = p.motivoIngreso || p.motivoDeIngreso || '';
   renderDaySelector();
   renderPanelBody();
   document.getElementById('entry-overlay').classList.add('open');
@@ -3342,10 +3344,12 @@ async function persistPatientAdmissionReason(hc, nextReason) {
 }
 
 async function savePatientAdmissionReason() {
-  if (!currentDaysHc) return;
+  const entryOverlayOpen = document.getElementById('entry-overlay')?.classList.contains('open');
+  const hc = entryOverlayOpen ? panelState.hc : currentDaysHc;
+  if (!hc) return;
   const input = document.getElementById('days-admission-reason');
   if (!input) return;
-  await persistPatientAdmissionReason(currentDaysHc, input.value.trim());
+  await persistPatientAdmissionReason(hc, input.value.trim());
 }
 
 function closePatientDays() {
