@@ -554,6 +554,31 @@ table.patient-table td {
   font-family: var(--mono);
 }
 
+.admission-reason-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--text3);
+}
+
+.admission-reason-field input {
+  width: min(360px, 100%);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface2);
+  color: var(--text);
+  padding: 8px 10px;
+  font: 12px var(--sans);
+}
+
+.admission-reason-field input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
 .panel-close {
   background: none;
   border: none;
@@ -2090,7 +2115,7 @@ table.patient-table td {
     margin-top: 2pt;
   }
   .print-meds-line {
-    margin-bottom: 1pt;
+    margin-bottom: 3pt;
     font-weight: normal;
   }
   .print-no-meds {
