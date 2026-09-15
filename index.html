@@ -31,8 +31,15 @@
 
 <!-- LOADING OVERLAY -->
 <div id="loading-overlay" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 500; align-items: center; justify-content: center; flex-direction: column; gap: 16px;">
-  <div class="spinner" style="width: 40px; height: 40px; border-width: 3px;"></div>
-  <div style="color: white; font-size: 14px;">Cargando datos...</div>
+  <div class="loading-modal">
+    <div class="loading-icon">⏳</div>
+    <div class="spinner"></div>
+    <div class="loading-title">Cargando datos</div>
+    <div class="loading-subtitle">Por favor, esperá un momento...</div>
+    <div class="loading-progress">
+      <div class="loading-progress-bar"></div>
+    </div>
+  </div>
 </div>
 
 <!-- HEADER -->

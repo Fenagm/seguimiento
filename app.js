@@ -594,12 +594,43 @@ function openPanel(hc, day) {
 
 function renderDaySelector() {
   const el = document.getElementById('day-selector');
-  el.innerHTML = DAYS.map(d =>
-    `<button class="day-btn ${d === panelState.day ? 'active' : ''}" data-day="${d}">${DAY_LABELS[d]}</button>`
-  ).join('');
+  const currentIndex = DAYS.indexOf(panelState.day);
+  
+  el.innerHTML = `
+    <button class="day-nav-btn" id="day-prev-btn" ${currentIndex === 0 ? 'disabled' : ''}>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18">
+        <polyline points="15 18 9 12 15 6"/>
+      </svg>
+    </button>
+    <div class="day-carousel">
+      ${DAYS.map((d, idx) => {
+        const distanceFromCenter = Math.abs(idx - currentIndex);
+        let carouselClass = '';
+        if (distanceFromCenter === 1) carouselClass = 'carousel-near';
+        else if (distanceFromCenter > 1) carouselClass = 'carousel-far';
+        
+        return `<button class="day-btn ${d === panelState.day ? 'active' : ''} ${carouselClass}" data-day="${d}">${DAY_LABELS[d]}</button>`;
+      }).join('')}
+    </div>
+    <button class="day-nav-btn" id="day-next-btn" ${currentIndex === DAYS.length - 1 ? 'disabled' : ''}>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18">
+        <polyline points="9 18 15 12 9 6"/>
+      </svg>
+    </button>
+  `;
+  
   document.querySelectorAll('.day-btn').forEach(btn => {
     btn.addEventListener('click', () => switchPanelDay(btn.dataset.day));
   });
+  
+  document.getElementById('day-prev-btn').addEventListener('click', () => {
+    if (currentIndex > 0) switchPanelDay(DAYS[currentIndex - 1]);
+  });
+  
+  document.getElementById('day-next-btn').addEventListener('click', () => {
+    if (currentIndex < DAYS.length - 1) switchPanelDay(DAYS[currentIndex + 1]);
+  });
+  
   updateCopyPrevBtn();
 }
 
