@@ -1589,13 +1589,20 @@ function renderDaySelector() {
     btn.addEventListener('click', () => switchPanelDay(btn.dataset.day));
   });
   
-  document.getElementById('day-prev-btn').addEventListener('click', () => {
-    if (currentIndex > 0) switchPanelDay(DAYS[currentIndex - 1]);
-  });
+  const prevBtn = document.getElementById('day-prev-btn');
+  const nextBtn = document.getElementById('day-next-btn');
   
-  document.getElementById('day-next-btn').addEventListener('click', () => {
-    if (currentIndex < DAYS.length - 1) switchPanelDay(DAYS[currentIndex + 1]);
-  });
+  if (prevBtn) {
+    prevBtn.addEventListener('click', () => {
+      if (currentIndex > 0) switchPanelDay(DAYS[currentIndex - 1]);
+    });
+  }
+
+  if (nextBtn) {
+    nextBtn.addEventListener('click', () => {
+      if (currentIndex < DAYS.length - 1) switchPanelDay(DAYS[currentIndex + 1]);
+    });
+  }
   
   updateCopyPrevBtn();
 }
