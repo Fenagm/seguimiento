@@ -76,9 +76,6 @@ export const TAGS = {
   ptv: ['Heparina', 'HBPM', 'Enoxaparina', 'Fondaparinux', 'Rivaroxaban', 'Apixaban'],
   sedacion: ['Midazolam', 'Metadona 5mg c/8h', 'Morfina', 'Oxicodona', 'Fentanilo', 'Propofol', 'Dexmedetomidina', 'Ketamina'],
   nutricion: ['NPT Magistral 63 ml/h', 'Fresubin Original 63 ml/h', 'Fresubin Energy 42 ml/h', 'Protison 42 ml/h', 'NE por SNG', 'Ayuno', 'Dieta blanda'],
-  otros: ['Filgrastim', 'Bactrim forte', 'Isavuconazol', 'Ceftolozano + Tazobactam', 'Omeprazol', 'Dexametasona'],
-  laboratorio: ['Glob. blancos', 'Glob. rojos', 'Hemoglobina', 'Hematocrito', 'Neutrófilos', 'Linfocitos', 'Rec. plaquetas', 'Potasio', 'Glucemia', 'Uremia', 'Creatinina'],
-  qmt: ['Rituximab + EPOCH', 'Ciclo 2', 'Carbo/Etopósido + Atezolizumab', 'FOLFIRI', 'FOLFOX', 'Cisplatino', 'Ciclofosfamida', 'Paclitaxel'],
   otros: ['Filgrastim', 'Bactrim forte', 'Isavuconazol', 'Ceftolozano + Tazobactam', 'Heparina', 'HBPM', 'Omeprazol', 'Dexametasona'],
   laboratorio: ['Glob. blancos', 'Glob. rojos', 'Hemoglobina', 'Hematocrito', 'Neutrófilos', 'Linfocitos', 'Rec. plaquetas', 'Potasio', 'Glucemia', 'Uremia', 'Creatinina'],
 };
