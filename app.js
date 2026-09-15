@@ -10,6 +10,7 @@ const CATS = [
   { id: 'antibioticos', label: 'Antibióticos', cls: 'atb', dot: '#f5a623' },
   { id: 'qmt', label: 'QMT', cls: 'qmt', dot: '#ef5e5e' },
   { id: 'otros', label: 'Otros', cls: 'oth', dot: '#4ab3c7' },
+  { id: 'laboratorio', label: 'Laboratorio', cls: 'lab', dot: '#3b82f6', inlineTags: true },
 ];
 
 const TAGS = {
@@ -18,6 +19,7 @@ const TAGS = {
   antibioticos: ['Vancomicina', 'Meropenem', 'Pip/Tazo 4,5g c/6h', 'Aciclovir 400mg c/12h', 'Caspofungina', 'Daptomicina', 'Ampicilina-Sulbactam', 'Colistin'],
   qmt: ['Rituximab + EPOCH', 'Ciclo 2', 'Carbo/Etopósido + Atezolizumab', 'FOLFIRI', 'FOLFOX', 'Cisplatino', 'Ciclofosfamida', 'Paclitaxel'],
   otros: ['Filgrastim', 'Bactrim forte', 'Isavuconazol', 'Ceftolozano + Tazobactam', 'Heparina', 'HBPM', 'Omeprazol', 'Dexametasona'],
+  laboratorio: ['Glob. blancos', 'Glob. rojos', 'Hemoglobina', 'Hematocrito', 'Neutrófilos', 'Linfocitos', 'Rec. plaquetas', 'Potasio', 'Glucemia', 'Uremia', 'Creatinina'],
 };
 
 const DAYS = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes'];
@@ -668,14 +670,39 @@ function renderPanelBody() {
     const text = entry.text || '';
     const tags = TAGS[cat.id] || [];
     const summary = activeTags.length ? activeTags.join(', ') : (text ? text.substring(0, 40) : '');
-    return `
-      <div class="cat-section" data-cat="${cat.id}">
-        <div class="cat-header" data-cat="${cat.id}"><div class="cat-dot" style="background:${cat.dot}"></div><span class="cat-label" style="color:${cat.dot}">${cat.label}</span><span class="cat-summary" id="cat-sum-${cat.id}">${summary}</span><span class="cat-toggle">▾</span></div>
-        <div class="cat-body" id="cat-body-${cat.id}" style="${activeTags.length || text ? '' : 'display:none'}">
-          <div class="tags-row">${tags.map(t => `<button class="tag-chip ${cat.cls} ${activeTags.includes(t) ? 'active' : ''}" data-cat="${cat.id}" data-tag="${t.replace(/'/g, "\\'")}">${t}</button>`).join('')}</div>
-          <textarea class="cat-textarea" id="ta-${cat.id}" data-cat="${cat.id}" placeholder="Notas adicionales de ${cat.label.toLowerCase()}...">${text}</textarea>
-        </div>
-      </div>`;
+    const isInline = cat.inlineTags === true;
+    
+    if (isInline) {
+      // Laboratorio: tags siempre visibles en textarea como líneas editables
+      return `
+        <div class="cat-section" data-cat="${cat.id}">
+          <div class="cat-header" data-cat="${cat.id}"><div class="cat-dot" style="background:${cat.dot}"></div><span class="cat-label" style="color:${cat.dot}">${cat.label}</span><span class="cat-summary" id="cat-sum-${cat.id}">${summary}</span><span class="cat-toggle">▾</span></div>
+          <div class="cat-body" id="cat-body-${cat.id}" style="">
+            <div class="inline-tags-container">
+              ${tags.map(t => {
+                const isActive = activeTags.includes(t);
+                const lineText = isActive ? text.split('\n').find(l => l.trim() === t) || t : '';
+                return `
+                  <div class="inline-tag-row">
+                    <button class="tag-chip-inline ${cat.cls} ${isActive ? 'active' : ''}" data-cat="${cat.id}" data-tag="${t.replace(/'/g, "\\'")}">${t}</button>
+                    <input type="text" class="inline-tag-input" data-cat="${cat.id}" data-tag="${t.replace(/'/g, "\\'")}" placeholder="Valor..." value="${lineText}" ${!isActive ? 'disabled' : ''}>
+                  </div>`;
+              }).join('')}
+            </div>
+            <textarea class="cat-textarea" id="ta-${cat.id}" data-cat="${cat.id}" placeholder="Notas adicionales de ${cat.label.toLowerCase()}...">${text}</textarea>
+          </div>
+        </div>`;
+    } else {
+      // Categorías normales con chips separados
+      return `
+        <div class="cat-section" data-cat="${cat.id}">
+          <div class="cat-header" data-cat="${cat.id}"><div class="cat-dot" style="background:${cat.dot}"></div><span class="cat-label" style="color:${cat.dot}">${cat.label}</span><span class="cat-summary" id="cat-sum-${cat.id}">${summary}</span><span class="cat-toggle">▾</span></div>
+          <div class="cat-body" id="cat-body-${cat.id}" style="${activeTags.length || text ? '' : 'display:none'}">
+            <div class="tags-row">${tags.map(t => `<button class="tag-chip ${cat.cls} ${activeTags.includes(t) ? 'active' : ''}" data-cat="${cat.id}" data-tag="${t.replace(/'/g, "\\'")}">${t}</button>`).join('')}</div>
+            <textarea class="cat-textarea" id="ta-${cat.id}" data-cat="${cat.id}" placeholder="Notas adicionales de ${cat.label.toLowerCase()}...">${text}</textarea>
+          </div>
+        </div>`;
+    }
   }).join('');
   
   document.querySelectorAll('.cat-header').forEach(header => {
@@ -683,6 +710,12 @@ function renderPanelBody() {
   });
   document.querySelectorAll('.tag-chip').forEach(btn => {
     btn.addEventListener('click', () => toggleTag(btn.dataset.cat, btn.dataset.tag, btn));
+  });
+  document.querySelectorAll('.tag-chip-inline').forEach(btn => {
+    btn.addEventListener('click', () => toggleInlineTag(btn.dataset.cat, btn.dataset.tag, btn));
+  });
+  document.querySelectorAll('.inline-tag-input').forEach(input => {
+    input.addEventListener('input', () => updateInlineTagValue(input.dataset.cat, input.dataset.tag, input.value));
   });
   document.querySelectorAll('.cat-textarea').forEach(ta => {
     ta.addEventListener('input', () => updateCatSummary(ta.dataset.cat));
@@ -716,6 +749,73 @@ function toggleTag(catId, tag, btn) {
   updateCatSummary(catId);
   const body = document.getElementById(`cat-body-${catId}`);
   if (body && body.style.display === 'none') body.style.display = '';
+}
+
+function toggleInlineTag(catId, tag, btn) {
+  if (!panelState.data[catId]) panelState.data[catId] = { tags: [], text: '' };
+  const tags = panelState.data[catId].tags || [];
+  const textarea = document.getElementById(`ta-${catId}`);
+  let currentText = textarea ? textarea.value : panelState.data[catId].text || '';
+  const input = document.querySelector(`.inline-tag-input[data-cat="${catId}"][data-tag="${tag.replace(/'/g, "\\'")}"]`);
+  const idx = tags.indexOf(tag);
+  
+  if (idx >= 0) {
+    // Desactivar tag
+    tags.splice(idx, 1);
+    btn.classList.remove('active');
+    if (input) {
+      input.disabled = true;
+      input.value = '';
+    }
+    // Remover línea del textarea
+    const tagLines = currentText.split('\n').filter(line => !line.startsWith(tag));
+    currentText = tagLines.join('\n');
+  } else {
+    // Activar tag
+    tags.push(tag);
+    btn.classList.add('active');
+    if (input) {
+      input.disabled = false;
+      input.value = tag;
+      input.focus();
+    }
+    // Agregar línea al textarea
+    currentText = currentText.trim() ? currentText + '\n' + tag : tag;
+  }
+  
+  panelState.data[catId].tags = tags;
+  panelState.data[catId].text = currentText;
+  if (textarea) textarea.value = currentText;
+  updateCatSummary(catId);
+  const body = document.getElementById(`cat-body-${catId}`);
+  if (body && body.style.display === 'none') body.style.display = '';
+}
+
+function updateInlineTagValue(catId, tag, value) {
+  if (!panelState.data[catId]) panelState.data[catId] = { tags: [], text: '' };
+  const textarea = document.getElementById(`ta-${catId}`);
+  let currentText = textarea ? textarea.value : panelState.data[catId].text || '';
+  
+  // Reemplazar la línea que comienza con el tag
+  const lines = currentText.split('\n');
+  const newLines = lines.map(line => {
+    if (line.trim() === tag || line.startsWith(tag)) {
+      return value || tag;
+    }
+    return line;
+  });
+  
+  // Si el valor es vacío, mantener solo el tag
+  if (!value || value.trim() === '') {
+    const filteredLines = newLines.filter(line => line.trim() !== '');
+    currentText = filteredLines.join('\n');
+  } else {
+    currentText = newLines.join('\n');
+  }
+  
+  panelState.data[catId].text = currentText;
+  if (textarea) textarea.value = currentText;
+  updateCatSummary(catId);
 }
 
 function updateCatSummary(catId) {
