@@ -1,0 +1,35 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Solo usuarios autenticados pueden leer y escribir
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Colecciones de datos clínicos
+    match /weeks/{weekId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /patients/{patientId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /discharges/{dischargeId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /audit/{entryId} {
+      allow read: if isAuthenticated();
+      // Audit es solo escritura — nadie puede modificar registros existentes
+      allow create: if isAuthenticated();
+      allow update, delete: if false;
+    }
+
+    // Todo lo demás: denegado
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
