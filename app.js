@@ -1588,6 +1588,15 @@ function renderDaySelector() {
   document.querySelectorAll('.day-btn').forEach(btn => {
     btn.addEventListener('click', () => switchPanelDay(btn.dataset.day));
   });
+  
+  document.getElementById('day-prev-btn').addEventListener('click', () => {
+    if (currentIndex > 0) switchPanelDay(DAYS[currentIndex - 1]);
+  });
+  
+  document.getElementById('day-next-btn').addEventListener('click', () => {
+    if (currentIndex < DAYS.length - 1) switchPanelDay(DAYS[currentIndex + 1]);
+  });
+  
   updateCopyPrevBtn();
 }
 
