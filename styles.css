@@ -475,8 +475,8 @@ table.patient-table td {
 #entry-panel {
   position: fixed;
   top: 0;
-  right: -520px;
-  width: 520px;
+  right: -600px;
+  width: 600px;
   height: 100vh;
   background: var(--surface);
   border-left: 1px solid var(--border);
@@ -485,6 +485,7 @@ table.patient-table td {
   flex-direction: column;
   transition: right .25s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
+  box-shadow: -10px 0 40px rgba(0, 0, 0, 0.15);
 }
 
 #entry-panel.open {
@@ -538,38 +539,106 @@ table.patient-table td {
 
 .day-selector {
   display: flex;
-  gap: 4px;
-  padding: 10px 20px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 20px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
-  background: var(--surface2);
+  background: linear-gradient(180deg, var(--surface2) 0%, var(--surface) 100%);
+  position: relative;
+  overflow: hidden;
 }
 
-.day-btn {
-  flex: 1;
-  padding: 6px;
-  border-radius: 5px;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+.day-selector-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+  z-index: 10;
+}
+
+.day-nav-btn {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  border: 1px solid var(--border);
-  background: none;
+  transition: all .2s;
   color: var(--text2);
-  transition: all .15s;
-  text-align: center;
+  flex-shrink: 0;
 }
 
-.day-btn.active {
+.day-nav-btn:hover:not(:disabled) {
   background: var(--accent);
   border-color: var(--accent);
   color: white;
+  transform: scale(1.1);
 }
 
-.day-btn:hover:not(.active) {
+.day-nav-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.day-carousel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: visible;
+  perspective: 1000px;
+}
+
+.day-btn {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text3);
+  transition: all .3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: center;
+  min-width: 70px;
+  position: relative;
+  transform-origin: center center;
+}
+
+.day-btn:hover:not(.active):not(.carousel-center) {
   background: var(--surface3);
-  color: var(--text);
+  color: var(--text2);
+  transform: translateY(-2px);
+}
+
+.day-btn.active {
+  background: linear-gradient(135deg, var(--accent) 0%, rgb(206, 32, 132) 100%);
+  border-color: var(--accent);
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 14px 22px;
+  min-width: 90px;
+  transform: scale(1.15) translateY(-4px);
+  box-shadow: 0 8px 20px rgba(186, 0, 112, 0.3);
+  z-index: 5;
+  letter-spacing: 0.1em;
+}
+
+.day-btn.carousel-near {
+  opacity: 0.7;
+  transform: scale(0.9);
+}
+
+.day-btn.carousel-far {
+  opacity: 0.4;
+  transform: scale(0.8);
 }
 
 .panel-body {
@@ -766,9 +835,14 @@ table.patient-table td {
 #csv-modal {
   background: var(--surface);
   border: 1px solid var(--border2);
-  border-radius: 10px;
-  width: 480px;
+  border-radius: 16px;
+  width: 560px;
   max-width: 95vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.3);
+  animation: modalSlideIn 0.25s ease-out;
 }
 
 .drop-zone {
@@ -944,28 +1018,34 @@ table.patient-table td {
 
 /* ─── MODALS ─── */
 .modal-header {
-  padding: 18px 20px 14px;
+  padding: 24px 28px;
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  background: linear-gradient(180deg, var(--surface2) 0%, var(--surface) 100%);
 }
 
 .modal-title {
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.02em;
 }
 
 .modal-body {
-  padding: 20px;
+  padding: 28px;
+  max-height: calc(90vh - 200px);
+  overflow-y: auto;
 }
 
 .modal-footer {
-  padding: 12px 20px;
+  padding: 16px 28px;
   border-top: 1px solid var(--border);
   display: flex;
-  gap: 8px;
+  gap: 10px;
   justify-content: flex-end;
+  background: var(--surface2);
 }
 
 #add-patient-overlay,
@@ -989,16 +1069,29 @@ table.patient-table td {
 #move-patient-modal {
   background: var(--surface);
   border: 1px solid var(--border2);
-  border-radius: 10px;
-  width: 480px;
+  border-radius: 16px;
+  width: 560px;
   max-width: 95vw;
-}
-
-#move-patient-modal {
-  width: 520px;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.3);
+  animation: modalSlideIn 0.25s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+#move-patient-modal {
+  width: 640px;
 }
 
 #add-patient-modal input,
@@ -1122,8 +1215,8 @@ table.patient-table td {
 #patient-days-panel {
   position: fixed;
   top: 0;
-  right: -520px;
-  width: 520px;
+  right: -600px;
+  width: 600px;
   height: 100vh;
   background: var(--surface);
   border-left: 1px solid var(--border);
@@ -1132,6 +1225,7 @@ table.patient-table td {
   flex-direction: column;
   transition: right .25s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
+  box-shadow: -10px 0 40px rgba(0, 0, 0, 0.15);
 }
 
 #patient-days-panel.open {
@@ -1328,28 +1422,38 @@ table.patient-table td {
 
 .login-card {
   background: var(--surface);
-  border-radius: 12px;
-  padding: 24px;
-  width: 320px;
+  border-radius: 16px;
+  padding: 32px;
+  width: 400px;
   max-width: 90vw;
   border: 1px solid var(--border2);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: modalSlideIn 0.25s ease-out;
 }
 
 .login-card h3 {
-  margin-bottom: 16px;
-  font-size: 16px;
+  margin-bottom: 20px;
+  font-size: 22px;
   color: var(--accent);
+  font-weight: 700;
+  text-align: center;
 }
 
 .login-card input {
   width: 100%;
-  padding: 10px;
-  margin-bottom: 12px;
+  padding: 12px;
+  margin-bottom: 14px;
   background: var(--surface2);
   border: 1px solid var(--border2);
-  border-radius: 6px;
+  border-radius: 8px;
   color: var(--text);
-  font-size: 13px;
+  font-size: 14px;
+  transition: border-color .15s;
+}
+
+.login-card input:focus {
+  border-color: var(--accent);
+  outline: none;
 }
 
 .login-card .btn {
@@ -1669,8 +1773,86 @@ table.patient-table td {
   flex-direction: column;
   gap: 16px;
 }
+
 #loading-overlay.open {
   display: flex;
+}
+
+/* Loading overlay modal redesign - popup window style */
+#loading-overlay .loading-modal {
+  background: var(--surface);
+  border-radius: 16px;
+  padding: 40px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  text-align: center;
+  max-width: 400px;
+  width: 90%;
+  border: 1px solid var(--border2);
+  animation: loadingModalSlideIn 0.3s ease-out;
+}
+
+@keyframes loadingModalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+#loading-overlay .loading-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  animation: loadingIconPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes loadingIconPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.8; }
+}
+
+#loading-overlay .loading-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+#loading-overlay .loading-subtitle {
+  font-size: 13px;
+  color: var(--text3);
+  margin-bottom: 24px;
+}
+
+#loading-overlay .loading-progress {
+  width: 100%;
+  height: 4px;
+  background: var(--surface2);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 20px;
+}
+
+#loading-overlay .loading-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent) 0%, rgb(206, 32, 132) 100%);
+  border-radius: 2px;
+  animation: loadingProgress 1.5s ease-in-out infinite;
+  width: 30%;
+}
+
+@keyframes loadingProgress {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+
+#loading-overlay .spinner {
+  width: 56px;
+  height: 56px;
+  border-width: 4px;
+  margin: 0 auto 16px;
 }
 
 }
