@@ -1721,7 +1721,7 @@ function renderPanelBody() {
       // Laboratorio: tags siempre visibles en textarea como líneas editables
       return `
         <div class="cat-section" data-cat="${cat.id}">
-          <div class="cat-header" data-cat="${cat.id}"><div class="cat-dot" style="background:${cat.dot}"></div><span class="cat-label" style="color:${cat.dot}">${cat.label}</span><span class="cat-summary" id="cat-sum-${cat.id}">${summary}</span><span class="cat-toggle">▾</span></div>
+          <div class="cat-header" data-cat="${cat.id}"><div class="cat-dot" style="background:${cat.dot}"></div><span class="cat-label" style="color:${cat.dot}">${cat.label}</span><span class="cat-summary" id="cat-sum-${cat.id}">${summary}</span></div>
           <div class="cat-body" id="cat-body-${cat.id}" style="">
             <div class="inline-tags-container">
               ${tags.map(t => {
@@ -1741,8 +1741,8 @@ function renderPanelBody() {
       // Categorías normales con chips separados
       return `
         <div class="cat-section" data-cat="${cat.id}">
-          <div class="cat-header" data-cat="${cat.id}"><div class="cat-dot" style="background:${cat.dot}"></div><span class="cat-label" style="color:${cat.dot}">${cat.label}</span><span class="cat-summary" id="cat-sum-${cat.id}">${summary}</span><span class="cat-toggle">▾</span></div>
-          <div class="cat-body" id="cat-body-${cat.id}" style="${activeTags.length || text ? '' : 'display:none'}">
+          <div class="cat-header" data-cat="${cat.id}"><div class="cat-dot" style="background:${cat.dot}"></div><span class="cat-label" style="color:${cat.dot}">${cat.label}</span><span class="cat-summary" id="cat-sum-${cat.id}">${summary}</span></div>
+          <div class="cat-body" id="cat-body-${cat.id}" style="">
             <div class="tags-row">${tags.map(t => `<button class="tag-chip ${cat.cls} ${activeTags.includes(t) ? 'active' : ''}" data-cat="${cat.id}" data-tag="${t.replace(/'/g, "\\'")}">${t}</button>`).join('')}</div>
             <textarea class="cat-textarea" id="ta-${cat.id}" data-cat="${cat.id}" placeholder="Notas adicionales de ${cat.label.toLowerCase()}...">${text}</textarea>
           </div>
@@ -1751,10 +1751,7 @@ function renderPanelBody() {
   }).join('');
 
   // Attach event listeners
-  document.querySelectorAll('.cat-header').forEach(header => {
-    const catId = header.dataset.cat;
-    header.addEventListener('click', () => toggleCat(catId));
-  });
+  // Nota: las categorías ya no colapsan (grid 2x3 en el modal, todas visibles a la vez).
   document.querySelectorAll('.tag-chip').forEach(btn => {
     const catId = btn.dataset.cat;
     const tag = btn.dataset.tag;
@@ -1811,6 +1808,7 @@ function renderPanelBody() {
 
   // Agregar botón de historial al final del panel
   const historyBtnDiv = document.createElement('div');
+  historyBtnDiv.className = 'panel-full-row';
   historyBtnDiv.style.cssText = 'margin-top: 12px;';
   historyBtnDiv.innerHTML = `<button id="show-history-btn" class="btn" style="width:100%; gap:6px; display:flex; align-items:center; justify-content:center;">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
