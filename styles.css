@@ -919,42 +919,68 @@ table.patient-table td {
   color: #fff;
 }
 
-.tag-chip.lab {
-  color: var(--cat-lab);
-  border-color: var(--cat-lab);
+/* Laboratorio inline tags */
+.inline-tags-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
 }
 
-.tag-chip.lab.active {
-  background: var(--cat-lab);
+.inline-tag-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tag-chip-inline {
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  cursor: pointer;
+  border: 1px solid;
+  transition: all .12s;
+  background: none;
+  font-family: var(--sans);
+  min-width: 110px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.tag-chip-inline.lab {
+  color: var(--cat-lab, #3b82f6);
+  border-color: var(--cat-lab, #3b82f6);
+}
+
+.tag-chip-inline.lab.active {
+  background: var(--cat-lab, #3b82f6);
   color: #fff;
 }
 
-
-.textarea-wrapper {
-  position: relative;
-}
-
-.cat-textarea-ghost {
-  position: absolute;
-  inset: 0;
-  padding: 7px 9px;
+.inline-tag-input {
+  flex: 1;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text);
   font-size: 12px;
   font-family: var(--sans);
-  line-height: 1.4;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  color: transparent;
-  pointer-events: none;
-  overflow: hidden;
+  min-width: 120px;
 }
 
-.ghost-typed {
-  color: transparent;
+.inline-tag-input:focus {
+  outline: none;
+  border-color: var(--cat-lab, #3b82f6);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
 }
 
-.ghost-suffix {
+.inline-tag-input:disabled {
+  background: var(--surface2);
   color: var(--text3);
+  cursor: not-allowed;
 }
+
 .cat-textarea {
   display: block;
   width: 100%;
