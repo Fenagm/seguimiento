@@ -21,6 +21,8 @@
   --cat-qmt-bg: rgba(239, 94, 94, 0.12);
   --cat-oth: #4ab3c7;
   --cat-oth-bg: rgba(74, 179, 199, 0.12);
+  --cat-lab: #3b82f6;
+  --cat-lab-bg: rgba(59, 130, 246, 0.12);
 
   --mono: 'IBM Plex Mono', monospace;
   --sans: 'IBM Plex Sans', sans-serif;
@@ -38,7 +40,7 @@ body {
   font-family: var(--sans);
   background: var(--bg);
   color: var(--text);
-  min-height: 100vh;
+  min-height: 100dvh;
   overflow-x: hidden;
 }
 
@@ -147,10 +149,11 @@ body {
 }
 
 .header-actions {
-  margin-left: auto;
+  margin-left: 12px;
   display: flex;
   gap: 8px;
   align-items: center;
+  min-width: 0;
 }
 
 .btn {
@@ -244,6 +247,12 @@ body {
   flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 12px;
+}
+
+.section-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 
 .section-title {
@@ -397,6 +406,11 @@ table.patient-table td {
   color: var(--cat-oth);
 }
 
+.badge.lab {
+  background: var(--cat-lab-bg);
+  color: var(--cat-lab);
+}
+
 .cell-empty {
   color: var(--text3);
   font-size: 11px;
@@ -442,6 +456,20 @@ table.patient-table td {
   gap: 8px;
 }
 
+.discharge-days-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.discharge-day-card {
+  border: 1px solid var(--border);
+  border-left: 3px solid #ddd;
+  border-radius: 8px;
+  padding: 10px;
+  min-width: 0;
+}
+
 .days-row-day {
   font-size: 10px;
   text-transform: uppercase;
@@ -466,30 +494,36 @@ table.patient-table td {
   background: rgba(0, 0, 0, 0.6);
   z-index: 200;
   backdrop-filter: blur(2px);
+  overscroll-behavior: contain;
 }
 
 #entry-overlay.open {
-  display: block;
+  display: flex;
+  justify-content: flex-end;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 
 #entry-panel {
-  position: fixed;
-  top: 0;
-  right: -600px;
-  width: 600px;
-  height: 100vh;
+  position: relative;
+  width: 520px;
+  height: 100dvh;
+  /* iOS Safari fallback */
+  height: -webkit-fill-available;
   background: var(--surface);
   border-left: 1px solid var(--border);
   z-index: 201;
   display: flex;
   flex-direction: column;
-  transition: right .25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform .25s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
-  box-shadow: -10px 0 40px rgba(0, 0, 0, 0.15);
+  margin-left: auto;
+  transform: translateX(100%);
 }
 
 #entry-panel.open {
-  right: 0;
+  transform: translateX(0);
 }
 
 .panel-header {
@@ -518,6 +552,61 @@ table.patient-table td {
   font-size: 11px;
   color: var(--text3);
   font-family: var(--mono);
+}
+
+.admission-reason-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--text3);
+}
+
+.admission-reason-field input {
+  width: min(360px, 100%);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface2);
+  color: var(--text);
+  padding: 8px 10px;
+  font: 12px var(--sans);
+}
+
+
+.days-row-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.days-row-toolbar-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.admission-reason-field-inline {
+  margin-top: 0;
+  flex: 1 1 260px;
+  min-width: 220px;
+}
+
+.admission-reason-field-inline input {
+  width: 100%;
+}
+
+.admission-reason-field input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
 .panel-close {
@@ -617,6 +706,19 @@ table.patient-table td {
   transform: translateY(-2px);
 }
 
+.day-btn .day-date {
+  display: block;
+  margin-top: 2px;
+  font-size: 10px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.day-btn:not(.active) .day-date {
+  color: var(--text3);
+}
+
 .day-btn.active {
   background: linear-gradient(135deg, var(--accent) 0%, rgb(206, 32, 132) 100%);
   border-color: var(--accent);
@@ -644,23 +746,41 @@ table.patient-table td {
 .panel-body {
   overflow-y: auto;
   flex: 1;
+  min-height: 0;
   padding: 16px 20px;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  padding-bottom: 20px;
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+  scroll-padding-top: 14px;
+  scroll-padding-bottom: 80px;
+}
+
+/* Highlight the last cat-section (Otros) with a subtle accent border so it's easier to spot */
+.cat-section:last-child {
+  border-color: var(--cat-oth);
+  border-opacity: 0.4;
 }
 
 .cat-section {
   border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
+  transition: border-color .2s;
+}
+
+.cat-section:has(.cat-body:not([style*="display:none"])) {
+  border-color: var(--border2);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
 }
 
 .cat-header {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
+  padding: 11px 14px;
   cursor: pointer;
   user-select: none;
   transition: background .1s;
@@ -671,14 +791,14 @@ table.patient-table td {
 }
 
 .cat-dot {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
 .cat-label {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   flex: 1;
   letter-spacing: 0.03em;
@@ -687,10 +807,18 @@ table.patient-table td {
 .cat-toggle {
   font-size: 11px;
   color: var(--text3);
+  transition: color .15s;
+  flex-shrink: 0;
+  width: 16px;
+  text-align: center;
+}
+
+.cat-header:hover .cat-toggle {
+  color: var(--text2);
 }
 
 .cat-summary {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text3);
   max-width: 220px;
   overflow: hidden;
@@ -699,29 +827,42 @@ table.patient-table td {
 }
 
 .cat-body {
-  padding: 10px 12px;
+  padding: 8px 10px;
   border-top: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   background: var(--surface2);
+  position: relative;
 }
 
 .tags-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: 3px;
+  max-height: min(10dvh, 60px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
+  scroll-padding-top: 4px;
+  scroll-padding-bottom: 4px;
+  padding-right: 2px;
+}
+
+.tags-row.hidden {
+  display: none;
 }
 
 .tag-chip {
-  font-size: 11px;
-  padding: 3px 9px;
-  border-radius: 20px;
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 14px;
   cursor: pointer;
   border: 1px solid;
   transition: all .12s;
   background: none;
   font-family: var(--sans);
+  white-space: nowrap;
 }
 
 .tag-chip:hover {
@@ -778,7 +919,44 @@ table.patient-table td {
   color: #fff;
 }
 
+.tag-chip.lab {
+  color: var(--cat-lab);
+  border-color: var(--cat-lab);
+}
+
+.tag-chip.lab.active {
+  background: var(--cat-lab);
+  color: #fff;
+}
+
+
+.textarea-wrapper {
+  position: relative;
+}
+
+.cat-textarea-ghost {
+  position: absolute;
+  inset: 0;
+  padding: 7px 9px;
+  font-size: 12px;
+  font-family: var(--sans);
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  color: transparent;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.ghost-typed {
+  color: transparent;
+}
+
+.ghost-suffix {
+  color: var(--text3);
+}
 .cat-textarea {
+  display: block;
   width: 100%;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -786,12 +964,12 @@ table.patient-table td {
   color: var(--text);
   font-size: 12px;
   font-family: var(--sans);
-  padding: 8px 10px;
+  padding: 7px 9px;
   resize: vertical;
-  min-height: 60px;
+  min-height: 64px;
   outline: none;
   transition: border-color .15s;
-  line-height: 1.5;
+  line-height: 1.4;
 }
 
 .cat-textarea:focus {
@@ -800,6 +978,18 @@ table.patient-table td {
 
 .cat-textarea::placeholder {
   color: var(--text3);
+}
+
+.autocomplete-toggle-row {
+  margin-bottom: 4px;
+}
+
+.autocomplete-toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text2);
 }
 
 .panel-footer {
@@ -817,35 +1007,113 @@ table.patient-table td {
 }
 
 /* ─── CSV UPLOAD MODAL ─── */
+/* ─── OVERLAY BASE (todos los overlays) ─── */
+.overlay-base {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 300;
+  display: none;
+  align-items: flex-start;    /* ← flex-start + padding, no center, así el modal nunca queda fuera */
+  justify-content: center;
+  backdrop-filter: blur(4px);
+  overflow-y: auto;
+  padding: 16px;
+}
+.overlay-base.open { display: flex; }
+
+/* ─── MODAL BASE (todos los modals centrados) ─── */
+.modal-card {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  width: 480px;
+  max-width: 100%;
+  max-height: calc(100dvh - 32px); /* nunca más alto que la pantalla */
+  display: flex;
+  flex-direction: column;
+  margin: auto;                    /* centra verticalmente cuando hay espacio */
+}
+
+/* ─── CSV MODAL ─── */
 #csv-overlay {
   display: none;
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.7);
   z-index: 300;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   backdrop-filter: blur(4px);
+  overflow-y: auto;
+  padding: 16px;
 }
-
-#csv-overlay.open {
-  display: flex;
-}
+#csv-overlay.open { display: flex; }
 
 #csv-modal {
   background: var(--surface);
   border: 1px solid var(--border2);
-  border-radius: 16px;
-  width: 560px;
-  max-width: 95vw;
-  max-height: 90vh;
+  border-radius: 10px;
+  width: 480px;
+  max-width: 100%;
+  max-height: calc(100dvh - 32px);
   display: flex;
   flex-direction: column;
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.3);
-  animation: modalSlideIn 0.25s ease-out;
+  margin: auto;
 }
 
-.drop-zone {
+#csv-modal .modal-body {
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* ─── ADD PATIENT MODAL ─── */
+#add-patient-overlay,
+#move-patient-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 300;
+  align-items: flex-start;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+  overflow-y: auto;
+  padding: 16px;
+}
+
+#add-patient-overlay.open,
+#move-patient-overlay.open {
+  display: flex;
+}
+
+#add-patient-modal,
+#move-patient-modal {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  width: 480px;
+  max-width: 100%;
+  max-height: calc(100dvh - 32px);
+  display: flex;
+  flex-direction: column;
+  margin: auto;
+}
+
+#move-patient-modal {
+  width: 520px;
+}
+
+/* Make modal body scroll, footer stays fixed */
+#add-patient-modal .modal-body,
+#move-patient-modal .modal-body {
+  overflow-y: auto;
+  flex: 1;
+}
+
+#add-patient-modal input,
+#add-patient-modal textarea,
+#move-patient-modal input {
   border: 2px dashed var(--border2);
   border-radius: 8px;
   padding: 36px 20px;
@@ -903,7 +1171,7 @@ table.patient-table td {
 }
 
 .preview-list {
-  max-height: 200px;
+  max-height: min(200px, 30dvh);
   overflow-y: auto;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -1016,7 +1284,7 @@ table.patient-table td {
   margin-right: 6px;
 }
 
-/* ─── MODALS ─── */
+/* ─── MODALS shared ─── */
 .modal-header {
   padding: 24px 28px;
   border-bottom: 1px solid var(--border);
@@ -1048,51 +1316,7 @@ table.patient-table td {
   background: var(--surface2);
 }
 
-#add-patient-overlay,
-#move-patient-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.7);
-  z-index: 300;
-  align-items: center;
-  justify-content: center;
-  backdrop-filter: blur(4px);
-}
-
-#add-patient-overlay.open,
-#move-patient-overlay.open {
-  display: flex;
-}
-
-#add-patient-modal,
-#move-patient-modal {
-  background: var(--surface);
-  border: 1px solid var(--border2);
-  border-radius: 16px;
-  width: 560px;
-  max-width: 95vw;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.3);
-  animation: modalSlideIn 0.25s ease-out;
-}
-
-@keyframes modalSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-20px) scale(0.97);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-#move-patient-modal {
-  width: 640px;
-}
+/* old block removed — see new #add-patient-overlay above */
 
 #add-patient-modal input,
 #add-patient-modal textarea,
@@ -1215,9 +1439,10 @@ table.patient-table td {
 #patient-days-panel {
   position: fixed;
   top: 0;
-  right: -600px;
-  width: 600px;
-  height: 100vh;
+  right: -520px;
+  width: 520px;
+  height: 100dvh;
+  height: -webkit-fill-available;
   background: var(--surface);
   border-left: 1px solid var(--border);
   z-index: 201;
@@ -1376,20 +1601,41 @@ table.patient-table td {
 .user-panel {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   margin-left: auto;
   background: var(--surface2);
-  padding: 4px 12px;
+  padding: 4px 8px 4px 12px;
   border-radius: 6px;
   border: 1px solid var(--border);
+  min-width: 0;          /* allow shrinking */
+  max-width: 240px;      /* cap so logout never gets pushed off */
+  flex-shrink: 0;
 }
 
-.user-name {
+.user-name-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: background .12s;
   font-size: 11px;
   font-family: var(--mono);
   color: var(--accent);
   font-weight: 500;
+  min-width: 0;          /* allow text truncation */
+  flex: 1;
 }
+.user-name-btn #user-name-display {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+}
+.user-name-btn:hover { background: var(--surface3); }
 
 .user-logout-btn {
   background: none;
@@ -1399,6 +1645,8 @@ table.patient-table td {
   font-size: 11px;
   padding: 4px 6px;
   border-radius: 4px;
+  flex-shrink: 0;        /* never shrink — always visible */
+  white-space: nowrap;
 }
 
 .user-logout-btn:hover {
@@ -1406,60 +1654,182 @@ table.patient-table td {
   color: var(--text);
 }
 
-.login-modal {
+/* ─── LOGIN SCREEN ─── */
+#login-screen {
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.7);
-  z-index: 400;
+  background: var(--bg);
+  z-index: 500;
   align-items: center;
   justify-content: center;
+  overflow: auto;
+}
+#login-screen.visible { display: flex; }
+
+.login-bg-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 30%, transparent 100%);
+  pointer-events: none;
 }
 
-.login-modal.open {
+.login-container {
+  position: relative;
+  z-index: 1;
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  padding: 24px 16px;
+  width: 100%;
+  max-width: 400px;
+}
+
+.login-logo {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.login-logo svg { width: 44px; height: 44px; flex-shrink: 0; }
+.login-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+.login-subtitle {
+  font-size: 12px;
+  color: var(--text3);
+  margin-top: 2px;
 }
 
 .login-card {
-  background: var(--surface);
-  border-radius: 16px;
-  padding: 32px;
-  width: 400px;
-  max-width: 90vw;
-  border: 1px solid var(--border2);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  animation: modalSlideIn 0.25s ease-out;
-}
-
-.login-card h3 {
-  margin-bottom: 20px;
-  font-size: 22px;
-  color: var(--accent);
-  font-weight: 700;
-  text-align: center;
-}
-
-.login-card input {
   width: 100%;
-  padding: 12px;
-  margin-bottom: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+}
+
+.login-card-header {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.login-error {
+  background: rgba(239,94,94,0.12);
+  border: 1px solid rgba(239,94,94,0.3);
+  border-radius: 7px;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: #ef5e5e;
+  line-height: 1.5;
+}
+
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.login-field label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text3);
+}
+.login-field input {
   background: var(--surface2);
   border: 1px solid var(--border2);
   border-radius: 8px;
   color: var(--text);
   font-size: 14px;
-  transition: border-color .15s;
-}
-
-.login-card input:focus {
-  border-color: var(--accent);
+  padding: 11px 14px;
   outline: none;
+  transition: border-color .15s, box-shadow .15s;
+  font-family: var(--sans);
+  width: 100%;
 }
+.login-field input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(61,126,245,0.15);
+}
+.login-field input::placeholder { color: var(--text3); }
 
-.login-card .btn {
+.login-pass-wrap {
+  position: relative;
+}
+.login-pass-wrap input { padding-right: 42px; }
+.pass-toggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text3);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+}
+.pass-toggle svg { width: 16px; height: 16px; }
+.pass-toggle:hover { color: var(--text2); }
+
+.login-forgot {
+  text-align: right;
+  margin-top: -8px;
+}
+.login-forgot button {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+  font-family: var(--sans);
+}
+.login-forgot button:hover { text-decoration: underline; }
+
+.login-btn {
   width: 100%;
   justify-content: center;
-  margin-top: 8px;
+  padding: 12px;
+  font-size: 14px;
+  border-radius: 8px;
+  margin-top: 4px;
+  gap: 8px;
+}
+
+.login-reset-msg {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(45,164,78,0.1);
+  border: 1px solid rgba(45,164,78,0.25);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 12px;
+  color: #2da44e;
+  width: 100%;
+}
+
+@media (max-width: 420px) {
+  .login-card { padding: 22px 18px; border-radius: 12px; }
+  .login-logo svg { width: 36px; height: 36px; }
+  .login-title { font-size: 17px; }
 }
 
 /* ─── MOBILE CARD TABLE ─── */
@@ -1602,7 +1972,7 @@ table.patient-table td {
     flex: 1;
   }
 
-  .btn span:not(#btn-copy-prev-label) {
+  #header .btn span:not(#btn-copy-prev-label) {
     display: none;
   }
 
@@ -1613,23 +1983,46 @@ table.patient-table td {
 
   #entry-panel {
     width: 100%;
-    right: -100%;
+    height: 100dvh;
   }
 
-  #entry-panel.open {
-    right: 0;
+  #entry-overlay.open {
+    justify-content: stretch;
   }
 
   #patient-days-panel {
     width: 100%;
     right: -100%;
+    height: 100dvh;
   }
 
   #patient-days-panel.open {
     right: 0;
   }
 
+  /* Modals: reduce padding so they fit on small screens */
+  #csv-overlay,
+  #add-patient-overlay,
+  #move-patient-overlay {
+    padding: 8px;
+  }
+
+  #csv-modal,
+  #add-patient-modal,
+  #move-patient-modal {
+    max-height: calc(100dvh - 16px);
+    border-radius: 8px;
+  }
+
+  .modal-header { padding: 14px 16px 12px; }
+  .modal-body   { padding: 14px 16px; }
+  .modal-footer { padding: 10px 16px; }
+
   .days-row-cards-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .discharge-days-grid {
     grid-template-columns: 1fr 1fr;
   }
 
@@ -1644,6 +2037,10 @@ table.patient-table td {
 
 @media (max-width: 480px) {
   .days-row-cards-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .discharge-days-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1677,8 +2074,8 @@ table.patient-table td {
   }
 
   .tag-chip {
-    min-height: 34px;
-    padding: 6px 12px;
+    min-height: 30px;
+    padding: 4px 10px;
   }
 
   .week-nav button {
@@ -1705,7 +2102,7 @@ table.patient-table td {
 
 /* ─── SCROLLBAR ─── */
 ::-webkit-scrollbar {
-  width: 5px;
+  width: 6px;
   height: 5px;
 }
 
@@ -1714,8 +2111,8 @@ table.patient-table td {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--surface3);
-  border-radius: 3px;
+  background-color: rgba(0,0,0,0.2);
+  border-radius: 4px;
 }
 
 /* ─── NO DATA ─── */
@@ -1760,99 +2157,106 @@ table.patient-table td {
     transform: translateX(-50%) translateY(0);
     opacity: 1;
   }
-
-/* Loading overlay */
-#loading-overlay {
-  display: none;
+}
+/* ─── PWA INSTALL BANNER ─── */
+#pwa-install-banner {
   position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.8);
-  z-index: 500;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  gap: 16px;
-}
-
-#loading-overlay.open {
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
-}
-
-/* Loading overlay modal redesign - popup window style */
-#loading-overlay .loading-modal {
+  align-items: center;
+  gap: 14px;
   background: var(--surface);
-  border-radius: 16px;
-  padding: 40px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
-  text-align: center;
-  max-width: 400px;
-  width: 90%;
   border: 1px solid var(--border2);
-  animation: loadingModalSlideIn 0.3s ease-out;
+  border-radius: 12px;
+  padding: 12px 16px;
+  z-index: 490;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+  width: min(420px, calc(100vw - 32px));
+  animation: slideUp .3s ease;
 }
 
-@keyframes loadingModalSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-30px) scale(0.95);
+/* ─── PRINT ─── */
+#print-content { display: none; }
+
+@media print {
+  /* Hide everything except the print content */
+  body > *:not(#print-content) { display: none !important; }
+
+  #print-content {
+    display: block !important;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 11pt;
+    color: #000;
+    background: #fff;
+    padding: 0;
+    margin: 0;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
+
+  .print-header {
+    font-size: 13pt;
+    font-weight: bold;
+    margin-bottom: 4pt;
+  }
+  .print-subheader {
+    font-size: 10pt;
+    color: #444;
+    margin-bottom: 14pt;
+    border-bottom: 1pt solid #000;
+    padding-bottom: 6pt;
+  }
+  .print-patient {
+    margin-bottom: 10pt;
+    page-break-inside: avoid;
+  }
+  .print-patient-line {
+    font-size: 11pt;
+    font-weight: bold;
+  }
+  .print-meds {
+    font-size: 10pt;
+    margin-left: 16pt;
+    margin-top: 2pt;
+  }
+  .print-meds-line {
+    margin-bottom: 3pt;
+    font-weight: normal;
+  }
+  .print-no-meds {
+    font-size: 10pt;
+    color: #888;
+    margin-left: 16pt;
+    font-style: italic;
+  }
+  .print-separator {
+    border: none;
+    border-top: 1pt dotted #ccc;
+    margin: 8pt 0;
+  }
+
+  @page {
+    size: A4;
+    margin: 18mm 15mm 18mm 15mm;
   }
 }
 
-#loading-overlay .loading-icon {
-  font-size: 48px;
-  margin-bottom: 16px;
-  animation: loadingIconPulse 1.5s ease-in-out infinite;
+.history-view-selector .btn.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
 }
 
-@keyframes loadingIconPulse {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.1); opacity: 0.8; }
-}
-
-#loading-overlay .loading-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--text);
-  margin-bottom: 8px;
-}
-
-#loading-overlay .loading-subtitle {
-  font-size: 13px;
-  color: var(--text3);
-  margin-bottom: 24px;
-}
-
-#loading-overlay .loading-progress {
-  width: 100%;
-  height: 4px;
+.week-badge {
   background: var(--surface2);
-  border-radius: 2px;
-  overflow: hidden;
-  margin-top: 20px;
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-family: var(--mono);
+  color: var(--text2);
 }
 
-#loading-overlay .loading-progress-bar {
-  height: 100%;
-  background: linear-gradient(90deg, var(--accent) 0%, rgb(206, 32, 132) 100%);
-  border-radius: 2px;
-  animation: loadingProgress 1.5s ease-in-out infinite;
-  width: 30%;
-}
-
-@keyframes loadingProgress {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(400%); }
-}
-
-#loading-overlay .spinner {
-  width: 56px;
-  height: 56px;
-  border-width: 4px;
-  margin: 0 auto 16px;
-}
-
+.hist-card-header.compact {
+  cursor: pointer;
+  padding: 8px 12px;
 }
