@@ -1603,6 +1603,40 @@ function renderDaySelector() {
   }
   
   updateCopyPrevBtn();
+  renderCategoryTabs();
+}
+
+function renderCategoryTabs() {
+  const tabsEl = document.getElementById('category-tabs');
+  if (!tabsEl) return;
+  
+  tabsEl.innerHTML = CATS.map((cat, idx) => 
+    `<button class="category-tab-btn ${idx === 0 ? 'active' : ''}" data-cat="${cat.id}" style="border-bottom-color: ${idx === 0 ? cat.dot : 'transparent'}">
+      <span class="cat-dot" style="background:${cat.dot}; display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px;"></span>
+      ${cat.label}
+    </button>`
+  ).join('');
+  
+  document.querySelectorAll('.category-tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.category-tab-btn').forEach(b => {
+        b.classList.remove('active');
+        b.style.borderBottomColor = 'transparent';
+      });
+      btn.classList.add('active');
+      btn.style.borderBottomColor = CATS.find(c => c.id === btn.dataset.cat)?.dot || 'var(--accent)';
+      
+      document.querySelectorAll('#panel-body .cat-section').forEach(sec => {
+        sec.classList.remove('active');
+      });
+      const activeSection = document.querySelector(`#panel-body .cat-section[data-cat="${btn.dataset.cat}"]`);
+      if (activeSection) activeSection.classList.add('active');
+    });
+  });
+  
+  // Set first category as active by default
+  const firstSection = document.querySelector('#panel-body .cat-section');
+  if (firstSection) firstSection.classList.add('active');
 }
 
 function updateCopyPrevBtn() {
@@ -1709,7 +1743,7 @@ function renderPanelBody() {
       </label>
     </div>
   `;
-  el.innerHTML = autoToggle + CATS.map(cat => {
+  el.innerHTML = autoToggle + CATS.map((cat, idx) => {
     const entry = panelState.data[cat.id] || {};
     const activeTags = Array.isArray(entry.tags) ? entry.tags : [];
     const text = entry.text || '';
@@ -1720,7 +1754,7 @@ function renderPanelBody() {
     if (isInline) {
       // Laboratorio: tags siempre visibles en textarea como líneas editables
       return `
-        <div class="cat-section" data-cat="${cat.id}">
+        <div class="cat-section ${idx === 0 ? 'active' : ''}" data-cat="${cat.id}">
           <div class="cat-header" data-cat="${cat.id}"><div class="cat-dot" style="background:${cat.dot}"></div><span class="cat-label" style="color:${cat.dot}">${cat.label}</span><span class="cat-summary" id="cat-sum-${cat.id}">${summary}</span></div>
           <div class="cat-body" id="cat-body-${cat.id}" style="">
             <div class="inline-tags-container">
@@ -1740,7 +1774,7 @@ function renderPanelBody() {
     } else {
       // Categorías normales con chips separados
       return `
-        <div class="cat-section" data-cat="${cat.id}">
+        <div class="cat-section ${idx === 0 ? 'active' : ''}" data-cat="${cat.id}">
           <div class="cat-header" data-cat="${cat.id}"><div class="cat-dot" style="background:${cat.dot}"></div><span class="cat-label" style="color:${cat.dot}">${cat.label}</span><span class="cat-summary" id="cat-sum-${cat.id}">${summary}</span></div>
           <div class="cat-body" id="cat-body-${cat.id}" style="">
             <div class="tags-row">${tags.map(t => `<button class="tag-chip ${cat.cls} ${activeTags.includes(t) ? 'active' : ''}" data-cat="${cat.id}" data-tag="${t.replace(/'/g, "\\'")}">${t}</button>`).join('')}</div>
@@ -1750,8 +1784,28 @@ function renderPanelBody() {
     }
   }).join('');
 
-  // Attach event listeners
-  // Nota: las categorías ya no colapsan (grid 2x3 en el modal, todas visibles a la vez).
+  // Attach event listeners for category tabs
+  document.querySelectorAll('.cat-header').forEach(header => {
+    header.addEventListener('click', () => {
+      const catId = header.dataset.cat;
+      document.querySelectorAll('#panel-body .cat-section').forEach(sec => {
+        sec.classList.remove('active');
+      });
+      document.querySelectorAll('.category-tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+        btn.style.borderBottomColor = 'transparent';
+      });
+      const section = document.querySelector(`#panel-body .cat-section[data-cat="${catId}"]`);
+      if (section) section.classList.add('active');
+      const tabBtn = document.querySelector(`.category-tab-btn[data-cat="${catId}"]`);
+      if (tabBtn) {
+        tabBtn.classList.add('active');
+        tabBtn.style.borderBottomColor = CATS.find(c => c.id === catId)?.dot || 'var(--accent)';
+      }
+    });
+  });
+  
+  // Nota: las categorías ahora se muestran en solapas, una a la vez.
   document.querySelectorAll('.tag-chip').forEach(btn => {
     const catId = btn.dataset.cat;
     const tag = btn.dataset.tag;
