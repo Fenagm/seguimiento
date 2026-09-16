@@ -425,6 +425,10 @@ table.patient-table td {
   gap: 8px;
 }
 
+.days-row-card.today {
+  grid-column: span 3;
+}
+
 .days-row-card {
   background: var(--surface);
   border: 1px solid var(--border);

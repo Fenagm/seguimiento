@@ -78,7 +78,7 @@ export const TAGS = {
   sedacion: ['Midazolam', 'Metadona 5mg c/8h', 'Morfina', 'Oxicodona', 'Fentanilo', 'Propofol', 'Dexmedetomidina', 'Ketamina'],
   nutricion: ['NPT Magistral 63 ml/h', 'Fresubin Original 63 ml/h', 'Fresubin Energy 42 ml/h', 'Protison 42 ml/h', 'NE por SNG', 'Ayuno', 'Dieta blanda'],
   otros: ['Filgrastim', 'Bactrim forte', 'Isavuconazol', 'Ceftolozano + Tazobactam', 'Omeprazol', 'Dexametasona'],
-  laboratorio: ['Glob. blancos', 'Glob. rojos', 'Hemoglobina', 'Hematocrito', 'Neutrófilos', 'Linfocitos', 'Rec. plaquetas', 'Potasio', 'Glucemia', 'Uremia', 'Creatinina'],
+  laboratorio: [],
   qmt: ['Rituximab + EPOCH', 'Ciclo 2', 'Carbo/Etopósido + Atezolizumab', 'FOLFIRI', 'FOLFOX', 'Cisplatino', 'Ciclofosfamida', 'Paclitaxel'],
 };
 
@@ -1943,10 +1943,12 @@ function renderDaysRowContent(hc) {
   const container = document.getElementById(`days-content-${hc}`);
   if (!container) return;
   const p = allPatients[hc];
+  const todayDay = getTodayWeekDayId();
   const dayDates = getWeekDayDates(currentWeek);
   const dayCards = DAYS.map(day => {
     const entry = weekData[`${hc}_${day}`];
     const hasEntry = entry && CATS.some(c => entry[c.id] && (entry[c.id].text || entry[c.id].tags?.length));
+    const isToday = todayDay === day;
     let summary = 'Sin datos';
     if (hasEntry) {
       const parts = [];
@@ -1965,7 +1967,7 @@ function renderDaysRowContent(hc) {
       summary = parts.join('<br>');
     }
     return `
-      <button class="days-row-card ${hasEntry ? 'has-data' : ''}" data-hc="${hc}" data-day="${day}">
+      <button class="days-row-card ${hasEntry ? 'has-data' : ''} ${isToday ? 'today' : ''}" data-hc="${hc}" data-day="${day}">
         <div class="days-row-card-header">
           <span class="days-row-day">${DAY_LABELS[day]} <small style="font-size:10px;color:var(--text3);font-weight:500;">${dayDates[day]}</small></span>
           <div class="day-badges">${renderDayBadges(hc, day)}</div>
@@ -2493,7 +2495,12 @@ function saveEntry() {
   const details = {};
   CATS.forEach(cat => {
     const d = panelState.data[cat.id];
-    if (d && (d.tags?.length || d.text)) {
+    // For laboratorio and qmt, only save if there's actual text content
+    if (cat.id === 'laboratorio' || cat.id === 'qmt') {
+      if (d && d.text?.trim()) {
+        details[cat.id] = { tags: [], textPreview: d.text.substring(0, 50) };
+      }
+    } else if (d && (d.tags?.length || d.text)) {
       details[cat.id] = { tags: d.tags, textPreview: d.text?.substring(0, 50) };
     }
   });
@@ -4464,7 +4471,16 @@ function getPrintPatients() {
 
 function hasMedsForDay(hc, day) {
   const entry = weekData[`${hc}_${day}`];
-  return entry && CATS.some(c => entry[c.id] && (entry[c.id].tags?.length || entry[c.id].text));
+  if (!entry) return false;
+  // For laboratorio and qmt, only consider them as having meds if they have text content
+  return CATS.some(c => {
+    const d = entry[c.id];
+    if (!d) return false;
+    if (c.id === 'laboratorio' || c.id === 'qmt') {
+      return !!d.text?.trim();
+    }
+    return d.tags?.length || d.text;
+  });
 }
 
 function buildMedLine(entry) {
@@ -4476,6 +4492,8 @@ function buildMedLine(entry) {
     // Use only the text field for printing (which may include copied tags + manual edits)
     // Do NOT duplicate tags separately
     const text = d.text?.trim();
+    // For laboratorio and qmt, only print/save if there's actual content
+    if ((cat.id === 'laboratorio' || cat.id === 'qmt') && !text) return;
     if (text) lines.push(`[${cat.label}] ${text}`);
   });
   return lines;
