@@ -68,6 +68,7 @@ export const CATS = [
   { id: 'sedacion', label: 'Sedación y Analgesia', cls: 'sed', dot: '#c87af0' },
   { id: 'nutricion', label: 'Nutrición', cls: 'nut', dot: '#2da44e' },
   { id: 'otros', label: 'Otros', cls: 'oth', dot: '#4ab3c7' },
+  { id: 'qmt', label: 'QMT', cls: 'qmt', dot: '#ef5e5e' },
   { id: 'laboratorio', label: 'Laboratorio', cls: 'lab', dot: '#3b82f6', inlineTags: true },
 ];
 
@@ -77,7 +78,8 @@ export const TAGS = {
   sedacion: ['Midazolam', 'Metadona 5mg c/8h', 'Morfina', 'Oxicodona', 'Fentanilo', 'Propofol', 'Dexmedetomidina', 'Ketamina'],
   nutricion: ['NPT Magistral 63 ml/h', 'Fresubin Original 63 ml/h', 'Fresubin Energy 42 ml/h', 'Protison 42 ml/h', 'NE por SNG', 'Ayuno', 'Dieta blanda'],
   otros: ['Filgrastim', 'Bactrim forte', 'Isavuconazol', 'Ceftolozano + Tazobactam', 'Heparina', 'HBPM', 'Omeprazol', 'Dexametasona'],
-  laboratorio: ['Glob. blancos', 'Glob. rojos', 'Hemoglobina', 'Hematocrito', 'Neutrófilos', 'Linfocitos', 'Rec. plaquetas', 'Potasio', 'Glucemia', 'Uremia', 'Creatinina'],
+  qmt: [],
+  laboratorio: [],
 };
 
 const AUTOCOMPLETE_STORAGE_KEY = 'med_autocomplete_enabled';
@@ -1454,9 +1456,11 @@ function renderDaysRowContent(hc) {
   if (!container) return;
   const p = allPatients[hc];
   const dayDates = getWeekDayDates(currentWeek);
+  const todayDay = getTodayWeekDayId();
   const dayCards = DAYS.map(day => {
     const entry = weekData[`${hc}_${day}`];
     const hasEntry = entry && CATS.some(c => entry[c.id] && (entry[c.id].text || entry[c.id].tags?.length));
+    const isToday = day === todayDay;
     let summary = 'Sin datos';
     if (hasEntry) {
       const parts = [];
@@ -1475,7 +1479,7 @@ function renderDaysRowContent(hc) {
       summary = parts.join('<br>');
     }
     return `
-      <button class="days-row-card ${hasEntry ? 'has-data' : ''}" data-hc="${hc}" data-day="${day}">
+      <button class="days-row-card ${hasEntry ? 'has-data' : ''} ${isToday ? 'today' : ''}" data-hc="${hc}" data-day="${day}">
         <div class="days-row-card-header">
           <span class="days-row-day">${DAY_LABELS[day]} <small style="font-size:10px;color:var(--text3);font-weight:500;">${dayDates[day]}</small></span>
           <div class="day-badges">${renderDayBadges(hc, day)}</div>
