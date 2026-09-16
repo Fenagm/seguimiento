@@ -690,7 +690,7 @@ table.patient-table td {
   color: var(--text3);
   transition: all .2s;
   text-align: center;
-  white-space: nowrap;
+
   position: relative;
   z-index: 1;
 }
