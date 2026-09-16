@@ -429,12 +429,16 @@ table.patient-table td {
   grid-column: span 3;
 }
 
+.days-row-card.today .days-row-day {
+  font-size: 14px;
+}
+
 .days-row-card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 10px;
-  min-height: 86px;
+  min-height: 120px;
   cursor: pointer;
   transition: all .15s;
   display: flex;
@@ -662,7 +666,7 @@ table.patient-table td {
 .category-tabs {
   display: flex;
   align-items: stretch;
-  gap: 0;
+  gap: 2px;
   padding: 0;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
@@ -687,17 +691,21 @@ table.patient-table td {
   transition: all .2s;
   text-align: center;
   white-space: nowrap;
+  position: relative;
+  z-index: 1;
 }
 
 .category-tab-btn:hover {
   background: var(--surface2);
   color: var(--text2);
+  z-index: 2;
 }
 
 .category-tab-btn.active {
   background: var(--surface2);
   color: var(--text);
   border-bottom-color: var(--accent);
+  z-index: 2;
 }
 
 .day-selector-controls {
