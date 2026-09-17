@@ -79,7 +79,7 @@ export const TAGS = {
   nutricion: ['NPT Magistral 63 ml/h', 'Fresubin Original 63 ml/h', 'Fresubin Energy 42 ml/h', 'Protison 42 ml/h', 'NE por SNG', 'Ayuno', 'Dieta blanda'],
   otros: ['Filgrastim', 'Bactrim forte', 'Isavuconazol', 'Ceftolozano + Tazobactam', 'Heparina', 'HBPM', 'Omeprazol', 'Dexametasona'],
   qmt: [],
-  laboratorio: [],
+  laboratorio: ['Glob. blancos', 'Glob. rojos', 'Hemoglobina', 'Hematocrito', 'Neutrófilos', 'Linfocitos', 'Rec. plaquetas', 'Potasio', 'Glucemia', 'Uremia', 'Creatinina'],
 };
 
 const AUTOCOMPLETE_STORAGE_KEY = 'med_autocomplete_enabled';
