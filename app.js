@@ -1788,7 +1788,7 @@ function renderPanelBody() {
                 return `
                   <div class="inline-tag-row">
                     <button class="tag-chip-inline ${cat.cls} ${isActive ? 'active' : ''}" data-cat="${cat.id}" data-tag="${t.replace(/'/g, "\\'")}">${t}</button>
-                    <input type="text" class="inline-tag-input" data-cat="${cat.id}" data-tag="${t.replace(/'/g, "\\'")}" placeholder="Valor..." value="${lineText}" ${!isActive ? 'disabled' : ''}>
+                    <input type="text" class="inline-tag-input" data-cat="${cat.id}" data-tag="${t.replace(/'/g, "\\'")}" placeholder="Valor..." value="${lineText} " ${!isActive ? 'disabled' : ''}>
                   </div>`;
               }).join('')}
             </div>
@@ -2058,13 +2058,21 @@ function toggleInlineTag(catId, tag, btn) {
     // Activar tag
     tags.push(tag);
     btn.classList.add('active');
+    
+    // Texto con el espacio agregado al final del tag
+    const tagWithSpace = tag + ' ';
+    
     if (input) {
       input.disabled = false;
-      input.value = tag;
-      input.focus();
+      input.value = tagWithSpace; // <--- Carga el tag con el espacio al final
+      setTimeout(() => {
+        input.focus();
+        // Coloca el cursor justo después del espacio
+        input.setSelectionRange(input.value.length, input.value.length);
+      }, 50);
     }
-    // Agregar línea al textarea
-    currentText = currentText.trim() ? currentText + '\n' + tag : tag;
+    // Agregar línea al textarea con el espacio
+    currentText = currentText.trim() ? currentText + '\n' + tagWithSpace : tagWithSpace;
   }
   
   panelState.data[catId].tags = tags;
