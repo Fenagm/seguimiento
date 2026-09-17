@@ -426,7 +426,6 @@ table.patient-table td {
 }
 
 .days-row-card.today {
-  grid-column: span 2;
   border: 2px solid var(--accent);
 }
 
@@ -435,8 +434,12 @@ table.patient-table td {
 }
 
 .days-row-card.today .days-row-day {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
+}
+
+.days-row-card:not(.today) .days-row-day {
+  font-size: 9px;
 }
 
 .days-row-card {
