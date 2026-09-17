@@ -468,32 +468,6 @@
   }
 </style>
 
-<script>
-  const hoy = new Date().getDay(); // 1 = Lunes, 2 = Martes, etc.
-  const gridContainer = document.getElementById('daysGrid');
-
-  switch (hoy) {
-    case 1: // Lunes
-      gridContainer.style.gridTemplateColumns = '4fr repeat(4, 1fr)';
-      break;
-    case 2: // Martes
-      gridContainer.style.gridTemplateColumns = '1fr 4fr repeat(3, 1fr)';
-      break;
-    case 3: // Miércoles
-      gridContainer.style.gridTemplateColumns = 'repeat(2, 1fr) 4fr repeat(2, 1fr)';
-      break;
-    case 4: // Jueves
-      gridContainer.style.gridTemplateColumns = 'repeat(3, 1fr) 4fr 1fr';
-      break;
-    case 5: // Viernes
-      gridContainer.style.gridTemplateColumns = 'repeat(4, 1fr) 4fr';
-      break;
-    default: // Fin de semana por defecto al lunes
-      gridContainer.style.gridTemplateColumns = '4fr repeat(4, 1fr)';
-      break;
-  }
-</script>
-
 <script type="module" src="app.js?v=2.0.1"></script>
 <!-- PRINT MODAL -->
 <div id="print-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:310;align-items:center;justify-content:center;backdrop-filter:blur(4px);">
