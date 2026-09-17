@@ -421,8 +421,9 @@ table.patient-table td {
 .days-row-cards-grid {
   padding: 10px 12px;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 8px;
+  grid-template-rows: 1fr;
+  grid-column-gap: 0px;
+  grid-row-gap: 0px;
 }
 
 .days-row-card.today {
@@ -433,13 +434,18 @@ table.patient-table td {
   border: 2px solid #4caf50 !important;
 }
 
+/* Tipografía más grande para el día actual */
 .days-row-card.today .days-row-day {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.days-row-card.today .days-row-summary {
+  font-size: 11px;
 }
 
 .days-row-card:not(.today) .days-row-day {
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .days-row-card {
@@ -2183,7 +2189,7 @@ table.patient-table td {
   }
 
   .days-row-card.today {
-    grid-column: span 2;
+    border: 2px solid var(--accent);
   }
 
   .discharge-days-grid {

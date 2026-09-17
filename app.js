@@ -1457,6 +1457,26 @@ function renderDaysRowContent(hc) {
   const p = allPatients[hc];
   const dayDates = getWeekDayDates(currentWeek);
   const todayDay = getTodayWeekDayId();
+
+  // Calcular la distribución del Grid según el día actual
+  const todayIndex = new Date().getDay(); // 1 = Lunes, 2 = Martes, ..., 5 = Viernes
+  let gridColumnsStyle = '4fr repeat(4, 1fr)'; // Fallback / Lunes / Fin de semana
+
+  switch (todayIndex) {
+    case 2: // Martes
+      gridColumnsStyle = '1fr 4fr repeat(3, 1fr)';
+      break;
+    case 3: // Miércoles
+      gridColumnsStyle = 'repeat(2, 1fr) 4fr repeat(2, 1fr)';
+      break;
+    case 4: // Jueves
+      gridColumnsStyle = 'repeat(3, 1fr) 4fr 1fr';
+      break;
+    case 5: // Viernes
+      gridColumnsStyle = 'repeat(4, 1fr) 4fr';
+      break;
+  }
+
   const dayCards = DAYS.map(day => {
     const entry = weekData[`${hc}_${day}`];
     const hasEntry = entry && CATS.some(c => entry[c.id] && (entry[c.id].text || entry[c.id].tags?.length));
@@ -1503,7 +1523,7 @@ function renderDaysRowContent(hc) {
         Mover cama
       </button>
     </div>
-    <div class="days-row-cards-grid">${dayCards}</div>`;
+    <div class="days-row-cards-grid" style="grid-template-columns: ${gridColumnsStyle};">${dayCards}</div>`;
 
   // Attach event listeners
   container.querySelectorAll('.days-row-card').forEach(card => {
