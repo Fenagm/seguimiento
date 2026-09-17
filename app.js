@@ -729,7 +729,7 @@ const MEDICATION_DICTIONARY = Object.fromEntries(
 );
 
 export const DAYS = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes'];
-export const DAY_LABELS = { lunes: 'Lun', martes: 'Mar', miercoles: 'Mié', jueves: 'Jue', viernes: 'Vie' };
+export const DAY_LABELS = { lunes: 'Lun', martes: 'Mar', miercoles: 'Mie', jueves: 'Jue', viernes: 'Vie' };
 export const FLOORS = ['3', '4', '5', 'tamo', 'uti', 'utiq'];
 export const FLOOR_LABELS = { '3': 'Piso 3', '4': 'Piso 4', '5': 'Piso 5', 'tamo': 'TAMO', 'uti': 'UTI', 'utiq': 'UTI-Q' };
 

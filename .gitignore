@@ -1,40 +1,42 @@
-```
-# Build artifacts
+```gitignore
+# Compiled and build artifacts
+*.pyc
+__pycache__/
+*.o
+*.obj
 dist/
 build/
-*.js
-*.css
-*.html
-*.webmanifest
-*.png
-*.svg
+target/
 
 # Dependencies
 node_modules/
-
-# Environment
+.venv/
+venv/
 .env
 .env.local
 .env.*
 
-# Editor/IDE
+# Logs and temp files
+*.log
+*.tmp
+*.swp
+
+# Editors
 .vscode/
 .idea/
-*.swp
-*.swo
-*.tmp
 
-# Logs
-*.log
+# OS
+.DS_Store
+Thumbs.db
 
 # Coverage
 coverage/
 htmlcov/
 .coverage
 
-# Python
-__pycache__/
+# Python specific
 *.pyc
+__pycache__/
 *.pyo
 *.pyd
 .Python
@@ -61,4 +63,28 @@ __pycache__/
 *.Z
 *.lz
 *.lzo
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.tar.zst
+
+# MyPy
+.mypy_cache/
+
+# Pytest
+.pytest_cache/
+
+# Gradle
+.gradle/
+
+# Temporary files
+*.tmp
+*~
+*.bak
+*.swp
+*.swo
+
+# Environment specific
+.env*
+!.env.example
 ```
